@@ -1,0 +1,13 @@
+[project]
+name = "py-gis_app"
+version = "0.1.0"
+description = "Add your description here"
+readme = "README.md"
+requires-python = ">=3.10"
+dependencies = []
+
+[tool.ruff]
+indent-width = 2
+
+[tool.ruff.format]
+quote-style = "double"
