@@ -1,17 +1,21 @@
 import json
 import math
+import os
 from pathlib import Path
-from typing import Optional, TypeAlias, TypedDict, Union, cast
+from typing import Literal, Optional, TypeAlias, TypedDict, Union, cast
 
-from .gdal_utils import gdalinfo
+from .env import load_env
+from .gdal_utils import GdalTranslateOptions, band_ranges, gdal_translate, gdalinfo
+from .geometry import Polygon
 from .math_utils import dot, norm
 from .sicd_model import Sicd, SicdObject
-from .spatialite import Field, Model, insert_records, spatialite_connect
+from .spatialite import Field, Model, SpatialDatabase
 
 
 class ImageIndexTable(Model):
   table_name = "images"
   id = Field(int, primary_key=True)
+  directory = Field(str)
   filename = Field(str)
   filetype = Field(str)
   classification = Field(str)
@@ -27,6 +31,7 @@ class ImageIndexTable(Model):
 
 
 class ImageIndexRow(TypedDict):
+  directory: str
   filename: str
   filetype: str
   classification: str
@@ -48,71 +53,67 @@ def ground_sample_distance(
   sample_spacing: float, unit_vector: Vec3, point: Vec3
 ) -> float:
   n_mag = norm(point)
-  n = (point[0] / n_mag, point[1] / n_mag, point[2] / n_mag)
+  surface_normal = (point[0] / n_mag, point[1] / n_mag, point[2] / n_mag)
 
-  udotn = dot(unit_vector, n)
+  udotn = dot(unit_vector, surface_normal)
 
   ground_factor = math.sqrt(1.0 - udotn**2)
 
   return sample_spacing * ground_factor
 
 
-def sicd_metadata(path: Path) -> Union[Sicd, None]:
-  metadata = gdalinfo(path)
+def tiff_metadata(
+  gdal_info: dict, schema: Literal["SICD_METADATA", "TIFFTAG_IMAGEDESCRIPTION"]
+) -> Union[dict, None]:
+  metadata_text = gdal_info.get("metadata", {}).get("", {}).get(schema)
 
-  sicd_text = metadata.get("metadata", {}).get("", {}).get("SICD_METADATA")
-
-  if sicd_text is not None:
-    sicd = cast(SicdObject, json.loads(sicd_text))
-    return sicd["metadata"]
+  if metadata_text is not None:
+    return json.loads(metadata_text)
 
   return None
 
 
-def parse_image_metadata(file_path: Path) -> ImageIndexRow:
-  if not file_path.exists():
-    raise FileNotFoundError(f"File not found: {str(file_path)}")
+def parse_image_metadata(
+  info: dict, file_path: Path, relative_directory: Path
+) -> ImageIndexRow:
+  sicd_obj = tiff_metadata(info, "SICD_METADATA")
 
-  extensions = {".tiff", ".tif"}
-  if file_path.suffix.lower() not in extensions:
-    raise ValueError(f"Input file must be .tif(f), got: {file_path.suffix}")
+  if sicd_obj is None:
+    raise ValueError(f"No SICD metadata found for {str(file_path)}")
 
-  sicd = sicd_metadata(file_path)
-  if sicd is None:
-    raise ValueError()
+  sicd = cast(SicdObject, sicd_obj)["metadata"]
+
+  tifftag = tiff_metadata(info, "TIFFTAG_IMAGEDESCRIPTION") or {}
+  tifftag = tifftag.get("collect", {}).get("image", {})
 
   collection_info = sicd["CollectionInfo"]
   geo_data = sicd["GeoData"]
   timeline = sicd["Timeline"]
   scpcoa = sicd["SCPCOA"]
+
   sensor_name = collection_info["CollectorName"]
   classification = collection_info["Classification"]
   interpretation_rating = collection_info.get("Parameters", {}).get("PREDICTED_RNIIRS")
 
   image_corners = geo_data["ImageCorners"]
-  points = (f"{corner['Lat']} {corner['Lon']}" for corner in image_corners)
+  points = (f"{corner['Lon']} {corner['Lat']}" for corner in image_corners)
   footprint = f"POLYGON(({', '.join(points)}))"
   datetime_collected = timeline["CollectStart"]
   look_angle = 90.0 - scpcoa["IncidenceAng"]
   azimuth_angle = scpcoa["AzimAng"]
 
-  scp_obj = geo_data["SCP"]["ECF"]
-  scp = (scp_obj["X"], scp_obj["Y"], scp_obj["Z"])
+  plane = sicd["RadarCollection"].get("Area", {}).get("Plane", {})
 
-  grid_row = sicd["Grid"]["Row"]
-  sample_spacing_x = grid_row["SS"]
-  unit_vec_obj_x = grid_row["UVectECF"]
-  unit_vec_x = (unit_vec_obj_x["X"], unit_vec_obj_x["Y"], unit_vec_obj_x["Z"])
-  gsd_x = ground_sample_distance(sample_spacing_x, unit_vec_x, scp)
-
-  grid_col = sicd["Grid"]["Col"]
-  sample_spacing_y = grid_col["SS"]
-  unit_vec_obj_y = grid_col["UVectECF"]
-  unit_vec_y = (unit_vec_obj_y["X"], unit_vec_obj_y["Y"], unit_vec_obj_y["Z"])
-  gsd_y = ground_sample_distance(sample_spacing_y, unit_vec_y, scp)
+  gsd_row = plane.get("XDir", {}).get(
+    "LineSpacing", tifftag.get("ground_range_resolution")
+  )
+  gsd_col = plane.get("YDir", {}).get(
+    "SampleSpacing", tifftag.get("ground_azimuth_resolution")
+  )
 
   return ImageIndexRow(
-    filename=file_path.name,
+    directory=str(relative_directory),
+    filename=file_path.stem,
     filetype=file_path.suffix,
     classification=classification,
     datetime_collected=datetime_collected,
@@ -121,36 +122,82 @@ def parse_image_metadata(file_path: Path) -> ImageIndexRow:
     footprint=footprint,
     look_angle=look_angle,
     azimuth_angle=azimuth_angle,
-    ground_sample_distance_row=gsd_x,
-    ground_sample_distance_col=gsd_y,
+    ground_sample_distance_row=gsd_row,
+    ground_sample_distance_col=gsd_col,
     interpretation_rating=interpretation_rating,
   )
 
 
-def create_image_index_table(db_path: Path):
-  with spatialite_connect(db_path) as db:
-    cursor = db.cursor()
-    cursor.execute(ImageIndexTable.create_table_sql())
+def index_images(image_dir: Path, thumbnail_minsize: tuple[int, int] = (600, 400)):
+  if not image_dir.exists() or not image_dir.is_dir():
+    raise FileNotFoundError(f"Invalid folder path: {image_dir}")
 
-    for sql in ImageIndexTable.add_geometry_sql():
-      cursor.execute(sql)
+  load_env()
 
-
-def index_images(folder: Path):
-  if not folder.exists() or not folder.is_dir():
-    raise FileNotFoundError(f"Invalid folder path: {folder}")
   extensions = {".tif", ".tiff"}
 
-  image_index: list[ImageIndexRow] = []
-  for file in folder.rglob("*"):
+  thumbnail_dir = Path(os.environ["STATIC_DIR"]) / "thumbnails"
+  thumbnail_dir.mkdir(exist_ok=True)
+
+  image_index: list[ImageIndexTable] = []
+  for file in image_dir.rglob("*"):
     if file.suffix.lower() not in extensions:
       continue
 
-    image_index.append(parse_image_metadata(file))
+    info = gdalinfo(file)
+    relative_directory = file.parent.relative_to(image_dir)
+    metadata = parse_image_metadata(info, file, relative_directory)
 
-  db_path = Path("data/index.db")
-  if not db_path.exists():
-    create_image_index_table(db_path)
+    row = ImageIndexTable()
+    for key, value in metadata.items():
+      setattr(row, key, value)
 
-  with spatialite_connect(db_path) as db:
-    insert_records(db, cast(str, ImageIndexTable.table_name), image_index, "footprint")
+    image_index.append(row)
+
+    thumbnail_path = thumbnail_dir / f"{file.stem}.png"
+
+    width, height = info["size"]
+    gsd_x = metadata["ground_sample_distance_row"]
+    gsd_y = metadata["ground_sample_distance_col"]
+    gsd = max(gsd_x, gsd_y)
+
+    width = int(width * (gsd_x / gsd))
+    height = int(height * (gsd_y / gsd))
+    aspect = width / height
+    min_width, min_height = thumbnail_minsize
+
+    thumbnail_width = min_width if aspect < 1 else int(min_height * aspect)
+    thumbnail_height = min_height if aspect > 1 else int(min_width * aspect)
+
+    options = GdalTranslateOptions(outsize=(thumbnail_width, thumbnail_height))
+
+    gdal_translate(
+      input_path=file,
+      output_path=thumbnail_path,
+      output_format="PNG",
+      options=options,
+    )
+
+  db_path = Path(os.getenv("DB_DIR", "db")) / "index.db"
+
+  with SpatialDatabase(db_path) as db:
+    db.create_table(ImageIndexTable)
+    db.insert_models(image_index)
+
+
+def select_images_by_intersection(db_path: Path, polygon: Polygon):
+  with SpatialDatabase(db_path) as db:
+    where = "ST_Intersects(footprint, poly.geom)"
+    derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
+    with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"
+    cross_join = "poly"
+    params = {"polygon": polygon.to_wkt()}
+
+    return db.select_records(
+      ImageIndexTable,
+      with_clause=with_clause,
+      derived=derived,
+      cross_join=cross_join,
+      where=where,
+      params=params,
+    )
