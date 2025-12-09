@@ -71,7 +71,7 @@ def gdalinfo(
   if not path.exists():
     raise FileNotFoundError(f"Invalid path: {str(path)}")
 
-  gdalinfo_path = os.environ["GDAL_INFO"]
+  gdalinfo_path = os.environ["GDAL_PATH"] + "/gdalinfo.exe"
   cmd = [gdalinfo_path, "-json"]
 
   if min_max:
@@ -96,7 +96,7 @@ def gdal_translate(
   options: Optional[GdalTranslateOptions] = None,
   create_aux: bool = False,
 ):
-  gdal_translate_path = os.environ["GDAL_TRANSLATE"]
+  gdal_translate_path = os.environ["GDAL_PATH"] + "/gdal_translate.exe"
 
   cmd = [gdal_translate_path, "-of", output_format]
 
@@ -179,7 +179,7 @@ class Band(TypedDict):
   type: NumberTypes
 
 
-def band_ranges(path: Path, z: int = 3) -> list[tuple[int, int]]:
+def band_ranges(path: Path, z: int = 3, bound: bool = False) -> list[tuple[int, int]]:
   info = gdalinfo(path, stats="exact")
 
   bands = info.get("bands")
@@ -192,6 +192,14 @@ def band_ranges(path: Path, z: int = 3) -> list[tuple[int, int]]:
     mean = float(metadata.get("STATISTICS_MEAN", band["mean"]))
     std = float(metadata.get("STATISTICS_STDDEV", band["stdDev"]))
 
-    ranges.append((int(mean - z * std), int(mean + z * std)))
+    zstd = z * std
+    lower = mean - zstd
+    upper = mean + zstd
+
+    if bound:
+      lower = max(lower, band["minimum"])
+      upper = min(lower, band["maximum"])
+
+    ranges.append((int(lower), int(upper)))
 
   return ranges

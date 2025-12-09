@@ -452,10 +452,6 @@
     align-items: center;
     width: calc(21ch + 2.5rem);
   }
-  .date-input {
-    width: 100%;
-    padding-right: 2.5rem;
-  }
   .calendar-toggle {
     position: absolute;
     right: 2rem;

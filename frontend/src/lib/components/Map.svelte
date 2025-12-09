@@ -4,6 +4,7 @@
   import "maplibre-gl/dist/maplibre-gl.css";
 
   export let extent: GeoJSON.Polygon | null = null;
+  export let polygon: GeoJSON.Polygon | null = null;
   export let showSearchButton = false;
   export let onSearchExtent: (polygon: GeoJSON.Polygon) => void;
 
@@ -59,6 +60,18 @@
         [Math.max(...lngs), Math.max(...lats)],
       ];
       map.fitBounds(bounds as maplibre.LngLatBoundsLike);
+    }
+
+    if (polygon) {
+      map.addSource("footprint", {
+        type: "geojson",
+        data: polygon,
+      });
+      map.addLayer({
+        id: "footprint",
+        type: "line",
+        source: "footprint",
+      });
     }
 
     resizeObserver = new ResizeObserver(() => {

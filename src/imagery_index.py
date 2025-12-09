@@ -5,10 +5,10 @@ from pathlib import Path
 from typing import Literal, Optional, TypeAlias, TypedDict, Union, cast
 
 from .env import load_env
-from .gdal_utils import GdalTranslateOptions, band_ranges, gdal_translate, gdalinfo
+from .gdal_utils import GdalTranslateOptions, gdal_translate, gdalinfo
 from .geometry import Polygon
 from .math_utils import dot, norm
-from .sicd_model import Sicd, SicdObject
+from .sicd_model import SicdObject
 from .spatialite import Field, Model, SpatialDatabase
 
 
@@ -196,6 +196,7 @@ def select_images_by_intersection(db_path: Path, polygon: Polygon):
     return db.select_records(
       ImageIndexTable,
       with_clause=with_clause,
+      geo_format="AsGeoJSON",
       derived=derived,
       cross_join=cross_join,
       where=where,

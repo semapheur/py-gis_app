@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import os
 import sqlite3
 from contextlib import contextmanager
@@ -12,7 +13,6 @@ from typing import (
   Mapping,
   Optional,
   Sequence,
-  TypeAlias,
   Union,
 )
 
@@ -20,9 +20,11 @@ from src.env import load_env
 
 load_env()
 
-SqliteTypes: TypeAlias = Union[bytes, int, float, str]
+SqliteTypes = Union[bytes, int, float, str]
 
-Geometry: TypeAlias = Literal[
+GeoFormat = Literal["AsText", "AsGeoJSON"]
+
+Geometry = Literal[
   "POINT",
   "LINESTRING",
   "POLYGON",
@@ -293,6 +295,7 @@ class SpatialDatabase:
     self,
     table: type[Model],
     columns: Optional[Sequence[str]] = None,
+    geo_format: GeoFormat = "AsGeoJSON",
     derived: Optional[dict[str, str]] = None,
     with_clause: Optional[str] = None,
     cross_join: Optional[str] = None,
@@ -327,7 +330,7 @@ class SpatialDatabase:
     returned_columns: list[str] = []
     for col in columns:
       if col in geometry_fields:
-        sql_columns.append(f"AsText({col}) AS {col}")
+        sql_columns.append(f"{geo_format}({col}) AS {col}")
       else:
         sql_columns.append(col)
 
@@ -368,6 +371,7 @@ class SpatialDatabase:
     self,
     table: type[Model],
     columns: Optional[Sequence[str]] = None,
+    geo_format: GeoFormat = "AsGeoJSON",
     with_clause: Optional[str] = None,
     where: Optional[str] = None,
     limit: Optional[int] = None,
@@ -377,6 +381,7 @@ class SpatialDatabase:
     rows, columns = self._select_rows(
       table,
       columns=columns,
+      geo_format=geo_format,
       with_clause=with_clause,
       where=where,
       limit=limit,
@@ -390,6 +395,7 @@ class SpatialDatabase:
     self,
     table: type[Model],
     columns: Optional[Sequence[str]] = None,
+    geo_format: GeoFormat = "AsGeoJSON",
     derived: Optional[dict[str, str]] = None,
     with_clause: Optional[str] = None,
     cross_join: Optional[str] = None,
@@ -401,6 +407,7 @@ class SpatialDatabase:
     rows, columns = self._select_rows(
       table,
       columns=columns,
+      geo_format=geo_format,
       derived=derived,
       with_clause=with_clause,
       cross_join=cross_join,
@@ -419,7 +426,11 @@ class SpatialDatabase:
           result_row[col] = row[i]
           continue
 
-        value = field.convert(row[i])
+        if field.geometry_type is None:
+          value = field.convert(row[i])
+        else:
+          value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
+
         result_row[col] = value
 
       results.append(result_row)

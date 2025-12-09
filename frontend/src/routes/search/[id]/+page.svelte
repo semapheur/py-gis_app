@@ -14,6 +14,11 @@
   let images: ImageMetadata[] = $state([]);
   let loading = true;
   let error: string | null = null;
+  let highlightedFootprint: GeoJSON.Polygon | null = $state(null);
+
+  function onHoverImage(polygon: GeoJSON.Polygon | null) {
+    highlightedFootprint = polygon;
+  }
 
   onMount(async () => {
     polygon = getPolygon(id);
@@ -50,11 +55,11 @@
 <main class="container">
   <Splitpanes>
     <Pane>
-      <Map extent={polygon} />
+      <Map extent={polygon} polygon={highlightedFootprint} />
     </Pane>
     <Pane>
       <ImageFilterForm />
-      <ImageGrid {images} />
+      <ImageGrid {images} {onHoverImage} />
     </Pane>
   </Splitpanes>
 </main>

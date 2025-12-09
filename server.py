@@ -2,7 +2,6 @@ import json
 import os
 from http.server import HTTPServer, SimpleHTTPRequestHandler
 from pathlib import Path
-from urllib.parse import parse_qs, urlparse
 
 from src.env import load_env
 from src.geometry import Polygon
