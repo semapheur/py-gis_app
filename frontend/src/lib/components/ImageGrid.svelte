@@ -3,7 +3,7 @@
   import ImageCard from "$lib/components/ImageCard.svelte";
 
   export let images: ImageMetadata[] = [];
-  export let onHoverImage: (footprint: GeoJSON.Polygon | null) => void;
+  export let onHoverImage: (image: ImageMetadata | null) => void;
 </script>
 
 {#if images.length === 0}

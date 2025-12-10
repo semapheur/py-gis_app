@@ -169,7 +169,11 @@ def index_images(image_dir: Path, thumbnail_minsize: tuple[int, int] = (600, 400
     thumbnail_width = min_width if aspect < 1 else int(min_height * aspect)
     thumbnail_height = min_height if aspect > 1 else int(min_width * aspect)
 
-    options = GdalTranslateOptions(outsize=(thumbnail_width, thumbnail_height))
+    options = GdalTranslateOptions(
+      outsize=(thumbnail_width, thumbnail_height),
+      a_srs="EPSG:4326",
+      a_ullr=[0, 1, 1, 0],
+    )
 
     gdal_translate(
       input_path=file,

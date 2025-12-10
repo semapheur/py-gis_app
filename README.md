@@ -1,5 +1,73 @@
-{'type': 'Polygon', 'coordinates': [[[8.51465933370227, 48.94427064678439], [14.73907893003144, 48.94427064678439], [14.73907893003144, 52.87026742245655], [8.51465933370227, 52.87026742245655], [8.51465933370227, 48.94427064678439]]]}
+export function orderFootprintCorners(coords: [number, number][]): [number, number][] {
+  // Remove closing coordinate if present
+  if (coords.length === 5) coords = coords.slice(0, 4);
 
+  // Compute centroid
+  const cx = coords.reduce((s, c) => s + c[0], 0) / coords.length;
+  const cy = coords.reduce((s, c) => s + c[1], 0) / coords.length;
+
+  // Each point gets angle relative to centroid
+  // MapLibre's "0 degrees" is pointing North (−Y)
+  // But geographic coordinates are (lng, lat) → lat increases upward (north)
+  // We want our angle to be 0° at the top edge and increase clockwise.
+  const withAngles = coords.map(([x, y]) => ({
+    x,
+    y,
+    angle: Math.atan2(y - cy, x - cx)  // atan2(dy, dx)
+  }));
+
+  /*
+      atan2 returns:
+      
+      0 rad → right
+      π/2 → up
+      π → left
+      -π/2 → down
+
+      We want angles like:
+
+      Top-Left     π/2 + small
+      Top-Right    π/2 - small
+      Bottom-Right -π/2 - small
+      Bottom-Left  -π/2 + small
+
+      Sorted clockwise starting from top-left.
+  */
+
+  // Convert to degrees for easier debugging (not needed)
+  withAngles.forEach((p) => p.angleDeg = p.angle * (180 / Math.PI));
+
+  // Sort clockwise but with top-most first
+  withAngles.sort((a, b) => a.angle - b.angle);
+
+  // After sorting, points are in CCW order.
+  // MapLibre wants TOP-LEFT first, but sorting by angle starts at the right side.
+  // So we must rotate the array until the first element is the top-left point.
+  const sorted = withAngles;
+
+  // Determine top-left point → max latitude (y) and min longitude (x)
+  let topLeftIndex = 0;
+  let bestScore = -Infinity;
+
+  sorted.forEach((p, i) => {
+    const score = p.y * 10000 - p.x; // prioritize highest lat, then lowest lng
+    if (score > bestScore) {
+      bestScore = score;
+      topLeftIndex = i;
+    }
+  });
+
+  // Rotate array so that top-left is first
+  const rolled = [
+    sorted[topLeftIndex],
+    sorted[(topLeftIndex + 1) % 4],
+    sorted[(topLeftIndex + 2) % 4],
+    sorted[(topLeftIndex + 3) % 4]
+  ];
+
+  // Now return simple coordinate pairs
+  return rolled.map((p) => [p.x, p.y]);
+}
 
 # National imagery transmission format (NTIF)
 

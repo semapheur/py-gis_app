@@ -2,7 +2,7 @@
   import { type ImageMetadata } from "$lib/utils/types";
 
   export let image: ImageMetadata;
-  export let onHoverImage: (footprint: GeoJSON.Polygon | null) => void;
+  export let onHoverImage: (image: ImageMetadata | null) => void;
 
   const datetime = new Date(image.datetime_collected);
   const dateText = datetime.toISOString().slice(0, 10);
@@ -22,7 +22,7 @@
   <img
     src={`/thumbnails/${image.filename}.png`}
     alt={image.filename}
-    onmouseenter={() => onHoverImage(image.footprint)}
+    onmouseenter={() => onHoverImage(image)}
   />
 
   <div class="header">

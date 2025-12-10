@@ -6,7 +6,7 @@
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
   import { getPolygon } from "$lib/utils/searchStore";
-  import { type ImageMetadata } from "$lib/utils/types";
+  import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
 
   const id = page.params.id;
 
@@ -14,10 +14,17 @@
   let images: ImageMetadata[] = $state([]);
   let loading = true;
   let error: string | null = null;
-  let highlightedFootprint: GeoJSON.Polygon | null = $state(null);
+  let imagePreview: ImagePreviewInfo | null = $state(null);
 
-  function onHoverImage(polygon: GeoJSON.Polygon | null) {
-    highlightedFootprint = polygon;
+  function onHoverImage(image: ImageMetadata | null) {
+    imagePreview = image
+      ? {
+          filename: image.filename,
+          coordinates: image.footprint.coordinates[0],
+          azimuth_angle: image.azimuth_angle,
+          look_angle: image.look_angle,
+        }
+      : null;
   }
 
   onMount(async () => {
@@ -55,7 +62,7 @@
 <main class="container">
   <Splitpanes>
     <Pane>
-      <Map extent={polygon} polygon={highlightedFootprint} />
+      <Map extent={polygon} {imagePreview} />
     </Pane>
     <Pane>
       <ImageFilterForm />

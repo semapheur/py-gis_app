@@ -14,3 +14,10 @@ export interface ImageMetadata {
   interpretation_rating: number;
   coverage: number;
 }
+
+export interface ImagePreviewInfo {
+  filename: string;
+  coordinates: GeoJSON.Position[];
+  azimuth_angle: number;
+  look_angle: number;
+}

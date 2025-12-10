@@ -13,17 +13,20 @@ if __name__ == "__main__":
   image_path = Path("data/CAPELLA_C13_SP_SLC_HH_20241122024652_20241122024723.tif")
   thumbnail_path = Path("CAPELLA_C13_SP_SLC_HH_20241122024652_20241122024723.png")
 
-  ranges = band_ranges(image_path, 1000)
-  print(ranges)
+  # ranges = band_ranges(image_path, 1000)
 
-  options = GdalTranslateOptions(outsize=(600, 598), scale_x=ranges)
-  gdal_translate(image_path, thumbnail_path, "PNG", options)
+  options = options = GdalTranslateOptions(
+    outsize=(600, 598),
+    a_srs="EPSG:4326",
+    a_ullr=[0, 1, 1, 0],
+  )
+  # gdal_translate(image_path, thumbnail_path, "PNG", options)
 
-  # test = gdalinfo(image_path)
+  test = gdalinfo(image_path)
   # tifftag = test.get("metadata", {}).get("", {}).get("SICD_METADATA")
   # tifftag = json.loads(tifftag)
 
-# with open("sicd.json", "w") as f:
-#  json.dump(tifftag, f, indent=2)
+  with open("test.json", "w") as f:
+    json.dump(test, f, indent=2)
 
 # db_path = Path("db/index.db")

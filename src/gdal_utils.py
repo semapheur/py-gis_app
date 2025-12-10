@@ -60,6 +60,8 @@ class GdalTranslateOptions:
   expand: Optional[Literal["gray", "rgb", "rgba"]] = None
   colorinterp: Optional[ColorInterp] = None
   colorinterp_x: Optional[tuple[ColorInterp, ...]] = None
+  a_srs: Optional[str] = None
+  a_ullr: Optional[list[int]] = None
   creation_options: Optional[dict[str, str]] = None
 
 
@@ -140,6 +142,12 @@ def gdal_translate(
     if options.colorinterp_x is not None:
       for band, interp in enumerate(options.colorinterp_x):
         cmd += [f"-colorinterp_{band + 1}", interp]
+
+    if options.a_srs is not None:
+      cmd += ["-a_srs", options.a_srs]
+
+    if options.a_ullr is not None:
+      cmd += ["-a_ullr"] + [str(i) for i in options.a_ullr]
 
     if options.creation_options is not None:
       for k, v in options.creation_options.items():

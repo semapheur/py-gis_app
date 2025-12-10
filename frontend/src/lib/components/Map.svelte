@@ -2,15 +2,60 @@
   import { onMount, onDestroy } from "svelte";
   import * as maplibre from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
+  import { type ImagePreviewInfo } from "$lib/utils/types";
 
   export let extent: GeoJSON.Polygon | null = null;
-  export let polygon: GeoJSON.Polygon | null = null;
+  export let imagePreview: ImagePreviewInfo | null = null;
   export let showSearchButton = false;
   export let onSearchExtent: (polygon: GeoJSON.Polygon) => void;
 
   let map: maplibre.Map;
   let mapContainer: HTMLDivElement;
+  let mapLoaded = false;
+  let lastPreview: ImagePreviewInfo | null = null;
   let resizeObserver: ResizeObserver;
+
+  function reorderFootprint(coords: GeoJSON.Position[], map: maplibre.Map) {
+    // Maplibre order: top-left, top-right, bottom-right, bottom left
+
+    if (coords.length === 5) coords = coords.slice(0, 4);
+
+    // project into screen space
+    const points = coords.map(([lng, lat]) => {
+      const p = map.project([lng, lat]);
+      return { lng, lat, x: p.x, y: p.y, angle: 0 };
+    });
+
+    // centroid in screen space
+    const cx = points.reduce((s, p) => s + p.x, 0) / points.length;
+    const cy = points.reduce((s, p) => s + p.y, 0) / points.length;
+
+    // sort counterclockwise around centroid in screen space
+    points.forEach((p) => {
+      p.angle = Math.atan2(p.y - cy, p.x - cx);
+    });
+    points.sort((a, b) => a.angle - b.angle);
+
+    let topLeftIndex = 0;
+    let bestScore = Infinity;
+
+    points.forEach((p, i) => {
+      const score = p.y * 1e5 + p.x;
+      if (score < bestScore) {
+        bestScore = score;
+        topLeftIndex = i;
+      }
+    });
+
+    const ordered = [
+      points[topLeftIndex],
+      points[(topLeftIndex + 1) % 4],
+      points[(topLeftIndex + 2) % 4],
+      points[(topLeftIndex + 3) % 4],
+    ];
+
+    return ordered.map((p) => [p.lng, p.lat]);
+  }
 
   function getExtentGeoJSON(map: maplibre.Map): GeoJSON.Polygon {
     const bounds = map.getBounds();
@@ -34,8 +79,20 @@
     };
   }
 
+  function getBounds(
+    coordinates: GeoJSON.Position[],
+  ): maplibre.LngLatBoundsLike {
+    const lats = coordinates.map((c) => c[1]);
+    const lngs = coordinates.map((c) => c[0]);
+    const bounds = [
+      [Math.min(...lngs), Math.min(...lats)],
+      [Math.max(...lngs), Math.max(...lats)],
+    ];
+    return bounds as maplibre.LngLatBoundsLike;
+  }
+
   function searchCurrentExtent() {
-    if (!(map && onSearchExtent)) return;
+    if (!map || !onSearchExtent) return;
 
     const polygon = getExtentGeoJSON(map);
     onSearchExtent(polygon);
@@ -46,33 +103,36 @@
 
     map = new maplibre.Map({
       container: mapContainer,
-      style:
-        "https://demotiles.maplibre.org/styles/osm-bright-gl-style/style.json",
+      style: {
+        version: 8,
+        sources: {
+          osm: {
+            type: "raster",
+            tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+            tileSize: 256,
+            attribution: "&copy; OpenStreetMap Contributors",
+            maxzoom: 19,
+          },
+        },
+        layers: [
+          {
+            id: "osm",
+            type: "raster",
+            source: "osm", // This must match the source key above
+          },
+        ],
+      },
     });
     map.addControl(new maplibre.NavigationControl(), "top-right");
 
-    if (extent) {
-      const coordinates = extent.coordinates[0];
-      const lats = coordinates.map((c) => c[1]);
-      const lngs = coordinates.map((c) => c[0]);
-      const bounds = [
-        [Math.min(...lngs), Math.min(...lats)],
-        [Math.max(...lngs), Math.max(...lats)],
-      ];
-      map.fitBounds(bounds as maplibre.LngLatBoundsLike);
-    }
+    map.on("load", () => {
+      mapLoaded = true;
 
-    if (polygon) {
-      map.addSource("footprint", {
-        type: "geojson",
-        data: polygon,
-      });
-      map.addLayer({
-        id: "footprint",
-        type: "line",
-        source: "footprint",
-      });
-    }
+      if (extent) {
+        const bounds = getBounds(extent.coordinates[0]);
+        map.fitBounds(bounds, { padding: 40 });
+      }
+    });
 
     resizeObserver = new ResizeObserver(() => {
       if (map) map.resize();
@@ -84,11 +144,78 @@
       map.remove();
     });
   });
+
+  $: if (map && mapLoaded && imagePreview && imagePreview !== lastPreview) {
+    lastPreview = imagePreview;
+
+    const orderedCoords = reorderFootprint(imagePreview.coordinates, map);
+    console.log(orderedCoords);
+    const url = `/thumbnails/${imagePreview.filename}.png`;
+
+    const imageSource = map.getSource("image-preview") as maplibre.ImageSource;
+
+    if (imageSource !== undefined) {
+      imageSource.updateImage({
+        url: url,
+        coordinates: orderedCoords,
+      });
+    } else {
+      map.addSource("image-preview", {
+        type: "image",
+        url: url,
+        coordinates: orderedCoords,
+      });
+
+      map.addLayer({
+        id: "image-preview",
+        type: "raster",
+        source: "image-preview",
+      });
+    }
+
+    const footprintSource = map.getSource(
+      "footprint",
+    ) as maplibre.GeoJSONSource;
+
+    if (footprintSource !== undefined) {
+      footprintSource.setData({
+        type: "Polygon",
+        coordinates: [imagePreview.coordinates],
+      });
+    } else {
+      map.addSource("footprint", {
+        type: "geojson",
+        data: {
+          type: "Polygon",
+          coordinates: [imagePreview.coordinates],
+        },
+      });
+
+      map.addLayer({
+        id: "footprint",
+        type: "line",
+        source: "footprint",
+        paint: {
+          "line-color": "#f4320b",
+          "line-width": 3,
+        },
+      });
+    }
+
+    const bounds = getBounds(imagePreview.coordinates);
+    map.fitBounds(bounds, {
+      padding: 40,
+      bearing: imagePreview.azimuth_angle,
+      pitch: imagePreview.look_angle,
+      animate: true,
+      duration: 500,
+    });
+  }
 </script>
 
 <div class="map" bind:this={mapContainer}>
   {#if showSearchButton}
-    <button class="btn-search-extent" on:click={searchCurrentExtent}>
+    <button class="btn-search-extent" onclick={searchCurrentExtent}>
       Search extent
     </button>
   {/if}
