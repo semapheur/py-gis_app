@@ -52,7 +52,7 @@ class GeoDataObject(TypedDict):
 
 
 class Polynomial(TypedDict):
-  Coeffs: list[float]
+  Coefs: list[list[float]]
 
 
 class WeightType(TypedDict):
@@ -213,6 +213,19 @@ class RadarCollectionObject(TypedDict):
   Area: Optional[AreaObject]
 
 
+class NoiseLevelObject(TypedDict):
+  NoiseLevelType: Literal["ABSOLUTE", "RELATIVE"]
+  NoisePoly: Polynomial
+
+
+class RadiometricObject(TypedDict):
+  NoiseLevel: Optional[NoiseLevelObject]
+  RCSSFPoly: Optional[Polynomial]
+  SigmaZeroSFPoly: Optional[Polynomial]
+  BetaZeroSFPoly: Optional[Polynomial]
+  GammaZeroSFPoly: Optional[Polynomial]
+
+
 class Sicd(TypedDict):
   CollectionInfo: CollectionInfoObject
   ImageCreation: dict
@@ -223,7 +236,7 @@ class Sicd(TypedDict):
   Position: dict
   RadarCollection: RadarCollectionObject
   SCPCOA: SceneCenterPointCenterOfAperture
-  Radiometric: Optional[dict]
+  Radiometric: Optional[RadiometricObject]
   Antenna: Optional[dict]
   ErrorStatistics: Optional[dict]
   PFA: dict
