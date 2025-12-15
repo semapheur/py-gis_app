@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, TypeAlias, TypedDict, Union, cast
 
-from src.env import load_env
+from src.const import INDEX_DB, STATIC_DIR
 from src.gdal_utils import (
   CogOptions,
   GdalTranslateOptions,
@@ -18,7 +18,7 @@ from src.gdal_utils import (
 )
 from src.geometry import Polygon
 from src.hashing import hash_geotiff
-from src.index.catalog import CatalogTable, upsert_catalog
+from src.index.catalog import CatalogTable, get_catalogs
 from src.math_utils import dot, norm
 from src.sicd_model import SicdObject
 from src.spatialite import (
@@ -367,10 +367,8 @@ class IndexAction(Enum):
   DUPLICATE = "duplicate"
 
 
-def check_image(
-  db_path: Path, image_path: Path, hash: bytes
-) -> tuple[IndexAction, Union[str, None]]:
-  with SpatialDatabase(db_path) as db:
+def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, None]]:
+  with SpatialDatabase(INDEX_DB) as db:
     derived_columns = {
       "path": "concat(catalog.path, '/', images.relative_path, '/', images.filename, images.filetype)",
     }
@@ -395,37 +393,44 @@ def check_image(
 
     return (IndexAction.REINDEX_PARENT, None)
 
-  if indexed_path == image_path:
+  if indexed_path == image_path.resolve():
     return (IndexAction.INDEXED, None)
 
   return (IndexAction.DUPLICATE, None)
 
 
 def index_images(
-  image_dir: Path,
-  catalog_name: str,
+  catalog_id: int,
   thumbnail_minsize: tuple[int, int] = (600, 400),
 ):
-  if not image_dir.exists() or not image_dir.is_dir():
-    raise FileNotFoundError(f"Invalid folder path: {image_dir}")
-
-  load_env()
-  db_path = Path(os.getenv("DB_DIR", "db")) / "index.db"
-
   extensions = {".tif", ".tiff"}
 
-  cog_dir = Path(os.environ["STATIC_DIR"]) / "cog"
+  cog_dir = STATIC_DIR / "cog"
   cog_dir.mkdir(exist_ok=True)
 
-  thumbnail_dir = Path(os.environ["STATIC_DIR"]) / "thumbnails"
+  thumbnail_dir = STATIC_DIR / "thumbnails"
   thumbnail_dir.mkdir(exist_ok=True)
 
-  with SpatialDatabase(db_path) as db:
-    db.create_table(CatalogTable)
+  with SpatialDatabase(INDEX_DB) as db:
     db.create_table(ImageIndexTable)
     db.create_table(RadiometricParamsTable)
 
-    catalog_id = upsert_catalog(db, str(image_dir), catalog_name)
+    catalog_record = db.select_records(
+      CatalogTable,
+      columns=("path",),
+      where="id = :id",
+      params={"id": catalog_id},
+    )
+    if not catalog_record:
+      from pprint import pformat
+
+      catalogs = get_catalogs()
+      raise ValueError(
+        f"Failed to get path for catalog id {id}. Registered catalogs\n",
+        f"{pformat(catalogs, indent=2)}",
+      )
+
+    image_dir = cast(Path, catalog_record[0]["path"])
 
     image_index: list[ImageIndexTable] = []
     radiometric_index: list[RadiometricParamsTable] = []
@@ -434,7 +439,7 @@ def index_images(
         continue
 
       image_hash = hash_geotiff(file)
-      action, old_stem = check_image(db_path, file.resolve(), image_hash)
+      action, old_stem = check_image(file, image_hash)
 
       if action == IndexAction.INDEXED:
         continue
@@ -501,8 +506,8 @@ def index_images(
       db.insert_models(radiometric_index)
 
 
-def select_images_by_intersection(db_path: Path, polygon: Polygon):
-  with SpatialDatabase(db_path) as db:
+def get_images_by_intersection(polygon: Polygon):
+  with SpatialDatabase(INDEX_DB) as db:
     where = "ST_Intersects(footprint, poly.geom)"
     derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
     with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"

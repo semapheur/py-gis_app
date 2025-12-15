@@ -2,10 +2,6 @@ import os
 import subprocess
 from pathlib import Path
 
-from src.env import load_env
-
-load_env()
-
 
 def qgis_raster_calculator(input_path: Path, output_path: Path, expression: str):
   qgis_process = os.environ["QGIS_PATH"] + "/qgis_process.exe"

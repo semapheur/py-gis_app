@@ -6,10 +6,6 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional, TypedDict, Union, cast
 
-from src.env import load_env
-
-load_env()
-
 ResampleAlgorithms = Literal[
   "nearest",
   "bilinear",

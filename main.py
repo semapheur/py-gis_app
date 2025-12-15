@@ -11,12 +11,18 @@ from src.gdal_utils import (
   gdalwarp,
   geotiff_to_thumbnail,
 )
-from src.index.images import ImageIndexTable, index_images
+from src.index.catalog import edit_catalog, get_catalogs
+
+# from src.index.images import ImageIndexTable, index_images
 from src.spatialite import SpatialDatabase
 
 if __name__ == "__main__":
-  image_folder = Path("data")
-  index_images(image_folder, "main")
+  # edit_catalog(1, Path("./data"), "main")
+
+  catalogs = get_catalogs()
+  pprint(catalogs, indent=2)
+  # image_folder = Path("data")
+  # index_images(image_folder, "main")
 
   # file_stem = "CAPELLA_C13_SP_SLC_HH_20241122024652_20241122024723"
   # image_path = Path(f"data/{file_stem}.tif")

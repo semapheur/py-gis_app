@@ -17,10 +17,6 @@ from typing import (
   Union,
 )
 
-from src.env import load_env
-
-load_env()
-
 SqliteTypes = Union[bytes, int, float, str, None]
 
 GeoFormat = Literal["AsText", "AsGeoJSON"]
@@ -426,7 +422,7 @@ class SpatialDatabase:
   def select_models(
     self,
     table: type[Model],
-    columns: Optional[Sequence[str]] = None,
+    columns: Optional[Union[Literal["*"], tuple[str, ...]]] = None,
     geo_format: GeoFormat = "AsGeoJSON",
     with_clause: Optional[str] = None,
     where: Optional[str] = None,
@@ -434,7 +430,7 @@ class SpatialDatabase:
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteTypes], tuple[SqliteTypes, ...]]] = None,
   ) -> list[Model]:
-    rows, columns = self._select_rows(
+    rows, return_columns = self._select_rows(
       table,
       columns=columns,
       geo_format=geo_format,
@@ -450,7 +446,7 @@ class SpatialDatabase:
   def select_records(
     self,
     table: type[Model],
-    columns: Optional[Sequence[str]] = None,
+    columns: Optional[Union[Literal["*"], tuple[str, ...]]] = None,
     geo_format: GeoFormat = "AsGeoJSON",
     derived: Optional[dict[str, str]] = None,
     with_clause: Optional[str] = None,
@@ -459,8 +455,8 @@ class SpatialDatabase:
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteTypes], tuple[SqliteTypes, ...]]] = None,
-  ) -> list[dict[str, SqliteTypes]]:
-    rows, columns = self._select_rows(
+  ) -> list[dict[str, Any]]:
+    rows, return_columns = self._select_rows(
       table,
       columns=columns,
       geo_format=geo_format,
@@ -476,7 +472,7 @@ class SpatialDatabase:
     results: list[dict[str, SqliteTypes]] = []
     for row in rows:
       result_row = {}
-      for i, col in enumerate(columns):
+      for i, col in enumerate(return_columns):
         field = table._fields.get(col)
         if field is None:
           result_row[col] = row[i]

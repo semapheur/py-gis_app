@@ -3,16 +3,10 @@ import mimetypes
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import BufferedReader
-from pathlib import Path
 
-from src.env import load_env
+from src.const import STATIC_DIR
 from src.geometry import Polygon
-from src.imagery_index import select_images_by_intersection
-
-load_env()
-
-STATIC_DIR = os.getenv("STATIC_DIR", "./static")
-INDEX_DB = Path(os.getenv("DB_DIR", "db")) / "index.db"
+from src.index.images import get_images_by_intersection
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -21,13 +15,13 @@ class Handler(SimpleHTTPRequestHandler):
       return path
 
     rel = path.lstrip("/")
-    full = os.path.join(STATIC_DIR, rel)
+    full = STATIC_DIR / rel
 
-    if os.path.isdir(full):
-      return os.path.join(STATIC_DIR, "index.html")
+    if full.is_dir():
+      return str(STATIC_DIR / "index.html")
 
-    if os.path.exists(full):
-      return full
+    if full.exists():
+      return str(full)
 
     return super().translate_path(path)
 
@@ -125,7 +119,7 @@ class Handler(SimpleHTTPRequestHandler):
       polygon_geojson = json.loads(body)
 
       polygon = Polygon.parse_geojson(polygon_geojson)
-      result = select_images_by_intersection(INDEX_DB, polygon)
+      result = get_images_by_intersection(polygon)
 
       self.send_response(200)
       self.send_header("Content-Type", "application/json")
