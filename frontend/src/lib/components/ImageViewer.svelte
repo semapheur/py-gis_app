@@ -1,45 +1,49 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import Map from "ol/Map";
-  import TileLayer from "ol/layer/WebGLTile.js";
+  import WebGLTileLayer, { type Style } from "ol/layer/WebGLTile.js";
   import GeoTIFF from "ol/source/GeoTIFF.js";
-  import View from "ol/View";
-  import { Projection } from "ol/proj";
 
-  const epsg4326 = new Projection({
-    code: "EPSG:4326",
-    units: "degrees",
-    axisOrientation: "enu",
-  });
+  import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+  import frag from "$lib/shaders/slc_radiometric_correction.frag.glsl?raw";
 
   //useGeographic();
 
-  export let fileName: string | undefined;
+  export let image: ImageMetadata | null = null;
+  export let radiometricParams: RadiometricParams | null = null;
 
   let map: Map | null = null;
   let target: HTMLDivElement;
 
   onMount(() => {
-    if (fileName === undefined) return;
+    if (!image) return;
 
     const source = new GeoTIFF({
       sources: [
         {
-          url: `http://localhost:8080/cog/${fileName}.cog.tif`,
-          projection: epsg4326,
+          url: `http://localhost:8080/cog/${image.filename}.cog.tif`,
         },
       ],
     });
 
-    const test = source.getView().then((viewConfig) => console.log(viewConfig));
+    const style = radiometricParams
+      ? ({
+          fragmentShader: frag,
+          uniforms: {
+            u_noiseCoefs: radiometricParams.noise,
+            u_sigmaZeroCoefs: radiometricParams.sigma0,
+          },
+        } as Style)
+      : undefined;
+
+    const layer = new WebGLTileLayer({
+      source: source,
+      style: style,
+    });
 
     map = new Map({
       target,
-      layers: [
-        new TileLayer({
-          source: source,
-        }),
-      ],
+      layers: [layer],
       view: source.getView(),
     });
   });

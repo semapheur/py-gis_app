@@ -3,17 +3,26 @@
   import * as maplibre from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { type ImagePreviewInfo } from "$lib/utils/types";
+  import { bboxToWkt, type BBox } from "$lib/utils/geometry";
 
   export let extent: GeoJSON.Polygon | null = null;
   export let imagePreview: ImagePreviewInfo | null = null;
   export let showSearchButton = false;
-  export let onSearchExtent: (polygon: GeoJSON.Polygon) => void;
+  export let onSearchExtent: (polygonWkt: string) => void;
 
   let map: maplibre.Map;
   let mapContainer: HTMLDivElement;
   let mapLoaded = false;
   let lastPreview: ImagePreviewInfo | null = null;
   let resizeObserver: ResizeObserver;
+
+  function decimalsForZoom(zoom: number): number {
+    if (zoom >= 15) return 6;
+    if (zoom >= 12) return 5;
+    if (zoom >= 9) return 4;
+    if (zoom >= 6) return 3;
+    return 2;
+  }
 
   function reorderFootprint(coords: GeoJSON.Position[], map: maplibre.Map) {
     // Maplibre order: top-left, top-right, bottom-right, bottom left
@@ -57,26 +66,20 @@
     return ordered.map((p) => [p.lng, p.lat]);
   }
 
-  function getExtentGeoJSON(map: maplibre.Map): GeoJSON.Polygon {
+  function getExtentWkt(map: maplibre.Map): string {
     const bounds = map.getBounds();
+    const zoom = map.getZoom();
 
-    const west = bounds.getWest();
-    const south = bounds.getSouth();
-    const east = bounds.getEast();
-    const north = bounds.getNorth();
+    const bbox: BBox = [
+      bounds.getWest(),
+      bounds.getSouth(),
+      bounds.getEast(),
+      bounds.getNorth(),
+    ];
 
-    return {
-      type: "Polygon",
-      coordinates: [
-        [
-          [west, south],
-          [east, south],
-          [east, north],
-          [west, north],
-          [west, south],
-        ],
-      ],
-    };
+    const decimals = decimalsForZoom(zoom);
+
+    return bboxToWkt(bbox, decimals);
   }
 
   function getBounds(
@@ -94,8 +97,8 @@
   function searchCurrentExtent() {
     if (!map || !onSearchExtent) return;
 
-    const polygon = getExtentGeoJSON(map);
-    onSearchExtent(polygon);
+    const polygonWkt = getExtentWkt(map);
+    onSearchExtent(polygonWkt);
   }
 
   onMount(() => {
@@ -149,7 +152,6 @@
     lastPreview = imagePreview;
 
     const orderedCoords = reorderFootprint(imagePreview.coordinates, map);
-    console.log(orderedCoords);
     const url = `/thumbnails/${imagePreview.filename}.png`;
 
     const imageSource = map.getSource("image-preview") as maplibre.ImageSource;

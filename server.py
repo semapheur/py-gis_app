@@ -3,10 +3,15 @@ import mimetypes
 import os
 from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import BufferedReader
+from typing import Any, Callable, TypedDict, TypeVar
 
 from src.const import STATIC_DIR
-from src.geometry import Polygon
-from src.index.images import get_images_by_intersection
+from src.hashing import decode_sha256_from_b64
+from src.index.images import get_image_info, get_images_by_intersection
+from src.index.radiometric import get_radiometric_parameters
+
+P = TypeVar("P")
+R = TypeVar("R")
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -76,6 +81,14 @@ class Handler(SimpleHTTPRequestHandler):
       self.handle_query_images()
       return
 
+    if self.path == "/api/image-info":
+      self.handle_image_info()
+      return
+
+    if self.path == "/api/radiometric-params":
+      self.handle_parametric_params()
+      return
+
     self.send_error(404, "Unknown POST endpoint")
 
   def do_OPTIONS(self):
@@ -112,14 +125,12 @@ class Handler(SimpleHTTPRequestHandler):
 
       remaining -= len(chunk)
 
-  def handle_query_images(self):
+  def _handle_json(self, fn: Callable[[P], R]):
     try:
       content_length = int(self.headers.get("Content-Length", 0))
       body = self.rfile.read(content_length).decode("utf-8")
-      polygon_geojson = json.loads(body)
-
-      polygon = Polygon.parse_geojson(polygon_geojson)
-      result = get_images_by_intersection(polygon)
+      payload = json.loads(body)
+      result: R = fn(payload)
 
       self.send_response(200)
       self.send_header("Content-Type", "application/json")
@@ -128,6 +139,36 @@ class Handler(SimpleHTTPRequestHandler):
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
+
+  def handle_query_images(self):
+    class Payload(TypedDict):
+      wkt: str
+
+    def logic(payload: Payload) -> list[dict[str, Any]]:
+      wkt = payload["wkt"]
+      return get_images_by_intersection(wkt)
+
+    self._handle_json(logic)
+
+  def handle_image_info(self):
+    class Payload(TypedDict):
+      id: str
+
+    def logic(payload: Payload):
+      hash = decode_sha256_from_b64(payload["id"])
+      return get_image_info(hash)
+
+    self._handle_json(logic)
+
+  def handle_parametric_params(self):
+    class Payload(TypedDict):
+      id: str
+
+    def logic(payload: Payload):
+      hash = decode_sha256_from_b64(payload["id"])
+      return get_radiometric_parameters(hash, ("noise", "sigma0"))
+
+    self._handle_json(logic)
 
 
 if __name__ == "__main__":

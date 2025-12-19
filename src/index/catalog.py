@@ -4,7 +4,7 @@ from typing import Optional, Union, cast
 
 from src.const import INDEX_DB
 from src.path_utils import verify_dir
-from src.spatialite import Field, Model, SpatialDatabase
+from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SpatialDatabase
 
 
 class CatalogTable(Model):
@@ -12,20 +12,15 @@ class CatalogTable(Model):
   id = Field(int, primary_key=True)
   path = Field(
     Path,
-    sql_type=str,
+    sql_type=ColumnType.TEXT,
     nullable=False,
     unique=True,
     to_sql=lambda x: str(x),
     to_python=lambda x: Path(x),
+    to_json=lambda x: str(x),
   )
   name = Field(str, nullable=False, unique=True)
-  last_indexed = Field(
-    datetime,
-    str,
-    nullable=False,
-    to_sql=lambda x: datetime.isoformat(x, timespec="seconds"),
-    to_python=lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S"),
-  )
+  last_indexed = DATETIME_FIELD
 
 
 def insert_catalog(

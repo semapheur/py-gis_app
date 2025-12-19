@@ -1,18 +1,23 @@
+export interface ImageStats {}
+
 export interface ImageMetadata {
-  directory: string;
+  id?: string;
+  catalog: number;
+  relative_path: string;
   filename: string;
   filetype: string;
   classification: string;
   datetime_collected: string;
   sensor_name: string;
-  sensor_type: string;
-  footprint: GeoJSON.Polygon; // WKT
+  sensor_type: "eo" | "sar";
+  image_type: "grd" | "pan" | "ms" | "slc";
+  footprint?: GeoJSON.Polygon; // WKT
   look_angle: number;
   azimuth_angle: number;
   ground_sample_distance_row: number;
   ground_sample_distance_col: number;
   interpretation_rating: number;
-  coverage: number;
+  coverage?: number;
 }
 
 export interface ImagePreviewInfo {
@@ -20,4 +25,9 @@ export interface ImagePreviewInfo {
   coordinates: GeoJSON.Position[];
   azimuth_angle: number;
   look_angle: number;
+}
+
+export interface RadiometricParams {
+  noise: number[][];
+  sigma0: number[][];
 }

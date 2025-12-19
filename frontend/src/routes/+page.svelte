@@ -2,12 +2,9 @@
   import { Pane, Splitpanes } from "svelte-splitpanes";
   import Map from "$lib/components/Map.svelte";
   import { goto } from "$app/navigation";
-  import { savePolygon } from "$lib/utils/searchStore";
 
-  async function handleSearchExtent(polygon: GeoJSON.Polygon) {
-    const id = savePolygon(polygon);
-
-    goto(`/search/${id}`);
+  async function handleSearchExtent(polygonWkt: string) {
+    goto(`/search?wkt=${encodeURIComponent(polygonWkt)}`);
   }
 </script>
 

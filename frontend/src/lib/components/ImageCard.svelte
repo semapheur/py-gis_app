@@ -4,6 +4,8 @@
   export let image: ImageMetadata;
   export let onHoverImage: (image: ImageMetadata | null) => void;
 
+  const href = `/view/${image.id}`;
+
   const datetime = new Date(image.datetime_collected);
   const dateText = datetime.toISOString().slice(0, 10);
   const timeText = datetime.toTimeString().slice(0, 8);
@@ -18,38 +20,40 @@
   const look_angle = `${image.look_angle.toFixed(0)}°`;
 </script>
 
-<div class="card">
-  <img
-    src={`/thumbnails/${image.filename}.png`}
-    alt={image.filename}
-    onmouseenter={() => onHoverImage(image)}
-  />
+<a {href} class="card-link">
+  <div class="card">
+    <img
+      src={`/thumbnails/${image.filename}.png`}
+      alt={image.filename}
+      onmouseenter={() => onHoverImage(image)}
+    />
 
-  <div class="header">
-    <div class="parameter-badges">
-      <span class="badge">
-        {coverage}
-      </span>
-      <span class="badge">
-        {image.interpretation_rating}
-      </span>
-      <span class="badge">
-        {gsd_text}
-      </span>
-      <span class="badge">
-        {azimuth_angle}
-      </span>
-      <span class="badge">
-        {look_angle}
-      </span>
+    <div class="header">
+      <div class="parameter-badges">
+        <span class="badge">
+          {coverage}
+        </span>
+        <span class="badge">
+          {image.interpretation_rating}
+        </span>
+        <span class="badge">
+          {gsd_text}
+        </span>
+        <span class="badge">
+          {azimuth_angle}
+        </span>
+        <span class="badge">
+          {look_angle}
+        </span>
+      </div>
+    </div>
+
+    <div class="footer">
+      {dateText}
+      {timeText}
     </div>
   </div>
-
-  <div class="footer">
-    {dateText}
-    {timeText}
-  </div>
-</div>
+</a>
 
 <style>
   .card {

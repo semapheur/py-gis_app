@@ -4,20 +4,28 @@ import json
 import os
 import sqlite3
 from contextlib import contextmanager
+from dataclasses import dataclass
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
 from typing import (
   Any,
   Callable,
+  Generic,
   Literal,
   Mapping,
   Optional,
   Sequence,
   TypedDict,
+  TypeVar,
   Union,
 )
 
-SqliteTypes = Union[bytes, int, float, str, None]
+from src.hashing import decode_sha256_from_b64, encode_sha256_to_b64
+
+SqliteValue = Union[bytes, int, float, str, None]
+
+T = TypeVar("T")
 
 GeoFormat = Literal["AsText", "AsGeoJSON"]
 
@@ -48,64 +56,69 @@ class ColumnType(Enum):
   TEXT = str
   BLOB = bytes
 
+  @classmethod
+  def from_python(cls, py_type: type) -> ColumnType:
+    for ct in cls:
+      if ct.value is py_type:
+        return ct
 
-class Field:
-  def __init__(
-    self,
-    type_: type,
-    sql_type: Optional[type] = None,
-    primary_key: bool = False,
-    nullable: bool = True,
-    unique: bool = False,
-    default: Optional[SqliteTypes] = None,
-    geometry_type: Optional[Geometry] = None,
-    srid: int = 4326,
-    to_sql: Optional[Callable[[Any], Any]] = None,
-    to_python: Optional[Callable[[Any], Any]] = None,
-  ):
-    self.type_ = type_
+    raise ValueError(f"No SQLite affinity for python type {py_type!r}")
 
-    if sql_type is None:
-      if type_ not in (m.value for m in ColumnType):
-        raise ValueError(
-          f"sql_type must be provided for unsupported python type: {type_}"
-        )
-      self.sql_type = ColumnType(type_)
-    else:
-      self.sql_type = ColumnType(sql_type)
 
-    self.primary_key = primary_key
-    self.nullable = nullable
-    self.unique = unique
-    self.default = default
-    self.geometry_type = geometry_type
-    self.srid = srid
-    self.to_sql = to_sql
-    self.to_python = to_python
+@dataclass(slots=True)
+class Field(Generic[T]):
+  python_type: type[T]
+  sql_type: Optional[ColumnType] = None
+  primary_key: bool = False
+  nullable: bool = True
+  unique: bool = False
+  default: Optional[SqliteValue] = None
+  geometry_type: Optional[Geometry] = None
+  srid: int = 4326
+  to_sql: Optional[Callable[[T], SqliteValue]] = None
+  to_python: Optional[Callable[[SqliteValue], T]] = None
+  to_json: Optional[Callable[[SqliteValue], Any]] = None
+
+  def __post_init__(self):
+    if self.sql_type is None:
+      self.sql_type = ColumnType.from_python(self.python_type)
+
+    if self.primary_key:
+      self.nullable = False
 
   def sql_column_type(self) -> str:
+    if self.sql_type is None:
+      raise ValueError("sql_type is not set")
+
     return self.sql_type.name
 
-  def serialize(self, value: Any) -> SqliteTypes:
+  def serialize_to_sql(self, value: Optional[T]) -> SqliteValue:
     if value is None:
       return None
+
+    if not isinstance(value, self.python_type):
+      raise TypeError(
+        f"Expected {self.python_type.__name__}, got {type(value).__name__}"
+      )
 
     if self.to_sql:
       return self.to_sql(value)
 
-    if not isinstance(value, self.type_):
-      raise TypeError(f"Excpted {self.type_}, got {type(value)}")
-
     return value
 
-  def deserialize(self, value: Any) -> Any:
+  def deserialize_from_sql(
+    self, value: SqliteValue, to_json: bool = False
+  ) -> Union[T, None]:
     if value is None:
       return None
+
+    if to_json and self.to_json:
+      return self.to_json(value)
 
     if self.to_python:
       return self.to_python(value)
 
-    return self.type_(value)
+    return self.python_type(value)
 
   def to_wkt(self, value: Optional[str]) -> Optional[str]:
     if self.geometry_type is None:
@@ -141,7 +154,7 @@ class Model(metaclass=ModelMeta):
     if cls.table_name is None:
       cls.table_name = cls.__name__.lower()
 
-  def to_dict(self) -> dict[str, SqliteTypes]:
+  def to_dict(self) -> dict[str, SqliteValue]:
     data = {}
 
     for name, field in self._fields.items():
@@ -150,7 +163,7 @@ class Model(metaclass=ModelMeta):
       if field.geometry_type is not None:
         data[name] = field.to_wkt(value)
       else:
-        data[name] = field.serialize(value)
+        data[name] = value
 
     return data
 
@@ -216,7 +229,7 @@ class Model(metaclass=ModelMeta):
     for i, name in enumerate(columns):
       field = cls._fields[name]
       raw = row[i]
-      value = field.deserialize(raw)
+      value = field.deserialize_from_sql(raw)
       setattr(obj, name, value)
 
     return obj
@@ -353,7 +366,7 @@ class SpatialDatabase:
     where: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    params: Optional[Union[dict[str, SqliteTypes], tuple[SqliteTypes, ...]]] = None,
+    params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
   ):
     if self.conn is None:
       raise RuntimeError("Database not connected")
@@ -428,7 +441,7 @@ class SpatialDatabase:
     where: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    params: Optional[Union[dict[str, SqliteTypes], tuple[SqliteTypes, ...]]] = None,
+    params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
   ) -> list[Model]:
     rows, return_columns = self._select_rows(
       table,
@@ -454,7 +467,7 @@ class SpatialDatabase:
     where: Optional[str] = None,
     limit: Optional[int] = None,
     offset: Optional[int] = None,
-    params: Optional[Union[dict[str, SqliteTypes], tuple[SqliteTypes, ...]]] = None,
+    params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
   ) -> list[dict[str, Any]]:
     rows, return_columns = self._select_rows(
       table,
@@ -469,7 +482,7 @@ class SpatialDatabase:
       params=params,
     )
 
-    results: list[dict[str, SqliteTypes]] = []
+    results: list[dict[str, SqliteValue]] = []
     for row in rows:
       result_row = {}
       for i, col in enumerate(return_columns):
@@ -479,7 +492,7 @@ class SpatialDatabase:
           continue
 
         if field.geometry_type is None:
-          value = field.deserialize(row[i])
+          value = field.deserialize_from_sql(row[i], True)
         else:
           value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
 
@@ -537,7 +550,7 @@ def spatialite_connect(db_path: Path):
 def insert_records(
   db: sqlite3.Connection,
   table: str,
-  rows: list[Mapping[str, SqliteTypes]],
+  rows: list[Mapping[str, SqliteValue]],
   geometry_column: str,
   srid=4326,
 ):
@@ -555,3 +568,22 @@ def insert_records(
   sql = f"INSERT INTO {table} ({columns_sql}) VALUES ({placeholder_sql})"
 
   db.cursor().executemany(sql, rows)
+
+
+HASH_FIELD = Field(
+  bytes,
+  sql_type=ColumnType.BLOB,
+  primary_key=True,
+  to_json=lambda x: encode_sha256_to_b64(x),
+)
+
+DATETIME_FIELD = Field(
+  datetime,
+  ColumnType.TEXT,
+  nullable=False,
+  to_sql=lambda x: datetime.isoformat(x, timespec="seconds"),
+  to_python=lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S"),
+  to_json=lambda x: datetime.isoformat(x, timespec="seconds")
+  if isinstance(x, datetime)
+  else x,
+)

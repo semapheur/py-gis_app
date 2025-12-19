@@ -1,11 +1,11 @@
 import json
 import math
-import os
 import tempfile
 import warnings
+from datetime import datetime
 from enum import Enum
 from pathlib import Path
-from typing import Literal, TypeAlias, TypedDict, Union, cast
+from typing import Literal, TypeAlias, Union, cast
 
 from src.const import INDEX_DB, STATIC_DIR
 from src.gdal_utils import (
@@ -16,12 +16,15 @@ from src.gdal_utils import (
   gdalinfo,
   gdalwarp,
 )
-from src.geometry import Polygon
 from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalogs
+from src.index.radiometric import NoiseParameters, RadiometricParamsTable
 from src.math_utils import dot, norm
 from src.sicd_model import SicdObject
 from src.spatialite import (
+  DATETIME_FIELD,
+  HASH_FIELD,
+  ColumnType,
   Field,
   JoinClause,
   Model,
@@ -46,31 +49,34 @@ class ImageryType(str, Enum):
 
 class ImageIndexTable(Model):
   table_name = "images"
-  id = Field(bytes, primary_key=True)
+  id = HASH_FIELD
   catalog = Field(int, nullable=False)
   relative_path = Field(
     Path,
-    sql_type=str,
+    sql_type=ColumnType.TEXT,
     nullable=False,
     to_sql=lambda x: str(x),
     to_python=lambda x: Path(x),
+    to_json=lambda x: str(x),
   )
   filename = Field(str, nullable=False)
   filetype = Field(str, nullable=False)
   classification = Field(str)
-  datetime_collected = Field(str)
+  datetime_collected = DATETIME_FIELD
   sensor_name = Field(str)
   sensor_type = Field(
     ImagerySensorType,
-    str,
+    ColumnType.TEXT,
     to_sql=lambda x: x.value,
-    to_python=lambda x: ImagerySensorType[x],
+    to_python=lambda x: ImagerySensorType(x),
+    to_json=lambda x: x.value if isinstance(x, ImagerySensorType) else x,
   )
   image_type = Field(
     ImageryType,
-    str,
+    ColumnType.TEXT,
     to_sql=lambda x: x.value,
-    to_python=lambda x: ImageryType[x],
+    to_python=lambda x: ImageryType(x),
+    to_json=lambda x: x.value if isinstance(x, ImageryType) else x,
   )
   footprint = Field(str, geometry_type="POLYGON")
   look_angle = Field(float)
@@ -78,28 +84,6 @@ class ImageIndexTable(Model):
   ground_sample_distance_row = Field(float)
   ground_sample_distance_col = Field(float)
   interpretation_rating = Field(float)
-
-
-class NoiseParameters(TypedDict):
-  type: Literal["ABSOLUTE", "RELATIVE"]
-  poly: list[list[float]]
-
-
-polygon = Field(
-  list[list[float]],
-  str,
-  to_sql=lambda x: json.dumps(x),
-  to_python=lambda x: json.loads(x),
-)
-
-
-class RadiometricParamsTable(Model):
-  table_name = "radiometric_params"
-  id = Field(bytes, primary_key=True)
-  noise = polygon
-  sigma0 = polygon
-  beta0 = polygon
-  gamma0 = polygon
 
 
 def ground_sample_distance(
@@ -178,7 +162,7 @@ def parse_image_metadata(
   points = (f"{corner['Lon']} {corner['Lat']}" for corner in image_corners)
   footprint = f"POLYGON(({', '.join(points)}))"
 
-  datetime_collected = timeline["CollectStart"]
+  datetime_collected = datetime.fromisoformat(timeline["CollectStart"])
   look_angle = 90.0 - scpcoa["IncidenceAng"]
   azimuth_angle = scpcoa["AzimAng"]
 
@@ -488,7 +472,7 @@ def index_images(
           make_cog = False
 
       if make_cog:
-        image_type = cast(ImageryType, getattr(index_row, "image_type"))
+        image_type = ImageryType(getattr(index_row, "image_type"))
         generate_cog(file, cog_path, info, image_type)
 
     # Upsert index
@@ -506,16 +490,17 @@ def index_images(
       db.insert_models(radiometric_index)
 
 
-def get_images_by_intersection(polygon: Polygon):
+def get_images_by_intersection(polygon_wkt: str):
   with SpatialDatabase(INDEX_DB) as db:
     where = "ST_Intersects(footprint, poly.geom)"
     derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
     with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"
     join = JoinClause(join_type="CROSS", expression="poly")
-    params = {"polygon": polygon.to_wkt()}
+    params = {"polygon": polygon_wkt}
 
     return db.select_records(
       ImageIndexTable,
+      columns="*",
       with_clause=with_clause,
       geo_format="AsGeoJSON",
       derived=derived,
@@ -523,3 +508,20 @@ def get_images_by_intersection(polygon: Polygon):
       where=where,
       params=params,
     )
+
+
+def get_image_info(id: bytes) -> dict:
+  with SpatialDatabase(INDEX_DB) as db:
+    where = "id = :id"
+    params = {"id": id}
+
+    info = db.select_records(
+      ImageIndexTable,
+      columns=(
+        "filename",
+        "image_type",
+      ),
+      where=where,
+      params=params,
+    )
+    return info[0]

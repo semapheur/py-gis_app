@@ -1,0 +1,40 @@
+import json
+from typing import Literal, TypedDict
+
+from src.const import INDEX_DB
+from src.spatialite import HASH_FIELD, Field, Model, SpatialDatabase
+
+
+class NoiseParameters(TypedDict):
+  type: Literal["ABSOLUTE", "RELATIVE"]
+  poly: list[list[float]]
+
+
+polygon = Field(
+  list[list[float]],
+  str,
+  to_sql=lambda x: json.dumps(x),
+  to_python=lambda x: json.loads(x),
+)
+
+
+class RadiometricParamsTable(Model):
+  table_name = "radiometric_params"
+  id = HASH_FIELD
+  noise = polygon
+  sigma0 = polygon
+  beta0 = polygon
+  gamma0 = polygon
+
+
+def get_radiometric_parameters(
+  hash_id: bytes, factors: tuple[Literal["noise", "sigma0", "beta0", "gamma0"], ...]
+):
+  with SpatialDatabase(INDEX_DB) as db:
+    rows = db.select_records(
+      RadiometricParamsTable,
+      columns=factors,
+      where="id = :id",
+      params={"id": hash_id},
+    )
+    return rows[0]
