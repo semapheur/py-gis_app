@@ -31,20 +31,9 @@
 
 <div class="container">
   <form class="form" on:submit={submitForm}>
+    <Input label="File name" name="filename" bind:value={filename} />
+    <Input label="Min coverage" name="coverage" bind:value={coverage} />
     <Input
-      id="input:image-search:filename"
-      label="File name"
-      name="filename"
-      bind:value={filename}
-    />
-    <Input
-      id="input:image-search:coverage"
-      label="Min coverage"
-      name="coverage"
-      bind:value={coverage}
-    />
-    <Input
-      id="input:image-search:iirs"
       label="Min IIRS"
       type="number"
       min="0"
@@ -53,7 +42,6 @@
       bind:value={iirs}
     />
     <Input
-      id="input:image-search:gsd"
       label="Max GSD"
       type="number"
       min="0"

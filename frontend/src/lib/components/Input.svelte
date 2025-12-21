@@ -1,41 +1,45 @@
 <script lang="ts">
-  export let id: string;
-  export let value: string | number | null;
-  export let label: string = "";
+  interface Props {
+    value?: string | number | null;
+    label?: string;
+  }
 
-  $: placeholder = label;
+  let { value = null, label = "" }: Props = $props();
+  let placeholder = $derived(label);
+
+  const uid = crypto.randomUUID();
 </script>
 
 <div class="container">
-  <input {id} {placeholder} bind:value {...$$props} />
+  <input id={uid} {placeholder} bind:value />
   {#if label}
-    <label for={id}>{label}</label>
+    <label for={uid}>{label}</label>
   {/if}
 </div>
 
 <style>
   :root {
-    --padding-x: 0.4rem;
-    --top-float: -0.6rem;
-    --font-small: 0.75rem;
+    --top-float: 0rem;
   }
 
   .container {
     position: relative;
+    margin-top: var(--text-2xs);
   }
 
   label {
     position: absolute;
-    left: var(--padding-x);
-    font-size: var(--font-small);
+    left: var(--size-md);
+    font-size: var(--text-2xs);
     top: var(--top-float);
+    transform: translateY(-50%);
     transition: all 0.15s ease;
     background-color: white;
     pointer-events: none;
   }
 
   input {
-    padding: 0.4rem var(--padding-x) 0.2rem var(--padding-x);
+    padding: var(--size-sm);
 
     &::placeholder {
       color: transparent;
@@ -43,13 +47,14 @@
 
     &:placeholder-shown + label {
       font-size: inherit;
-      top: 0.2rem;
       background-color: transparent;
+      transform: translateY(0);
     }
 
     &:focus + label {
-      font-size: var(--font-small);
+      font-size: var(--text-2xs);
       top: var(--top-float);
+      transform: translateY(-50%);
       background-color: white;
     }
   }

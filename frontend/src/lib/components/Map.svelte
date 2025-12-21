@@ -5,10 +5,19 @@
   import { type ImagePreviewInfo } from "$lib/utils/types";
   import { bboxToWkt, type BBox } from "$lib/utils/geometry";
 
-  export let extent: GeoJSON.Polygon | null = null;
-  export let imagePreview: ImagePreviewInfo | null = null;
-  export let showSearchButton = false;
-  export let onSearchExtent: (polygonWkt: string) => void;
+  interface Props {
+    extent?: GeoJSON.Polygon | null;
+    imagePreview?: ImagePreviewInfo | null;
+    showSearchButton?: boolean;
+    onSearchExtent?: (polygonWkt: string) => void;
+  }
+
+  let {
+    extent = null,
+    imagePreview = null,
+    showSearchButton = false,
+    onSearchExtent,
+  }: Props = $props();
 
   let map: maplibre.Map;
   let mapContainer: HTMLDivElement;
@@ -148,7 +157,12 @@
     });
   });
 
-  $: if (map && mapLoaded && imagePreview && imagePreview !== lastPreview) {
+  $effect(() => {
+    const condition =
+      map && mapLoaded && imagePreview && imagePreview !== lastPreview;
+
+    if (!condition) return;
+
     lastPreview = imagePreview;
 
     const orderedCoords = reorderFootprint(imagePreview.coordinates, map);
@@ -212,7 +226,7 @@
       animate: true,
       duration: 500,
     });
-  }
+  });
 </script>
 
 <div class="map" bind:this={mapContainer}>

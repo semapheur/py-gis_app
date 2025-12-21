@@ -28,12 +28,15 @@
     days: CalendarCell[];
   }
 
-  export let id: string;
-  export let minDate: Date | null = null;
-  export let maxDate: Date | null = new Date();
+  interface Props {
+    minDate?: Date | null;
+    maxDate?: Date | null;
+  }
 
-  const minYear = minDate ? minDate.getFullYear() : -Infinity;
-  const maxYear = maxDate ? maxDate.getFullYear() : Infinity;
+  let { minDate = null, maxDate = new Date() }: Props = $props();
+
+  const minYear = $derived(minDate ? minDate.getFullYear() : -Infinity);
+  const maxYear = $derived(maxDate ? maxDate.getFullYear() : Infinity);
 
   const presets: DatePreset[] = [
     {
@@ -69,15 +72,15 @@
     },
   ];
 
-  let open = false;
-  let range: DateRange = { start: null, end: null };
+  let open = $state<boolean>(false);
+  let range = $state<DateRange>({ start: null, end: null });
 
-  let view: ViewDate = {
+  let view = $state<ViewDate>({
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
-  };
+  });
 
-  let mode: "calendar" | "choose-month" | "choose-year" = "calendar";
+  let mode = $state<"calendar" | "choose-month" | "choose-year">("calendar");
 
   const months = [
     "January",
@@ -131,17 +134,17 @@
     return date;
   }
 
-  $: canGoPrevMonth = (() => {
+  const canGoPrevMonth = $derived.by(() => {
     if (!minDate) return true;
     if (view.year > minYear) return true;
     return view.year === minYear && view.month > minDate.getMonth();
-  })();
+  });
 
-  $: canGoNextMonth = (() => {
+  const canGoNextMonth = $derived.by(() => {
     if (!maxDate) return true;
     if (view.year < maxYear) return true;
     return view.year === maxYear && view.month < maxDate.getMonth();
-  })();
+  });
 
   function changeMonth(delta: number) {
     let newMonth = view.month + delta;
@@ -186,10 +189,11 @@
     return `${y}-${m}-${d}`;
   }
 
-  $: yearOptions = Array.from(
-    { length: 21 },
-    (_, i) => view.year - 10 + i,
-  ).filter((y) => y >= minYear && y <= maxYear);
+  const yearOptions = $derived(
+    Array.from({ length: 21 }, (_, i) => view.year - 10 + i).filter(
+      (y) => y >= minYear && y <= maxYear,
+    ),
+  );
 
   function getISOWeekNumber(date: Date) {
     const d = new Date(date.getFullYear(), date.getMonth(), date.getDate());
@@ -244,7 +248,7 @@
     return false;
   }
 
-  $: calendarWeeks = (() => {
+  const calendarWeeks = $derived.by(() => {
     const weeks: Week[] = [];
 
     const year = view.year;
@@ -295,16 +299,13 @@
     }
 
     return weeks;
-  })();
+  });
 </script>
 
 <div class="datepicker">
   <div class="input-wrapper">
     <Input
-      {id}
-      class="date-input"
       label="Date interval"
-      type="text"
       value={range.start && range.end
         ? `${formatDate(range.start)} - ${formatDate(range.end)}`
         : range.start
@@ -314,7 +315,7 @@
     <button
       type="button"
       class="calendar-toggle"
-      on:click={() => (open = !open)}
+      onclick={() => (open = !open)}
     >
       📅
     </button>
@@ -325,7 +326,7 @@
       <!-- PRESETS DROPDOWN -->
       <label>
         Presets
-        <select on:change={handleSelectPreset}>
+        <select onchange={handleSelectPreset}>
           {#each presets as preset, i}
             <option value={i}>{preset.label}</option>
           {/each}
@@ -336,7 +337,7 @@
       <div class="header">
         <button
           class="arrow"
-          on:click={() => changeMonth(-1)}
+          onclick={() => changeMonth(-1)}
           disabled={!canGoPrevMonth}>◀</button
         >
 
@@ -344,7 +345,7 @@
           <button
             type="button"
             class="month"
-            on:click={() => (mode = "choose-month")}
+            onclick={() => (mode = "choose-month")}
           >
             {months[view.month]}
           </button>
@@ -352,7 +353,7 @@
           <button
             type="button"
             class="year"
-            on:click={() => (mode = "choose-year")}
+            onclick={() => (mode = "choose-year")}
           >
             {view.year}
           </button>
@@ -360,7 +361,7 @@
 
         <button
           class="arrow"
-          on:click={() => changeMonth(1)}
+          onclick={() => changeMonth(1)}
           disabled={!canGoNextMonth}>▶</button
         >
       </div>
@@ -371,7 +372,7 @@
           {#each months as m, i}
             <button
               class="month-option"
-              on:click={() => {
+              onclick={() => {
                 view.month = i;
                 mode = "calendar";
               }}
@@ -388,7 +389,7 @@
           {#each yearOptions as y}
             <button
               class="year-option"
-              on:click={() => {
+              onclick={() => {
                 view.year = y;
 
                 // clamp month if necessary
@@ -426,7 +427,7 @@
                   class="day"
                   class:other-month={!day.isCurrentMonth}
                   class:selected={isSelectedCell(day)}
-                  on:click={() => clickDayCell(day)}
+                  onclick={() => clickDayCell(day)}
                   disabled={isDisabledCell(day)}
                   aria-current={day.isCurrentMonth ? "date" : undefined}
                 >

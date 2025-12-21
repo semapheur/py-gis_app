@@ -20,15 +20,28 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --text-xs: 0.75rem;
-  --text-sm: 0.875rem;
-  --text-lg: 1.25rem;
-  --text-xl: 1.5rem;
+  --color-primary: 214 211 209;
+  --color-accent: 120 113 108;
+  --color-secondary: 161 98 7;
+  --color-text: 9 9 11;
 
   --size-xs: 0.125rem;
   --size-sm: 0.25rem;
   --size-md: 0.375rem;
   --size-lg: 0.5rem;
+
+  --text-2xs: 0.625rem;
+  --text-xs: 0.75rem;
+  --text-sm: 0.875rem;
+  --text-lg: 1.25rem;
+  --text-xl: 1.5rem;
+
+  --font-bold: 700;
+}
+
+html {
+  background-color: rgb(var(--color-primary));
+  color: rgb(var(--color-text));
 }
 
 html,

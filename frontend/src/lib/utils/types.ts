@@ -27,7 +27,12 @@ export interface ImagePreviewInfo {
   look_angle: number;
 }
 
+export interface NoiseParams {
+  type: "ABSOLUTE" | "RELATIVE";
+  poly: number[][];
+}
+
 export interface RadiometricParams {
-  noise: number[][];
+  noise: NoiseParams;
   sigma0: number[][];
 }
