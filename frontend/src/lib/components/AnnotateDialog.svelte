@@ -29,6 +29,10 @@
 
   $effect(() => {
     drawGeometry = annotateOptions[0].value;
+
+    if (!open && drawMode) {
+      drawMode = false;
+    }
   });
 </script>
 
@@ -53,12 +57,12 @@
           bind:value={drawGeometry}
         />
       {/key}
-      <button onclick={() => (drawMode = !drawMode)}>
-        {#if !drawMode}
-          Annotate
-        {:else}
-          Stop
-        {/if}
+      <button
+        class="button-annotate"
+        class:draw={drawMode}
+        onclick={() => (drawMode = !drawMode)}
+      >
+        {drawMode ? "Stop" : "Annotate"}
       </button>
     </footer>
   </div>
@@ -87,6 +91,7 @@
   .footer {
     display: flex;
     justify-content: end;
+    gap: var(--size-sm);
     padding-top: var(--size-sm);
     border-top: 1px solid rgba(var(--color-text) / 0.5);
   }
@@ -96,6 +101,14 @@
 
     &:hover {
       color: red;
+    }
+  }
+
+  .button-annotate {
+    background: rgba(var(--color-positive) / 0.8);
+
+    &.draw {
+      background: rgb(var(--color-negative));
     }
   }
 </style>

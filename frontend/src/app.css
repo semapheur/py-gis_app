@@ -20,10 +20,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --color-primary: 214 211 209;
+  --color-primary: 250 250 249;
   --color-accent: 120 113 108;
   --color-secondary: 161 98 7;
   --color-text: 9 9 11;
+  --color-positive: 101 163 13;
+  --color-negative: 220 38 38;
 
   --size-xs: 0.125rem;
   --size-sm: 0.25rem;

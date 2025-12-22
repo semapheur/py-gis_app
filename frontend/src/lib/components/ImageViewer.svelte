@@ -69,7 +69,9 @@
       source: equipmentSource,
       style: {
         "stroke-color": "red",
-        "stroke-width": 2,
+        "stroke-width": 1,
+        "circle-radius": 5,
+        "circle-fill-color": "red",
       },
     });
 
@@ -107,7 +109,6 @@
       return;
     }
 
-    console.log(drawGeometry);
     drawInteraction = new Draw({
       source: drawLayer === "equipment" ? equipmentSource : activitySource,
       type: drawGeometry,
