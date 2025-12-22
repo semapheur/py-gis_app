@@ -5,6 +5,13 @@
   import { type ImagePreviewInfo } from "$lib/utils/types";
   import { bboxToWkt, type BBox } from "$lib/utils/geometry";
 
+  type Coordinates = [
+    [number, number],
+    [number, number],
+    [number, number],
+    [number, number],
+  ];
+
   interface Props {
     extent?: GeoJSON.Polygon | null;
     imagePreview?: ImagePreviewInfo | null;
@@ -33,7 +40,10 @@
     return 2;
   }
 
-  function reorderFootprint(coords: GeoJSON.Position[], map: maplibre.Map) {
+  function reorderFootprint(
+    coords: GeoJSON.Position[],
+    map: maplibre.Map,
+  ): Coordinates {
     // Maplibre order: top-left, top-right, bottom-right, bottom left
 
     if (coords.length === 5) coords = coords.slice(0, 4);
@@ -72,7 +82,7 @@
       points[(topLeftIndex + 3) % 4],
     ];
 
-    return ordered.map((p) => [p.lng, p.lat]);
+    return ordered.map((p) => [p.lng, p.lat]) as Coordinates;
   }
 
   function getExtentWkt(map: maplibre.Map): string {

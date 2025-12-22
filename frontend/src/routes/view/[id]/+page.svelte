@@ -2,19 +2,41 @@
   import type { PageData } from "./$types";
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
+  import type {
+    AnnotateMode,
+    ImageMetadata,
+    RadiometricParams,
+  } from "$lib/utils/types";
 
-  let data: PageData = $props();
+  let { data } = $props<{ data: PageData }>();
+  const image: ImageMetadata = $derived(data.image);
+  const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
+
   let annotateOpen = $state(false);
-
-  const { image, radiometricParams } = data;
+  let drawMode = $state<boolean>(false);
+  let drawLayer = $state<AnnotateMode>("equipment");
+  let drawGeometry = $state<"Point" | "Polygon">("Point");
 </script>
 
 <div class="container">
-  <button class="toggle-form" onclick={() => (annotateOpen = !annotateOpen)}>
-    Add
-  </button>
-  <AnnotateDialog bind:open={annotateOpen} />
-  <ImageViewer {image} {radiometricParams} />
+  {#if !annotateOpen}
+    <button class="toggle-form" onclick={() => (annotateOpen = !annotateOpen)}>
+      Add
+    </button>
+  {/if}
+  <AnnotateDialog
+    bind:open={annotateOpen}
+    bind:drawMode
+    bind:activeForm={drawLayer}
+    bind:drawGeometry
+  />
+  <ImageViewer
+    {image}
+    {radiometricParams}
+    bind:drawMode
+    bind:drawLayer
+    bind:drawGeometry
+  />
 </div>
 
 <style>

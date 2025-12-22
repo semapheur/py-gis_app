@@ -7,16 +7,36 @@
   import { Draw } from "ol/interaction";
   import GeoTIFF from "ol/source/GeoTIFF.js";
 
-  import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+  import type {
+    ImageMetadata,
+    RadiometricParams,
+    AnnotateForm,
+    AnnotateGeometry,
+  } from "$lib/utils/types";
   import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
   //useGeographic();
 
-  export let image: ImageMetadata | null = null;
-  export let radiometricParams: RadiometricParams | null = null;
-  export let drawEquipmentGeometry: "Polygon" | "Point" | null = null;
+  interface Props {
+    image: ImageMetadata | null;
+    radiometricParams?: RadiometricParams | null;
+    drawMode: boolean;
+    drawLayer: AnnotateForm | null;
+    drawGeometry: AnnotateGeometry<AnnotateForm> | null;
+  }
+
+  let {
+    image = null,
+    radiometricParams = null,
+    drawMode = $bindable(false),
+    drawLayer = $bindable(null),
+    drawGeometry = $bindable(null),
+  }: Props = $props();
 
   let map: Map | null = null;
+  let drawInteraction: Draw | null = null;
+  let equipmentSource: VectorSource | null = null;
+  let activitySource: VectorSource | null = null;
   let target: HTMLDivElement;
 
   onMount(() => {
@@ -44,7 +64,7 @@
       style: rasterStyle,
     });
 
-    const equipmentSource = new VectorSource();
+    equipmentSource = new VectorSource();
     const equipmentLayer = new VectorLayer({
       source: equipmentSource,
       style: {
@@ -53,19 +73,54 @@
       },
     });
 
-    map = new Map({
-      target,
-      layers: [rasterLayer, equipmentLayer],
-      view: rasterSource.getView(),
+    activitySource = new VectorSource();
+    const activityLayer = new VectorLayer({
+      source: activitySource,
+      style: {
+        "stroke-color": "green",
+        "stroke-width": 2,
+      },
     });
 
-    if (drawEquipmentGeometry) {
-      const draw = new Draw({
-        source: equipmentSource,
-        type: drawEquipmentGeometry, // change to 'Point' to draw points
-      });
-      map.addInteraction(draw);
+    map = new Map({
+      target,
+      layers: [rasterLayer, equipmentLayer, activityLayer],
+      view: rasterSource.getView(),
+    });
+  });
+
+  $effect(() => {
+    if (!map) return;
+
+    if (drawInteraction) {
+      map.removeInteraction(drawInteraction);
+      drawInteraction = null;
     }
+
+    if (
+      !drawMode ||
+      !drawLayer ||
+      !drawGeometry ||
+      !equipmentSource ||
+      !activitySource
+    ) {
+      return;
+    }
+
+    console.log(drawGeometry);
+    drawInteraction = new Draw({
+      source: drawLayer === "equipment" ? equipmentSource : activitySource,
+      type: drawGeometry,
+    });
+
+    map.addInteraction(drawInteraction);
+
+    return () => {
+      if (drawInteraction) {
+        map?.removeInteraction(drawInteraction);
+        drawInteraction = null;
+      }
+    };
   });
 
   onDestroy(() => {

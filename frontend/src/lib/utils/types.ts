@@ -36,3 +36,24 @@ export interface RadiometricParams {
   noise: NoiseParams;
   sigma0: number[][];
 }
+
+export const annotateTabs = [
+  { name: "Equipment", value: "equipment" },
+  { name: "Activity", value: "activity" },
+] as const;
+export type AnnotateForm = (typeof annotateTabs)[number]["value"];
+
+export const annotateGeometryByForm = {
+  equipment: [
+    { label: "Point", value: "Point" },
+    { label: "Polygon", value: "Polygon" },
+  ],
+  activity: [
+    { label: "Polygon", value: "Polygon" },
+    { label: "MultiPolygon", value: "MultiPolygon" },
+  ],
+} as const;
+
+type AnnotateGeometryOptions = typeof annotateGeometryByForm;
+export type AnnotateGeometry<F extends keyof AnnotateGeometryOptions> =
+  AnnotateGeometryOptions[F][number]["value"];

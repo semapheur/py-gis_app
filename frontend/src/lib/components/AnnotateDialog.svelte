@@ -4,45 +4,62 @@
   import Select from "$lib/components/Select.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
 
+  import {
+    annotateTabs,
+    annotateGeometryByForm,
+    type AnnotateForm,
+    type AnnotateGeometry,
+  } from "$lib/utils/types";
+
   interface Props {
     open: boolean;
+    drawMode: boolean;
+    activeForm: AnnotateForm;
+    drawGeometry: AnnotateGeometry<AnnotateForm>;
   }
 
-  let { open = $bindable() }: Props = $props();
-  const tabs = [
-    { name: "Equipment", value: "equipment" },
-    { name: "Activity", value: "activity" },
-  ];
-  let currentTab = $state("equipment");
+  let {
+    open = $bindable(),
+    activeForm = $bindable(),
+    drawMode = $bindable(),
+    drawGeometry = $bindable(),
+  }: Props = $props();
 
-  const annotateOptions = [
-    {
-      label: "Point",
-      value: "Point",
-    },
-    {
-      label: "Polygon",
-      value: "Polygon",
-    },
-  ];
+  let annotateOptions = $derived(annotateGeometryByForm[activeForm]);
+
+  $effect(() => {
+    drawGeometry = annotateOptions[0].value;
+  });
 </script>
 
 {#if open}
   <div class="container">
     <header class="header">
-      <Tabs {tabs} bind:selected={currentTab} />
+      <Tabs tabs={annotateTabs} bind:selected={activeForm} />
       <button class="button-close" onclick={() => (open = false)}> ✕ </button>
     </header>
     <main>
-      {#if currentTab === "equipment"}
+      {#if activeForm === "equipment"}
         <EquipmentForm />
-      {:else if currentTab === "activity"}
+      {:else if activeForm === "activity"}
         <ActivityForm />
       {/if}
     </main>
     <footer class="footer">
-      <Select label="Geometry" options={annotateOptions} />
-      <button> Annotate </button>
+      {#key activeForm}
+        <Select
+          label="Geometry"
+          options={annotateOptions}
+          bind:value={drawGeometry}
+        />
+      {/key}
+      <button onclick={() => (drawMode = !drawMode)}>
+        {#if !drawMode}
+          Annotate
+        {:else}
+          Stop
+        {/if}
+      </button>
     </footer>
   </div>
 {/if}
@@ -57,6 +74,7 @@
     left: var(--size-sm);
     z-index: 2;
     background: rgb(var(--color-primary));
+    border-radius: var(--size-md);
     padding: var(--size-md);
   }
 
@@ -68,6 +86,9 @@
 
   .footer {
     display: flex;
+    justify-content: end;
+    padding-top: var(--size-sm);
+    border-top: 1px solid rgba(var(--color-text) / 0.5);
   }
 
   .button-close {

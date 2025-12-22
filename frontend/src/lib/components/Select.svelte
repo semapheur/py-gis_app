@@ -10,10 +10,10 @@
   interface Props {
     label?: string;
     value?: string | null;
-    options: OptionInput[];
+    options: readonly OptionInput[];
   }
 
-  let { label = "", value = null, options = [] }: Props = $props();
+  let { label = "", value = $bindable(null), options = [] }: Props = $props();
   let placeholder = $derived(label);
   const normalizedOptions = $derived(
     options.map((o) =>
@@ -26,7 +26,7 @@
 
 <div class="container">
   <select id={uid} bind:value>
-    <option value="" disabled>
+    <option value="" disabled hidden>
       {placeholder}
     </option>
 

@@ -39,6 +39,7 @@
 
     &:not(.selected):hover {
       color: rgb(var(--color-secondary));
+      cursor: pointer;
     }
   }
 </style>
