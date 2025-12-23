@@ -1,10 +1,13 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
   import Map from "ol/Map";
-  import WebGLTileLayer, { type Style } from "ol/layer/WebGLTile.js";
+  import WebGLTileLayer, {
+    type Style as RasterStyle,
+  } from "ol/layer/WebGLTile.js";
   import VectorSource from "ol/source/Vector";
   import VectorLayer from "ol/layer/Vector";
-  import { Draw } from "ol/interaction";
+  import { Draw, Modify, Translate } from "ol/interaction";
+  import { Circle, Fill, Stroke, Style, Text } from "ol/style.js";
   import GeoTIFF from "ol/source/GeoTIFF.js";
 
   import type {
@@ -12,10 +15,9 @@
     RadiometricParams,
     AnnotateForm,
     AnnotateGeometry,
+    EquipmentData,
   } from "$lib/utils/types";
   import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
-
-  //useGeographic();
 
   interface Props {
     image: ImageMetadata | null;
@@ -23,6 +25,7 @@
     drawMode: boolean;
     drawLayer: AnnotateForm | null;
     drawGeometry: AnnotateGeometry<AnnotateForm> | null;
+    formData: EquipmentData | null;
   }
 
   let {
@@ -31,10 +34,13 @@
     drawMode = $bindable(false),
     drawLayer = $bindable(null),
     drawGeometry = $bindable(null),
+    formData = null,
   }: Props = $props();
 
   let map: Map | null = null;
   let drawInteraction: Draw | null = null;
+  let modifyInteraction: Modify | null = null;
+  let translateInteraction: Translate | null = null;
   let equipmentSource: VectorSource | null = null;
   let activitySource: VectorSource | null = null;
   let target: HTMLDivElement;
@@ -56,7 +62,7 @@
             u_noiseCoefs: radiometricParams.noise.poly.flat(),
             u_sigmaZeroCoefs: radiometricParams.sigma0.flat(),
           },
-        } as Style)
+        } as RasterStyle)
       : undefined;
 
     const rasterLayer = new WebGLTileLayer({
@@ -67,11 +73,29 @@
     equipmentSource = new VectorSource();
     const equipmentLayer = new VectorLayer({
       source: equipmentSource,
-      style: {
-        "stroke-color": "red",
-        "stroke-width": 1,
-        "circle-radius": 5,
-        "circle-fill-color": "red",
+      style: (feature) => {
+        const data = feature.get("data");
+
+        const label = data
+          ? `${data.id}\n${data.status}\n${data.confidence}`
+          : "";
+
+        return new Style({
+          image: new Circle({
+            radius: 5,
+            fill: new Fill({ color: "red" }),
+            stroke: new Stroke({ color: "#fff", width: 1 }),
+          }),
+          stroke: new Stroke({
+            color: "red",
+            width: 1,
+          }),
+          text: new Text({
+            text: label,
+            stroke: new Stroke({ color: "#fff", width: 1 }),
+            offsetY: 25,
+          }),
+        });
       },
     });
 
@@ -91,37 +115,65 @@
     });
   });
 
+  function cleanupInteractions() {
+    if (drawInteraction) {
+      map?.removeInteraction(drawInteraction);
+      drawInteraction = null;
+    }
+    if (modifyInteraction) {
+      map?.removeInteraction(modifyInteraction);
+      modifyInteraction = null;
+    }
+    if (translateInteraction) {
+      map?.removeInteraction(translateInteraction);
+      translateInteraction = null;
+    }
+  }
+
   $effect(() => {
     if (!map) return;
 
-    if (drawInteraction) {
-      map.removeInteraction(drawInteraction);
-      drawInteraction = null;
-    }
+    cleanupInteractions();
 
     if (
       !drawMode ||
       !drawLayer ||
       !drawGeometry ||
       !equipmentSource ||
-      !activitySource
+      !activitySource ||
+      !formData
     ) {
       return;
     }
 
-    drawInteraction = new Draw({
-      source: drawLayer === "equipment" ? equipmentSource : activitySource,
-      type: drawGeometry,
-    });
+    const interactionSource =
+      drawLayer === "equipment" ? equipmentSource : activitySource;
 
-    map.addInteraction(drawInteraction);
+    if (drawMode) {
+      drawInteraction = new Draw({
+        source: interactionSource,
+        type: drawGeometry,
+      });
+      drawInteraction.on("drawend", (event) => {
+        const feature = event.feature;
 
-    return () => {
-      if (drawInteraction) {
-        map?.removeInteraction(drawInteraction);
-        drawInteraction = null;
+        feature.setProperties({
+          data: structuredClone($state.snapshot(formData)),
+        });
+      });
+      map.addInteraction(drawInteraction);
+    } else {
+      if (drawGeometry === "Polygon" || drawGeometry === "MultiPolygon") {
+        modifyInteraction = new Modify({ source: interactionSource });
+        map.addInteraction(modifyInteraction);
       }
-    };
+      translateInteraction = new Translate({
+        features: interactionSource.getFeaturesCollection(),
+      });
+      map.addInteraction(translateInteraction);
+    }
+
+    return cleanupInteractions;
   });
 
   onDestroy(() => {

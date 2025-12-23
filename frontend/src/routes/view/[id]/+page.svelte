@@ -3,7 +3,8 @@
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import type {
-    AnnotateMode,
+    AnnotateForm,
+    EquipmentData,
     ImageMetadata,
     RadiometricParams,
   } from "$lib/utils/types";
@@ -14,8 +15,9 @@
 
   let annotateOpen = $state(false);
   let drawMode = $state<boolean>(false);
-  let drawLayer = $state<AnnotateMode>("equipment");
+  let drawLayer = $state<AnnotateForm>("equipment");
   let drawGeometry = $state<"Point" | "Polygon">("Point");
+  let formData = $state<EquipmentData>();
 </script>
 
 <div class="container">
@@ -29,10 +31,12 @@
     bind:drawMode
     bind:activeForm={drawLayer}
     bind:drawGeometry
+    bind:formData
   />
   <ImageViewer
     {image}
     {radiometricParams}
+    {formData}
     bind:drawMode
     bind:drawLayer
     bind:drawGeometry

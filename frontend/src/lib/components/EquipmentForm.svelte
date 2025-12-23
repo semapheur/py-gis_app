@@ -2,17 +2,34 @@
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
 
-  let equipmentId: string | null = null;
-  let equipmentConfidence: "high" | "medium" | "low" | null = null;
+  import {
+    equipmentConfidence,
+    equipmentStatus,
+    type EquipmentData,
+    type EquipmentConfidence,
+    type EquipmentStatus,
+  } from "$lib/utils/types";
 
-  const confidenceOptions = ["High", "Medium", "Low"];
-  const statusOptions = ["Intact", "Damaged", "Destroyed"];
+  interface Props {
+    data: EquipmentData;
+    valid: boolean;
+  }
+
+  let { data = $bindable(), valid = $bindable() }: Props = $props();
+
+  $effect(() => {
+    valid = !!data.id && !!data.confidence && !!data.status;
+  });
 </script>
 
 <form class="form">
-  <Input label="Equipment" name="equipment" />
-  <Select options={confidenceOptions} label="Confidence" value="high" />
-  <Select options={statusOptions} label="Status" value="intact" />
+  <Input label="Equipment" bind:value={data.id} />
+  <Select
+    options={equipmentConfidence}
+    label="Confidence"
+    bind:value={data.confidence}
+  />
+  <Select options={equipmentStatus} label="Status" bind:value={data.status} />
 </form>
 
 <style>

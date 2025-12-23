@@ -7,6 +7,11 @@
   import {
     annotateTabs,
     annotateGeometryByForm,
+    equipmentConfidence,
+    equipmentStatus,
+    type EquipmentData,
+    type EquipmentConfidence,
+    type EquipmentStatus,
     type AnnotateForm,
     type AnnotateGeometry,
   } from "$lib/utils/types";
@@ -15,20 +20,31 @@
     open: boolean;
     drawMode: boolean;
     activeForm: AnnotateForm;
+    formData: EquipmentData;
     drawGeometry: AnnotateGeometry<AnnotateForm>;
   }
 
   let {
     open = $bindable(),
-    activeForm = $bindable(),
     drawMode = $bindable(),
+    activeForm = $bindable(),
+    formData = $bindable(),
     drawGeometry = $bindable(),
   }: Props = $props();
 
+  let validForm = $state<boolean>(false);
   let annotateOptions = $derived(annotateGeometryByForm[activeForm]);
 
   $effect(() => {
     drawGeometry = annotateOptions[0].value;
+
+    if (activeForm === "equipment") {
+      formData = {
+        id: null,
+        confidence: equipmentConfidence[0].toLowerCase() as EquipmentConfidence,
+        status: equipmentStatus[0].toLowerCase() as EquipmentStatus,
+      };
+    }
 
     if (!open && drawMode) {
       drawMode = false;
@@ -44,7 +60,7 @@
     </header>
     <main>
       {#if activeForm === "equipment"}
-        <EquipmentForm />
+        <EquipmentForm bind:data={formData} bind:valid={validForm} />
       {:else if activeForm === "activity"}
         <ActivityForm />
       {/if}
@@ -60,6 +76,7 @@
       <button
         class="button-annotate"
         class:draw={drawMode}
+        disabled={!validForm}
         onclick={() => (drawMode = !drawMode)}
       >
         {drawMode ? "Stop" : "Annotate"}

@@ -2,16 +2,21 @@
   interface Props {
     value?: string | number | null;
     label?: string;
+    required?: boolean;
   }
 
-  let { value = null, label = "" }: Props = $props();
+  let {
+    value = $bindable(null),
+    label = "",
+    required = false,
+  }: Props = $props();
   let placeholder = $derived(label);
 
   const uid = crypto.randomUUID();
 </script>
 
 <div class="container">
-  <input id={uid} {placeholder} bind:value />
+  <input id={uid} {placeholder} bind:value {required} />
   {#if label}
     <label for={uid}>{label}</label>
   {/if}
