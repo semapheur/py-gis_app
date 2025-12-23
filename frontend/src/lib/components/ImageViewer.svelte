@@ -3,12 +3,23 @@
   import Map from "ol/Map";
   import WebGLTileLayer, {
     type Style as RasterStyle,
-  } from "ol/layer/WebGLTile.js";
+  } from "ol/layer/WebGLTile";
   import VectorSource from "ol/source/Vector";
   import VectorLayer from "ol/layer/Vector";
-  import { Draw, Modify, Translate } from "ol/interaction";
-  import { Circle, Fill, Stroke, Style, Text } from "ol/style.js";
-  import GeoTIFF from "ol/source/GeoTIFF.js";
+  import { Draw, Modify, Select, Translate } from "ol/interaction";
+  import { Circle, Fill, Stroke, Style, Text } from "ol/style";
+  import type { FeatureLike } from "ol/Feature";
+  import Geometry from "ol/geom/Geometry";
+  import Point from "ol/geom/Point";
+  import MultiPoint from "ol/geom/MultiPoint";
+  import Polygon from "ol/geom/Polygon";
+  import MultiPolygon from "ol/geom/MultiPolygon";
+  import {
+    platformModifierKeyOnly,
+    pointerMove,
+    shiftKeyOnly,
+  } from "ol/events/condition";
+  import GeoTIFF from "ol/source/GeoTIFF";
 
   import type {
     ImageMetadata,
@@ -39,11 +50,92 @@
 
   let map: Map | null = null;
   let drawInteraction: Draw | null = null;
+  let hoverInteraction: Select | null = null;
+  let selectInteraction: Select | null = null;
   let modifyInteraction: Modify | null = null;
   let translateInteraction: Translate | null = null;
   let equipmentSource: VectorSource | null = null;
   let activitySource: VectorSource | null = null;
   let target: HTMLDivElement;
+
+  interface ColorScheme {
+    fill: (alpha?: number) => string;
+    stroke: (alpha?: number) => string;
+  }
+
+  const textColor = {
+    fill: (alpha: number = 1.0) => `rgba(250,250,249,${alpha})`,
+    stroke: (alpha: number = 1.0) => `rgba(28,25,23,${alpha})`,
+  };
+  const equipmentColor = {
+    fill: (alpha: number = 1.0) => `rgba(255,0,0,${alpha})`,
+    stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
+  };
+  const activityColor = {
+    fill: (alpha: number = 1.0) => `rgba(0,255,0,${alpha})`,
+    stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
+  };
+  function geometryStyle(
+    geometry: Geometry,
+    label: string,
+    colorScheme: ColorScheme,
+    alpha: number = 1.0,
+    strokeWidth: number = 1.0,
+  ) {
+    if (geometry instanceof Point) {
+      return new Style({
+        image: new Circle({
+          radius: 5,
+          fill: new Fill({ color: colorScheme.fill(alpha) }),
+          stroke: new Stroke({
+            color: equipmentColor.stroke(alpha),
+            width: strokeWidth,
+          }),
+        }),
+        text: new Text({
+          text: label,
+          fill: new Fill({ color: textColor.fill() }),
+          stroke: new Stroke({ color: textColor.stroke(), width: 1 }),
+          offsetY: 25,
+        }),
+      });
+    }
+
+    if (geometry instanceof Polygon || geometry instanceof MultiPolygon) {
+      return new Style({
+        stroke: new Stroke({
+          color: colorScheme.fill(alpha),
+          width: strokeWidth,
+        }),
+        fill: new Fill({
+          color: colorScheme.fill(0.0),
+        }),
+        text: new Text({
+          text: label,
+          fill: new Fill({ color: textColor.fill() }),
+          stroke: new Stroke({ color: textColor.stroke(), width: 1 }),
+        }),
+      });
+    }
+  }
+
+  const vertexStyle = new Style({
+    image: new Circle({
+      radius: 3,
+      fill: new Fill({ color: "#fff" }),
+      stroke: new Stroke({ color: "#000", width: 1 }),
+    }),
+    geometry: (feature) => {
+      const geometry = feature.getGeometry();
+      if (geometry instanceof Polygon) {
+        return new MultiPoint(geometry.getCoordinates()[0]);
+      }
+
+      if (geometry instanceof MultiPolygon) {
+        return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
+      }
+    },
+  });
 
   onMount(() => {
     if (!image) return;
@@ -74,37 +166,31 @@
     const equipmentLayer = new VectorLayer({
       source: equipmentSource,
       style: (feature) => {
+        const geometry = feature.getGeometry();
+        if (!(geometry instanceof Geometry)) return;
+
         const data = feature.get("data");
 
         const label = data
           ? `${data.id}\n${data.status}\n${data.confidence}`
           : "";
 
-        return new Style({
-          image: new Circle({
-            radius: 5,
-            fill: new Fill({ color: "red" }),
-            stroke: new Stroke({ color: "#fff", width: 1 }),
-          }),
-          stroke: new Stroke({
-            color: "red",
-            width: 1,
-          }),
-          text: new Text({
-            text: label,
-            stroke: new Stroke({ color: "#fff", width: 1 }),
-            offsetY: 25,
-          }),
-        });
+        geometryStyle(geometry, label, equipmentColor, 0.7);
       },
     });
 
     activitySource = new VectorSource();
     const activityLayer = new VectorLayer({
       source: activitySource,
-      style: {
-        "stroke-color": "green",
-        "stroke-width": 2,
+      style: (feature) => {
+        const geometry = feature.getGeometry();
+        if (!(geometry instanceof Geometry)) return;
+
+        const data = feature.get("data");
+
+        const label = data ? `${data.activity}` : "";
+
+        geometryStyle(geometry, activityColor, 0.7, label);
       },
     });
 
@@ -120,6 +206,14 @@
       map?.removeInteraction(drawInteraction);
       drawInteraction = null;
     }
+    if (hoverInteraction) {
+      map?.removeInteraction(hoverInteraction);
+      hoverInteraction = null;
+    }
+    if (selectInteraction) {
+      map?.removeInteraction(selectInteraction);
+      selectInteraction = null;
+    }
     if (modifyInteraction) {
       map?.removeInteraction(modifyInteraction);
       modifyInteraction = null;
@@ -131,27 +225,20 @@
   }
 
   $effect(() => {
-    if (!map) return;
+    if (!map || !equipmentSource || !activitySource) return;
 
     cleanupInteractions();
 
-    if (
-      !drawMode ||
-      !drawLayer ||
-      !drawGeometry ||
-      !equipmentSource ||
-      !activitySource ||
-      !formData
-    ) {
-      return;
-    }
-
-    const interactionSource =
-      drawLayer === "equipment" ? equipmentSource : activitySource;
-
     if (drawMode) {
+      if (!drawLayer || !drawGeometry || !formData) {
+        return;
+      }
+
+      const drawSource =
+        drawLayer === "equipment" ? equipmentSource : activitySource;
+
       drawInteraction = new Draw({
-        source: interactionSource,
+        source: drawSource,
         type: drawGeometry,
       });
       drawInteraction.on("drawend", (event) => {
@@ -163,14 +250,33 @@
       });
       map.addInteraction(drawInteraction);
     } else {
-      if (drawGeometry === "Polygon" || drawGeometry === "MultiPolygon") {
-        modifyInteraction = new Modify({ source: interactionSource });
-        map.addInteraction(modifyInteraction);
-      }
+      selectInteraction = new Select({
+        addCondition: shiftKeyOnly,
+        hitTolerance: 5,
+      });
+      map.addInteraction(selectInteraction);
+
+      modifyInteraction = new Modify({
+        features: selectInteraction.getFeatures(),
+      });
+      map.addInteraction(modifyInteraction);
+
       translateInteraction = new Translate({
-        features: interactionSource.getFeaturesCollection(),
+        condition: platformModifierKeyOnly,
+        features: selectInteraction.getFeatures(),
       });
       map.addInteraction(translateInteraction);
+
+      //const polygonFeatures = new Collection([
+      //  ...activitySource.getFeatures(),
+      //  ...equipmentSource.getFeatures().filter((feature) => {
+      //    const geometry = feature.getGeometry();
+      //    return (
+      //      geometry?.getType() === "Polygon" ||
+      //      geometry?.getType() === "MultiPolygon"
+      //    );
+      //  }),
+      //]);
     }
 
     return cleanupInteractions;
