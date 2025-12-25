@@ -9,6 +9,7 @@
   import { Draw, Modify, Select, Translate } from "ol/interaction";
   import { Circle, Fill, Stroke, Style, Text } from "ol/style";
   import type { FeatureLike } from "ol/Feature";
+  import Collection from "ol/Collection";
   import Geometry from "ol/geom/Geometry";
   import Point from "ol/geom/Point";
   import MultiPoint from "ol/geom/MultiPoint";
@@ -75,11 +76,27 @@
     fill: (alpha: number = 1.0) => `rgba(0,255,0,${alpha})`,
     stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
   };
+
+  function textStyle(
+    label: string,
+    colorScheme: ColorScheme,
+    alpha: number = 1.0,
+    offsetY?: number | undefined,
+  ) {
+    return new Text({
+      text: label,
+      fill: new Fill({ color: colorScheme.fill(alpha) }),
+      stroke: new Stroke({ color: colorScheme.stroke(alpha), width: 2 }),
+      offsetY: offsetY,
+    });
+  }
+
   function geometryStyle(
     geometry: Geometry,
     label: string,
     colorScheme: ColorScheme,
     alpha: number = 1.0,
+    polygonAlpha: number | undefined = 0.0,
     strokeWidth: number = 1.0,
   ) {
     if (geometry instanceof Point) {
@@ -92,12 +109,7 @@
             width: strokeWidth,
           }),
         }),
-        text: new Text({
-          text: label,
-          fill: new Fill({ color: textColor.fill() }),
-          stroke: new Stroke({ color: textColor.stroke(), width: 1 }),
-          offsetY: 25,
-        }),
+        text: textStyle(label, textColor, 1.0, 25),
       });
     }
 
@@ -107,16 +119,17 @@
           color: colorScheme.fill(alpha),
           width: strokeWidth,
         }),
-        fill: new Fill({
-          color: colorScheme.fill(0.0),
-        }),
-        text: new Text({
-          text: label,
-          fill: new Fill({ color: textColor.fill() }),
-          stroke: new Stroke({ color: textColor.stroke(), width: 1 }),
-        }),
+        fill:
+          polygonAlpha === null
+            ? undefined
+            : new Fill({
+                color: colorScheme.fill(polygonAlpha),
+              }),
+        text: textStyle(label, textColor, 1.0, 5),
       });
     }
+
+    return null;
   }
 
   const vertexStyle = new Style({
@@ -175,7 +188,7 @@
           ? `${data.id}\n${data.status}\n${data.confidence}`
           : "";
 
-        geometryStyle(geometry, label, equipmentColor, 0.7);
+        return geometryStyle(geometry, label, equipmentColor, 0.7, 0.0);
       },
     });
 
@@ -190,7 +203,7 @@
 
         const label = data ? `${data.activity}` : "";
 
-        geometryStyle(geometry, activityColor, 0.7, label);
+        return geometryStyle(geometry, label, activityColor, 0.7, 0.0);
       },
     });
 
@@ -250,14 +263,79 @@
       });
       map.addInteraction(drawInteraction);
     } else {
+      const modifiableFeatures = new Collection();
+
+      hoverInteraction = new Select({
+        condition: pointerMove,
+        hitTolerance: 5,
+        filter: (feature) => {
+          return !selectInteraction?.getFeatures().getArray().includes(feature);
+        },
+        style: (feature) => {
+          const geometry = feature.getGeometry();
+          if (!(geometry instanceof Geometry)) return;
+
+          const data = feature.get("data");
+          const label = data
+            ? `${data.id}\n${data.status}\n${data.confidence}`
+            : "";
+
+          return geometryStyle(geometry, label, equipmentColor, 1.0, 0.0, 2);
+        },
+      });
+      map.addInteraction(hoverInteraction);
+
       selectInteraction = new Select({
         addCondition: shiftKeyOnly,
         hitTolerance: 5,
+        style: (feature) => {
+          const geometry = feature.getGeometry();
+          if (!(geometry instanceof Geometry)) return;
+
+          const features = selectInteraction!.getFeatures();
+          const index = features.getArray().indexOf(feature);
+
+          const data = feature.get("data");
+          const label = data
+            ? `${data.id}\n${data.status}\n${data.confidence}`
+            : "";
+
+          const baseStyle = geometryStyle(
+            geometry,
+            label,
+            equipmentColor,
+            1.0,
+            0.2,
+            2,
+          );
+
+          if (!baseStyle || index < 0) return baseStyle;
+
+          return [
+            baseStyle,
+            new Style({
+              text: textStyle(`${index + 1}`, textColor, 1.0, -15),
+            }),
+            vertexStyle,
+          ];
+        },
       });
       map.addInteraction(selectInteraction);
 
+      selectInteraction.getFeatures().on("add", (e) => {
+        const geometry = e.element.getGeometry();
+
+        if (geometry instanceof Polygon || geometry instanceof MultiPolygon) {
+          modifiableFeatures.push(e.element);
+        }
+      });
+
+      selectInteraction.getFeatures().on("remove", (e) => {
+        modifiableFeatures.remove(e.element);
+      });
+
       modifyInteraction = new Modify({
-        features: selectInteraction.getFeatures(),
+        features: modifiableFeatures,
       });
       map.addInteraction(modifyInteraction);
 
@@ -266,17 +344,6 @@
         features: selectInteraction.getFeatures(),
       });
       map.addInteraction(translateInteraction);
-
-      //const polygonFeatures = new Collection([
-      //  ...activitySource.getFeatures(),
-      //  ...equipmentSource.getFeatures().filter((feature) => {
-      //    const geometry = feature.getGeometry();
-      //    return (
-      //      geometry?.getType() === "Polygon" ||
-      //      geometry?.getType() === "MultiPolygon"
-      //    );
-      //  }),
-      //]);
     }
 
     return cleanupInteractions;
@@ -284,6 +351,7 @@
 
   onDestroy(() => {
     map?.setTarget(undefined);
+    map?.getLayers().clear();
   });
 </script>
 
