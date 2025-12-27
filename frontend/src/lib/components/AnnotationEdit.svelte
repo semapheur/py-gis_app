@@ -3,14 +3,16 @@
 
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
+  import KebabMenu from "$lib/components/KebabMenu.svelte";
 
   import { type EquipmentData } from "$lib/utils/types";
 
   interface Props {
     selectedAnnotations: Feature[];
+    onDelete: (feature: Feature) => void;
   }
 
-  let { selectedAnnotations = $bindable() }: Props = $props();
+  let { selectedAnnotations, onDelete }: Props = $props();
 
   let selectedIndex = $state<number | null>(null);
   let validForm = $state<boolean>(true);
@@ -57,15 +59,21 @@
   function deleteFeature() {
     if (!selectedFeature) return;
 
-    const source = selectedFeature.getLayer?.()?.getSource?.();
-    source?.removeFeature(selectedFeature);
-
+    onDelete(selectedFeature);
     selectedIndex = null;
   }
 </script>
 
 {#if selectedAnnotations.length > 0}
   <aside class="edit-sidebar">
+    <header class="edit-header">
+      <KebabMenu>
+        <button role="menuitem">Export to GeoJSON</button>
+        <button role="menuitem">Bulk edit</button>
+        <button role="menuitem">Bulk delete</button>
+      </KebabMenu>
+      <span class="edit-heading">Selected annotations</span>
+    </header>
     <ol>
       {#each selectedAnnotations as annotation, i}
         <li>
@@ -94,7 +102,7 @@
         <button class="button-save" disabled={!validForm} onclick={saveEdits}>
           Save
         </button>
-        <button class="button-delete"> Delete </button>
+        <button class="button-delete" onclick={deleteFeature}> Delete </button>
       </footer>
     {/if}
   </aside>
@@ -108,6 +116,18 @@
     top: 0;
     right: 0;
     background: rgb(var(--color-primary));
+  }
+
+  .edit-header {
+    display: flex;
+    gap: var(--size-md);
+    border-bottom: 1px solid rgb(var(--color-text));
+  }
+
+  .edit-heading {
+    margin: 0;
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
   }
 
   .button-save {

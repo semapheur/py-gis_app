@@ -39,6 +39,7 @@
     drawGeometry: AnnotateGeometry<AnnotateForm> | null;
     formData: EquipmentData | null;
     selectedFeatures: Feature[];
+    onDeleteFeature?: (feature: Feature) => void;
   }
 
   let {
@@ -65,6 +66,14 @@
     if (!selectInteraction) return;
 
     selectedFeatures = [...selectInteraction.getFeatures().getArray()];
+  }
+
+  export function deleteFeature(feature: Feature) {
+    const type = feature.get("type");
+    const source = type === "equipment" ? equipmentSource : activitySource;
+    if (!source) return;
+
+    source.removeFeature(feature);
   }
 
   interface ColorScheme {

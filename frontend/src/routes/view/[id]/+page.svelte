@@ -22,6 +22,15 @@
   let drawGeometry = $state<"Point" | "Polygon">("Point");
   let formData = $state<EquipmentData | null>(null);
   let selectedAnnotations = $state<Feature[]>([]);
+  let imageViewerRef = $state<ImageViewer | null>(null);
+
+  function handleDelete(feature: Feature) {
+    if (!imageViewerRef) return;
+
+    imageViewerRef.deleteFeature(feature);
+
+    selectedAnnotations = selectedAnnotations.filter((f) => f !== feature);
+  }
 </script>
 
 <div class="container">
@@ -38,6 +47,7 @@
     bind:formData
   />
   <ImageViewer
+    bind:this={imageViewerRef}
     {image}
     {radiometricParams}
     {formData}
@@ -46,7 +56,7 @@
     bind:drawGeometry
     bind:selectedFeatures={selectedAnnotations}
   />
-  <AnnotationEdit {selectedAnnotations} />
+  <AnnotationEdit {selectedAnnotations} onDelete={handleDelete} />
 </div>
 
 <style>
