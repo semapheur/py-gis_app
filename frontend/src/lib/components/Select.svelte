@@ -11,9 +11,15 @@
     label?: string;
     value?: string | null;
     options: readonly OptionInput[];
+    onchange?: (event: Event) => void;
   }
 
-  let { label = "", value = $bindable(null), options = [] }: Props = $props();
+  let {
+    label = "",
+    value = $bindable(null),
+    options = [],
+    onchange,
+  }: Props = $props();
   let placeholder = $derived(label);
   const normalizedOptions = $derived(
     options.map((o) =>
@@ -25,7 +31,7 @@
 </script>
 
 <div class="container">
-  <select id={uid} bind:value>
+  <select id={uid} bind:value {onchange}>
     <option value="" disabled hidden>
       {placeholder}
     </option>

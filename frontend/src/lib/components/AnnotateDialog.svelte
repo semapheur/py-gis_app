@@ -7,11 +7,7 @@
   import {
     annotateTabs,
     annotateGeometryByForm,
-    equipmentConfidence,
-    equipmentStatus,
     type EquipmentData,
-    type EquipmentConfidence,
-    type EquipmentStatus,
     type AnnotateForm,
     type AnnotateGeometry,
   } from "$lib/utils/types";
@@ -20,7 +16,7 @@
     open: boolean;
     drawMode: boolean;
     activeForm: AnnotateForm;
-    formData: EquipmentData;
+    formData: EquipmentData | null;
     drawGeometry: AnnotateGeometry<AnnotateForm>;
   }
 
@@ -35,16 +31,14 @@
   let validForm = $state<boolean>(false);
   let annotateOptions = $derived(annotateGeometryByForm[activeForm]);
 
+  let formRef = $state<EquipmentForm | null>(null);
+
+  function handleCommit(data: EquipmentData) {
+    formData = data;
+  }
+
   $effect(() => {
     drawGeometry = annotateOptions[0].value;
-
-    if (activeForm === "equipment") {
-      formData = {
-        id: null,
-        confidence: equipmentConfidence[0].toLowerCase() as EquipmentConfidence,
-        status: equipmentStatus[0].toLowerCase() as EquipmentStatus,
-      };
-    }
 
     if (!open && drawMode) {
       drawMode = false;
@@ -59,11 +53,19 @@
       <button class="button-close" onclick={() => (open = false)}> ✕ </button>
     </header>
     <main>
-      {#if activeForm === "equipment"}
-        <EquipmentForm bind:data={formData} bind:valid={validForm} />
-      {:else if activeForm === "activity"}
-        <ActivityForm />
-      {/if}
+      {#key activeForm}
+        {#if activeForm === "equipment"}
+          <EquipmentForm
+            bind:this={formRef}
+            data={formData}
+            oncommit={handleCommit}
+            onvalid={(v) => (validForm = v)}
+            autoCommit={true}
+          />
+        {:else if activeForm === "activity"}
+          <ActivityForm />
+        {/if}
+      {/key}
     </main>
     <footer class="footer">
       {#key activeForm}

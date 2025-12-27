@@ -3,12 +3,14 @@
     value?: string | number | null;
     label?: string;
     required?: boolean;
+    oninput?: (event: Event) => void;
   }
 
   let {
     value = $bindable(null),
     label = "",
     required = false,
+    oninput,
   }: Props = $props();
   let placeholder = $derived(label);
 
@@ -16,7 +18,7 @@
 </script>
 
 <div class="container">
-  <input id={uid} {placeholder} bind:value {required} />
+  <input id={uid} {placeholder} bind:value {required} {oninput} />
   {#if label}
     <label for={uid}>{label}</label>
   {/if}

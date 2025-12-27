@@ -1,7 +1,10 @@
 <script lang="ts">
+  import Feature from "ol/Feature";
+
   import type { PageData } from "./$types";
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
+  import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
   import type {
     AnnotateForm,
     EquipmentData,
@@ -17,7 +20,8 @@
   let drawMode = $state<boolean>(false);
   let drawLayer = $state<AnnotateForm>("equipment");
   let drawGeometry = $state<"Point" | "Polygon">("Point");
-  let formData = $state<EquipmentData>();
+  let formData = $state<EquipmentData | null>(null);
+  let selectedAnnotations = $state<Feature[]>([]);
 </script>
 
 <div class="container">
@@ -40,7 +44,9 @@
     bind:drawMode
     bind:drawLayer
     bind:drawGeometry
+    bind:selectedFeatures={selectedAnnotations}
   />
+  <AnnotationEdit {selectedAnnotations} />
 </div>
 
 <style>
