@@ -14,7 +14,7 @@
   }: Props = $props();
   let placeholder = $derived(label);
 
-  const uid = crypto.randomUUID();
+  const uid = $props.id();
 </script>
 
 <div class="container">

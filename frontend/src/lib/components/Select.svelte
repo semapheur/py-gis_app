@@ -27,7 +27,7 @@
     ),
   );
 
-  const uid = crypto.randomUUID();
+  const uid = $props.id();
 </script>
 
 <div class="container">
