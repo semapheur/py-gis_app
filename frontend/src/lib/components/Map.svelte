@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
   import * as maplibre from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { type ImagePreviewInfo } from "$lib/utils/types";
@@ -26,10 +25,9 @@
     onSearchExtent,
   }: Props = $props();
 
+  let mapLoaded = $state<boolean>(false);
+
   let map: maplibre.Map;
-  let mapContainer: HTMLDivElement;
-  let mapLoaded = false;
-  let lastPreview: ImagePreviewInfo | null = null;
   let resizeObserver: ResizeObserver;
 
   function decimalsForZoom(zoom: number): number {
@@ -120,11 +118,11 @@
     onSearchExtent(polygonWkt);
   }
 
-  onMount(() => {
+  function attachMap(element: HTMLElement) {
     //const initialState = { lng: 0.0, lat: 0.0, zoom: 10 };
 
     map = new maplibre.Map({
-      container: mapContainer,
+      container: element,
       style: {
         version: 8,
         sources: {
@@ -159,26 +157,23 @@
     resizeObserver = new ResizeObserver(() => {
       if (map) map.resize();
     });
-    resizeObserver.observe(mapContainer);
+    resizeObserver.observe(element);
 
-    onDestroy(() => {
-      resizeObserver.disconnect();
+    return () => {
+      resizeObserver?.disconnect();
       map.remove();
-    });
-  });
+    };
+  }
 
   $effect(() => {
-    const condition =
-      map && mapLoaded && imagePreview && imagePreview !== lastPreview;
-
-    if (!condition) return;
-
-    lastPreview = imagePreview;
+    if (!map || !mapLoaded || !imagePreview) return;
 
     const orderedCoords = reorderFootprint(imagePreview.coordinates, map);
     const url = `/thumbnails/${imagePreview.filename}.png`;
 
-    const imageSource = map.getSource("image-preview") as maplibre.ImageSource;
+    const imageSource = map.getSource("image-preview") as
+      | maplibre.ImageSource
+      | undefined;
 
     if (imageSource !== undefined) {
       imageSource.updateImage({
@@ -199,9 +194,9 @@
       });
     }
 
-    const footprintSource = map.getSource(
-      "footprint",
-    ) as maplibre.GeoJSONSource;
+    const footprintSource = map.getSource("footprint") as
+      | maplibre.GeoJSONSource
+      | undefined;
 
     if (footprintSource !== undefined) {
       footprintSource.setData({
@@ -239,9 +234,9 @@
   });
 </script>
 
-<div class="map" bind:this={mapContainer}>
+<div class="map" {@attach attachMap}>
   {#if showSearchButton}
-    <button class="btn-search-extent" onclick={searchCurrentExtent}>
+    <button class="search-extent" onclick={searchCurrentExtent}>
       Search extent
     </button>
   {/if}
@@ -253,7 +248,7 @@
     width: 100%;
     height: 100%;
   }
-  .btn-search-extent {
+  .search-extent {
     position: absolute;
     bottom: 1rem;
     left: 1rem;

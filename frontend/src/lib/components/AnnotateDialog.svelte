@@ -10,26 +10,23 @@
     type EquipmentData,
     type AnnotateForm,
     type AnnotateGeometry,
+    type DrawConfig,
   } from "$lib/utils/types";
 
   interface Props {
     open: boolean;
-    drawMode: boolean;
-    activeForm: AnnotateForm;
+    drawConfig: DrawConfig;
     formData: EquipmentData | null;
-    drawGeometry: AnnotateGeometry<AnnotateForm>;
   }
 
   let {
     open = $bindable(),
-    drawMode = $bindable(),
-    activeForm = $bindable(),
+    drawConfig = $bindable(),
     formData = $bindable(),
-    drawGeometry = $bindable(),
   }: Props = $props();
 
   let validForm = $state<boolean>(false);
-  let annotateOptions = $derived(annotateGeometryByForm[activeForm]);
+  let annotateOptions = $derived(annotateGeometryByForm[drawConfig.layer]);
 
   let formRef = $state<EquipmentForm | null>(null);
 
@@ -38,10 +35,10 @@
   }
 
   $effect(() => {
-    drawGeometry = annotateOptions[0].value;
+    drawConfig.geometry = annotateOptions[0].value;
 
-    if (!open && drawMode) {
-      drawMode = false;
+    if (!open && drawConfig.enabled) {
+      drawConfig.enabled = false;
     }
   });
 </script>
@@ -49,12 +46,12 @@
 {#if open}
   <div class="container">
     <header class="header">
-      <Tabs tabs={annotateTabs} bind:selected={activeForm} />
+      <Tabs tabs={annotateTabs} bind:selected={drawConfig.layer} />
       <button class="button-close" onclick={() => (open = false)}> ✕ </button>
     </header>
     <main>
-      {#key activeForm}
-        {#if activeForm === "equipment"}
+      {#key drawConfig.layer}
+        {#if drawConfig.layer === "equipment"}
           <EquipmentForm
             bind:this={formRef}
             data={formData}
@@ -62,26 +59,26 @@
             onvalid={(v) => (validForm = v)}
             autoCommit={true}
           />
-        {:else if activeForm === "activity"}
+        {:else if drawConfig.layer === "activity"}
           <ActivityForm />
         {/if}
       {/key}
     </main>
     <footer class="footer">
-      {#key activeForm}
+      {#key drawConfig.layer}
         <Select
           label="Geometry"
           options={annotateOptions}
-          bind:value={drawGeometry}
+          bind:value={drawConfig.geometry}
         />
       {/key}
       <button
         class="button-annotate"
-        class:draw={drawMode}
+        class:draw={drawConfig.enabled}
         disabled={!validForm}
-        onclick={() => (drawMode = !drawMode)}
+        onclick={() => (drawConfig.enabled = !drawConfig.enabled)}
       >
-        {drawMode ? "Stop" : "Annotate"}
+        {drawConfig.enabled ? "Stop" : "Annotate"}
       </button>
     </footer>
   </div>

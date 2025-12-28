@@ -15,7 +15,7 @@
   }
 </script>
 
-<div {@attach menu.setContainer}>
+<div {...menu.containerProps}>
   <button
     {@attach (el) => {
       trigger = el;
@@ -29,7 +29,7 @@
   </button>
 
   {#if menu.open}
-    <div {@attach menu.setMenu} class="kebab-menu" {...menu.menuProps}>
+    <div class="kebab-menu" {...menu.menuProps}>
       {@render children?.()}
     </div>
   {/if}

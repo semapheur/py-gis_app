@@ -1,10 +1,11 @@
 import { tick } from "svelte";
+import { createAttachmentKey } from "svelte/attachments";
 
 export function useMenu() {
   let open = $state(false);
-  let container = $state<HTMLElement | null>(null);
-  let menu = $state<HTMLElement | null>(null);
 
+  let container: HTMLElement | null = null;
+  let menu: HTMLElement | null = null;
   let restoreFocusTo: HTMLElement | null = null;
 
   function openMenu({ restoreFocus }: { restoreFocus?: HTMLElement } = {}) {
@@ -58,14 +59,6 @@ export function useMenu() {
     if (item) closeMenu();
   }
 
-  function setContainer(el: HTMLElement) {
-    container = el;
-  }
-
-  function setMenu(el: HTMLElement) {
-    menu = el;
-  }
-
   $effect(() => {
     if (!open) return;
 
@@ -85,9 +78,15 @@ export function useMenu() {
     },
     openMenu,
     closeMenu,
-    setContainer,
-    setMenu,
+    containerProps: {
+      [createAttachmentKey()]: (el: HTMLElement) => {
+        container = el;
+      },
+    },
     menuProps: {
+      [createAttachmentKey()]: (el: HTMLElement) => {
+        menu = el;
+      },
       role: "menu",
       tabindex: -1,
       onkeydown: handleMenuKeydown,

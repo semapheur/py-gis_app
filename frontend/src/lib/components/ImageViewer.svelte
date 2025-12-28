@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { onMount, onDestroy } from "svelte";
+  import { onDestroy } from "svelte";
   import Map from "ol/Map";
   import WebGLTileLayer, {
     type Style as RasterStyle,
@@ -25,18 +25,15 @@
   import type {
     ImageMetadata,
     RadiometricParams,
-    AnnotateForm,
-    AnnotateGeometry,
     EquipmentData,
+    DrawConfig,
   } from "$lib/utils/types";
   import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
   interface Props {
     image: ImageMetadata | null;
     radiometricParams?: RadiometricParams | null;
-    drawMode: boolean;
-    drawLayer: AnnotateForm | null;
-    drawGeometry: AnnotateGeometry<AnnotateForm> | null;
+    drawConfig: DrawConfig;
     formData: EquipmentData | null;
     selectedFeatures: Feature[];
     onDeleteFeature?: (feature: Feature) => void;
@@ -45,9 +42,7 @@
   let {
     image = null,
     radiometricParams = null,
-    drawMode = $bindable(false),
-    drawLayer = $bindable(null),
-    drawGeometry = $bindable(null),
+    drawConfig,
     formData = null,
     selectedFeatures = $bindable(),
   }: Props = $props();
@@ -60,7 +55,6 @@
   let translateInteraction: Translate | null = null;
   let equipmentSource: VectorSource | null = null;
   let activitySource: VectorSource | null = null;
-  let target: HTMLDivElement;
 
   function syncSelectedFeatures() {
     if (!selectInteraction) return;
@@ -171,7 +165,7 @@
     },
   });
 
-  onMount(() => {
+  function attachMap(element: HTMLElement) {
     if (!image) return;
 
     const rasterSource = new GeoTIFF({
@@ -213,11 +207,11 @@
     });
 
     map = new Map({
-      target,
+      target: element,
       layers: [rasterLayer, equipmentLayer, activityLayer],
       view: rasterSource.getView(),
     });
-  });
+  }
 
   function cleanupInteractions() {
     if (drawInteraction) {
@@ -247,28 +241,28 @@
 
     cleanupInteractions();
 
-    if (drawMode) {
-      if (!drawLayer || !drawGeometry || !formData) {
+    if (drawConfig.enabled) {
+      if (!formData) {
         return;
       }
 
       const drawSource =
-        drawLayer === "equipment" ? equipmentSource : activitySource;
+        drawConfig.layer === "equipment" ? equipmentSource : activitySource;
 
       drawInteraction = new Draw({
         source: drawSource,
-        type: drawGeometry,
+        type: drawConfig.geometry,
       });
       drawInteraction.on("drawend", (event) => {
         const feature = event.feature;
 
         const label =
-          drawLayer === "equipment"
+          drawConfig.layer === "equipment"
             ? `${formData.id}\n${formData.status}\n${formData.confidence}`
             : ""; //formData.activity
 
         feature.setProperties({
-          type: drawLayer,
+          type: drawConfig.layer,
           label,
           data: structuredClone($state.snapshot(formData)),
         });
@@ -349,7 +343,7 @@
   });
 </script>
 
-<div bind:this={target} class="map"></div>
+<div {@attach attachMap} class="map"></div>
 
 <style>
   .map {

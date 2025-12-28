@@ -70,3 +70,9 @@ export type EquipmentConfidence = Lowercase<
 >;
 export const equipmentStatus = ["Intact", "Damaged", "Destroyed"] as const;
 export type EquipmentStatus = Lowercase<(typeof equipmentStatus)[number]>;
+
+export interface DrawConfig {
+  enabled: boolean;
+  layer: AnnotateForm;
+  geometry: AnnotateGeometry<AnnotateForm>;
+}

@@ -8,6 +8,7 @@
   import type {
     AnnotateForm,
     EquipmentData,
+    DrawConfig,
     ImageMetadata,
     RadiometricParams,
   } from "$lib/utils/types";
@@ -17,9 +18,11 @@
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
 
   let annotateOpen = $state(false);
-  let drawMode = $state<boolean>(false);
-  let drawLayer = $state<AnnotateForm>("equipment");
-  let drawGeometry = $state<"Point" | "Polygon">("Point");
+  let drawConfig = $state<DrawConfig>({
+    enabled: false,
+    layer: "equipment",
+    geometry: "Point",
+  });
   let formData = $state<EquipmentData | null>(null);
   let selectedAnnotations = $state<Feature[]>([]);
   let imageViewerRef = $state<ImageViewer | null>(null);
@@ -39,21 +42,13 @@
       Add
     </button>
   {/if}
-  <AnnotateDialog
-    bind:open={annotateOpen}
-    bind:drawMode
-    bind:activeForm={drawLayer}
-    bind:drawGeometry
-    bind:formData
-  />
+  <AnnotateDialog bind:open={annotateOpen} bind:drawConfig bind:formData />
   <ImageViewer
     bind:this={imageViewerRef}
     {image}
     {radiometricParams}
+    {drawConfig}
     {formData}
-    bind:drawMode
-    bind:drawLayer
-    bind:drawGeometry
     bind:selectedFeatures={selectedAnnotations}
   />
   <AnnotationEdit {selectedAnnotations} onDelete={handleDelete} />
