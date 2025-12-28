@@ -1,8 +1,10 @@
+import { tick } from "svelte";
+
 export function useMenu() {
   let open = $state(false);
+  let container = $state<HTMLElement | null>(null);
+  let menu = $state<HTMLElement | null>(null);
 
-  let container: HTMLElement | null = null;
-  let menu: HTMLElement | null = null;
   let restoreFocusTo: HTMLElement | null = null;
 
   function openMenu({ restoreFocus }: { restoreFocus?: HTMLElement } = {}) {
@@ -56,11 +58,21 @@ export function useMenu() {
     if (item) closeMenu();
   }
 
+  function setContainer(el: HTMLElement) {
+    container = el;
+  }
+
+  function setMenu(el: HTMLElement) {
+    menu = el;
+  }
+
   $effect(() => {
     if (!open) return;
 
-    queueMicrotask(() => menu?.focus());
-    window.addEventListener("pointerdown", handleClickOutside);
+    tick().then(() => {
+      menu?.focus();
+      window.addEventListener("pointerdown", handleClickOutside);
+    });
 
     return () => {
       window.removeEventListener("pointerdown", handleClickOutside);
@@ -73,11 +85,9 @@ export function useMenu() {
     },
     openMenu,
     closeMenu,
-    containerProps: {
-      "@attach": (el: HTMLElement) => (container = el),
-    },
+    setContainer,
+    setMenu,
     menuProps: {
-      "@attach": (el: HTMLElement) => (menu = el),
       role: "menu",
       tabindex: -1,
       onkeydown: handleMenuKeydown,
