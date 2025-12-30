@@ -1,42 +1,39 @@
 <script lang="ts">
-  import Feature from "ol/Feature";
+  import GeoJSON from "ol/format/GeoJSON";
 
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
 
-  import { type EquipmentData } from "$lib/utils/types";
+  import { getImageViewerState } from "$lib/states/image_viewer.svelte";
+  import { type EquipmentData } from "$lib/states/annotate.svelte";
 
-  interface Props {
-    selectedAnnotations: Feature[];
-    onDelete: (feature: Feature) => void;
-  }
-
-  let { selectedAnnotations, onDelete }: Props = $props();
+  const viewer = getImageViewerState();
 
   let selectedIndex = $state<number | null>(null);
   let validForm = $state<boolean>(true);
   let editData = $state<EquipmentData | null>(null);
-  let formRef = $state<EquipmentForm | null>(null);
 
-  const labels = $derived(
-    selectedAnnotations.map((f) => f.get("label")?.replace("\n", ", ")),
-  );
+  const selectedFeatures = $derived(viewer.selectedFeatures);
   const selectedFeature = $derived(
-    selectedIndex !== null
-      ? (selectedAnnotations[selectedIndex] ?? null)
-      : null,
+    selectedIndex !== null ? (selectedFeatures[selectedIndex] ?? null) : null,
   );
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
+  const labels = $derived(
+    selectedFeatures.map((f) => f.get("label")?.replace("\n", ", ")),
+  );
 
   $effect(() => {
-    if (!selectedFeature) return;
+    if (!selectedFeature) {
+      editData = null;
+      selectedIndex = null;
+      return;
+    }
 
-    const data = selectedFeature.get("data");
-    editData = data ?? null;
+    editData = structuredClone(selectedFeature.get("data") ?? null);
   });
 
-  function handleCommit(data: EquipmentData) {
+  function commit(data: EquipmentData) {
     if (!selectedFeature) return;
 
     selectedFeature.set("data", data);
@@ -47,35 +44,46 @@
 
     selectedFeature.set("label", label);
     selectedFeature.changed();
-    selectedAnnotations = [...selectedAnnotations];
   }
 
   function saveEdits() {
-    if (!formRef || !validForm) return;
+    if (!editData || !validForm) return;
 
-    handleCommit(formRef.commit());
+    commit(editData);
   }
 
   function deleteFeature() {
     if (!selectedFeature) return;
 
-    onDelete(selectedFeature);
+    viewer.deleteFeature(selectedFeature);
     selectedIndex = null;
+    editData = null;
+  }
+
+  function exportFeaturesToGeoJson() {
+    if (!selectedFeatures.length) return;
+
+    const format = new GeoJSON();
+
+    const geojson = format.writeFeatures(selectedFeatures);
+    console.log(geojson);
   }
 </script>
 
-{#if selectedAnnotations.length > 0}
+{#if selectedFeatures.length > 0}
   <aside class="edit-sidebar">
     <header class="edit-header">
       <KebabMenu>
-        <button role="menuitem">Export to GeoJSON</button>
+        <button role="menuitem" onclick={exportFeaturesToGeoJson}
+          >Export to GeoJSON</button
+        >
         <button role="menuitem">Bulk edit</button>
         <button role="menuitem">Bulk delete</button>
       </KebabMenu>
       <span class="edit-heading">Selected annotations</span>
     </header>
     <ol>
-      {#each selectedAnnotations as annotation, i}
+      {#each selectedFeatures as _, i}
         <li>
           <label>
             <input type="radio" value={i} bind:group={selectedIndex} />
@@ -88,11 +96,9 @@
       {#key selectedIndex}
         {#if selectedType === "equipment"}
           <EquipmentForm
-            bind:this={formRef}
-            data={editData}
-            oncommit={handleCommit}
+            value={editData}
+            onchange={(v) => (editData = v)}
             onvalid={(v) => (validForm = v)}
-            autoCommit={false}
           />
         {:else if selectedType === "activity"}
           <ActivityForm />

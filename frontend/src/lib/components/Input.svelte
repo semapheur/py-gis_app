@@ -6,12 +6,7 @@
     oninput?: (event: Event) => void;
   }
 
-  let {
-    value = $bindable(null),
-    label = "",
-    required = false,
-    oninput,
-  }: Props = $props();
+  let { value = null, label = "", required = false, oninput }: Props = $props();
   let placeholder = $derived(label);
 
   const uid = $props.id();

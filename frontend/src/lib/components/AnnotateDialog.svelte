@@ -5,80 +5,61 @@
   import Tabs from "$lib/components/Tabs.svelte";
 
   import {
+    getAnnotateState,
     annotateTabs,
-    annotateGeometryByForm,
     type EquipmentData,
-    type AnnotateForm,
-    type AnnotateGeometry,
-    type DrawConfig,
-  } from "$lib/utils/types";
+  } from "$lib/states/annotate.svelte";
 
   interface Props {
     open: boolean;
-    drawConfig: DrawConfig;
-    formData: EquipmentData | null;
   }
 
-  let {
-    open = $bindable(),
-    drawConfig = $bindable(),
-    formData = $bindable(),
-  }: Props = $props();
+  let { open = $bindable() }: Props = $props();
 
-  let validForm = $state<boolean>(false);
-  let annotateOptions = $derived(annotateGeometryByForm[drawConfig.layer]);
-
-  let formRef = $state<EquipmentForm | null>(null);
-
-  function handleCommit(data: EquipmentData) {
-    formData = data;
-  }
+  const annotate = getAnnotateState();
 
   $effect(() => {
-    drawConfig.geometry = annotateOptions[0].value;
-
-    if (!open && drawConfig.enabled) {
-      drawConfig.enabled = false;
-    }
+    if (!open) annotate.stop();
   });
 </script>
 
 {#if open}
   <div class="container">
     <header class="header">
-      <Tabs tabs={annotateTabs} bind:selected={drawConfig.layer} />
+      <Tabs
+        tabs={annotateTabs}
+        selected={annotate.layer}
+        onselect={(layer: typeof annotate.layer) => annotate.setLayer(layer)}
+      />
       <button class="button-close" onclick={() => (open = false)}> ✕ </button>
     </header>
     <main>
-      {#key drawConfig.layer}
-        {#if drawConfig.layer === "equipment"}
+      {#key annotate.layer}
+        {#if annotate.layer === "equipment"}
           <EquipmentForm
-            bind:this={formRef}
-            data={formData}
-            oncommit={handleCommit}
-            onvalid={(v) => (validForm = v)}
-            autoCommit={true}
+            value={annotate.data as EquipmentData}
+            onchange={(d) => annotate.setData(d)}
           />
-        {:else if drawConfig.layer === "activity"}
+        {:else if annotate.layer === "activity"}
           <ActivityForm />
         {/if}
       {/key}
     </main>
     <footer class="footer">
-      {#key drawConfig.layer}
+      {#key annotate.layer}
         <Select
           label="Geometry"
-          options={annotateOptions}
-          bind:value={drawConfig.geometry}
+          options={annotate.geometryOptions}
+          value={annotate.geometry}
         />
       {/key}
       <button
         class="button-annotate"
-        class:draw={drawConfig.enabled}
-        disabled={!validForm}
-        onclick={() => (drawConfig.enabled = !drawConfig.enabled)}
+        class:draw={annotate.active}
+        disabled={!annotate.validData}
+        onclick={() => annotate.toggleActive()}
       >
-        {drawConfig.enabled ? "Stop" : "Annotate"}
+        {annotate.active ? "Stop" : "Annotate"}
       </button>
     </footer>
   </div>

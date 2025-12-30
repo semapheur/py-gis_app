@@ -14,12 +14,7 @@
     onchange?: (event: Event) => void;
   }
 
-  let {
-    label = "",
-    value = $bindable(null),
-    options = [],
-    onchange,
-  }: Props = $props();
+  let { label = "", value = null, options = [], onchange }: Props = $props();
   let placeholder = $derived(label);
   const normalizedOptions = $derived(
     options.map((o) =>

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { useMenu } from "$lib/components/useMenu.svelte";
+  import { useMenu } from "$lib/hooks/useMenu.svelte";
 
   interface Props {
     children: Snippet;
@@ -47,8 +47,8 @@
     position: absolute;
     display: flex;
     flex-direction: column;
-    background: rgb(var(--color-primary));
-    border: 1px solid rgb(var(--color-text));
+    background: rgb(var(--color-accent));
+    border: 1px solid rgba(var(--color-text));
     z-index: 1;
 
     & :global(button[role="menuitem"]) {
@@ -65,7 +65,7 @@
 
       &:hover,
       &:focus-visible {
-        background: rgba(var(--color-text) / 0.2);
+        background: rgba(var(--color-primary) / 0.5);
       }
     }
   }

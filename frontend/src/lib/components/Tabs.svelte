@@ -4,19 +4,20 @@
     value: T;
   }
 
-  interface Props {
-    tabs: readonly Tab[];
-    selected: string;
+  interface Props<T = string> {
+    tabs: readonly Tab<T>[];
+    selected: T;
+    onselect: (value: T) => void;
   }
 
-  let { tabs, selected = $bindable() }: Props = $props();
+  let { tabs, selected, onselect }: Props = $props();
 </script>
 
 <nav class="tabs">
   {#each tabs as tab}
     <button
       class:selected={selected === tab.value}
-      onclick={() => (selected = tab.value)}
+      onclick={() => onselect(tab.value)}
     >
       {tab.name}
     </button>

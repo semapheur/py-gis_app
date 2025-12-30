@@ -1,39 +1,20 @@
 <script lang="ts">
-  import Feature from "ol/Feature";
-
   import type { PageData } from "./$types";
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
-  import type {
-    AnnotateForm,
-    EquipmentData,
-    DrawConfig,
-    ImageMetadata,
-    RadiometricParams,
-  } from "$lib/utils/types";
+  import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+  import { setAnnotateState } from "$lib/states/annotate.svelte";
+  import { setImageViewerState } from "$lib/states/image_viewer.svelte";
 
   let { data } = $props<{ data: PageData }>();
   const image: ImageMetadata = $derived(data.image);
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
 
   let annotateOpen = $state(false);
-  let drawConfig = $state<DrawConfig>({
-    enabled: false,
-    layer: "equipment",
-    geometry: "Point",
-  });
-  let formData = $state<EquipmentData | null>(null);
-  let selectedAnnotations = $state<Feature[]>([]);
-  let imageViewerRef = $state<ImageViewer | null>(null);
 
-  function handleDelete(feature: Feature) {
-    if (!imageViewerRef) return;
-
-    imageViewerRef.deleteFeature(feature);
-
-    selectedAnnotations = selectedAnnotations.filter((f) => f !== feature);
-  }
+  setAnnotateState();
+  setImageViewerState();
 </script>
 
 <div class="container">
@@ -42,16 +23,9 @@
       Add
     </button>
   {/if}
-  <AnnotateDialog bind:open={annotateOpen} bind:drawConfig bind:formData />
-  <ImageViewer
-    bind:this={imageViewerRef}
-    {image}
-    {radiometricParams}
-    {drawConfig}
-    {formData}
-    bind:selectedFeatures={selectedAnnotations}
-  />
-  <AnnotationEdit {selectedAnnotations} onDelete={handleDelete} />
+  <AnnotateDialog bind:open={annotateOpen} />
+  <ImageViewer {image} {radiometricParams} />
+  <AnnotationEdit />
 </div>
 
 <style>

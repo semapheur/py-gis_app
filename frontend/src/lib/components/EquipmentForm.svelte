@@ -6,67 +6,44 @@
     equipmentConfidence,
     equipmentStatus,
     type EquipmentData,
-    type EquipmentConfidence,
-    type EquipmentStatus,
-  } from "$lib/utils/types";
+  } from "$lib/states/annotate.svelte";
 
   interface Props {
-    data: EquipmentData | null;
-    onvalid: (valid: boolean) => void;
-    oncommit: (data: EquipmentData) => void;
-    autoCommit: boolean;
+    value: EquipmentData;
+    onchange: (value: EquipmentData) => void;
+    onvalid?: (valid: boolean) => void;
   }
 
-  let { data, onvalid, oncommit, autoCommit = false }: Props = $props();
+  let { value, onchange, onvalid }: Props = $props();
 
-  function createDefault(): EquipmentData {
-    return {
-      id: null,
-      confidence: equipmentConfidence[0].toLowerCase() as EquipmentConfidence,
-      status: equipmentStatus[0].toLowerCase() as EquipmentStatus,
-    };
+  function update<K extends keyof EquipmentData>(key: K, v: EquipmentData[K]) {
+    const next = { ...value, [key]: v };
+    onchange(next);
+    onvalid?.(isValid(next));
   }
 
-  let draft = $state<EquipmentData>(createDefault());
-
-  $effect(() => {
-    draft = data
-      ? {
-          id: data.id,
-          confidence: data.confidence,
-          status: data.status,
-        }
-      : createDefault();
-  });
-
-  $effect(() => {
-    onvalid(!!draft.id && !!draft.confidence && !!draft.status);
-  });
-
-  export function commit() {
-    const snapshot = structuredClone($state.snapshot(draft));
-    oncommit(snapshot);
-    return snapshot;
-  }
-
-  function handleChange() {
-    if (autoCommit) commit();
+  function isValid(v: EquipmentData) {
+    return Boolean(v.id && v.status && v.confidence);
   }
 </script>
 
 <form class="form">
-  <Input label="Equipment" bind:value={draft.id} oninput={handleChange} />
+  <Input
+    label="Equipment"
+    value={value.id}
+    oninput={(e) => update("id", e.target.value)}
+  />
   <Select
     options={equipmentConfidence}
     label="Confidence"
-    bind:value={draft.confidence}
-    onchange={handleChange}
+    value={value.confidence}
+    onchange={(v) => update("confidence", v)}
   />
   <Select
     options={equipmentStatus}
     label="Status"
-    bind:value={draft.status}
-    onchange={handleChange}
+    value={value.status}
+    onchange={(v) => update("status", v)}
   />
 </form>
 
