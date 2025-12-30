@@ -11,6 +11,10 @@
   let { image = null, radiometricParams = null }: Props = $props();
   const annotate = getAnnotateState();
   const viewer = getImageViewerState();
+
+  $effect(() => {
+    viewer.updateDrawInteraction(annotate);
+  });
 </script>
 
 {#if image}

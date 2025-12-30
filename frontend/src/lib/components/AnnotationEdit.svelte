@@ -33,17 +33,16 @@
     editData = structuredClone(selectedFeature.get("data") ?? null);
   });
 
+  $effect(() => {
+    if (selectedIndex !== null && selectedIndex >= selectedFeatures.length) {
+      selectedIndex = null;
+    }
+  });
+
   function commit(data: EquipmentData) {
     if (!selectedFeature) return;
 
-    selectedFeature.set("data", data);
-    const label =
-      selectedType === "equipment"
-        ? `${data.id}\n${data.status}\n${data.confidence}`
-        : "";
-
-    selectedFeature.set("label", label);
-    selectedFeature.changed();
+    viewer.updateFeatureData(selectedFeature, data);
   }
 
   function saveEdits() {

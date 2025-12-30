@@ -28,11 +28,7 @@
 </script>
 
 <form class="form">
-  <Input
-    label="Equipment"
-    value={value.id}
-    oninput={(e) => update("id", e.target.value)}
-  />
+  <Input label="Equipment" value={value.id} oninput={(v) => update("id", v)} />
   <Select
     options={equipmentConfidence}
     label="Confidence"

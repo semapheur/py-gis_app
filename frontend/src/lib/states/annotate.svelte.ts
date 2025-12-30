@@ -38,58 +38,73 @@ export interface ActivityData {
   type: string;
 }
 
-export interface AnnotateConfig {
-  active: boolean;
-  layer: AnnotateForm;
-  geometry: AnnotateGeometry<AnnotateForm>;
-  data: EquipmentData | ActivityData;
-}
-
 const defaultLayer = "equipment";
 
 export class AnnotateState {
-  #config = $state<AnnotateConfig>({
-    active: false,
-    layer: defaultLayer,
-    geometry: annotateGeometryByForm[defaultLayer][0].value,
-    data: this.createDefaultData(defaultLayer),
-  });
+  active = $state<boolean>(false);
+  layer = $state<AnnotateForm>(defaultLayer);
+  geometry = $state<AnnotateGeometry<AnnotateForm>>(
+    annotateGeometryByForm[defaultLayer][0].value,
+  );
+  data = $state<EquipmentData | ActivityData>(
+    this.createDefaultData(defaultLayer),
+  );
 
   label = $derived.by(() => {
-    const { layer, data } = this.#config;
-    if (!data) return "";
-
-    if (layer === "equipment") {
-      const d = data as EquipmentData;
+    if (this.layer === "equipment") {
+      const d = this.data as EquipmentData;
       return `${d.id}\n${d.confidence}\n${d.status}`;
     }
 
-    if (layer === "activity") {
-      const d = data as ActivityData;
+    if (this.layer === "activity") {
+      const d = this.data as ActivityData;
       return `${d.type}`;
     }
     return "";
   });
 
   validData = $derived.by(() => {
-    const { layer, data } = this.#config;
-
-    if (layer === "equipment") {
-      const d = data as EquipmentData;
+    if (this.layer === "equipment") {
+      const d = this.data as EquipmentData;
       return !!d?.id;
     }
 
-    if (layer === "activity") {
-      const d = data as ActivityData;
+    if (this.layer === "activity") {
+      const d = this.data as ActivityData;
       return !!d?.type;
     }
 
     return false;
   });
 
-  geometryOptions = $derived(annotateGeometryByForm[this.#config.layer]);
+  geometryOptions = $derived(annotateGeometryByForm[this.layer]);
 
   constructor() {}
+
+  setLayer(layer: AnnotateForm) {
+    if (this.layer === layer) return;
+
+    this.layer = layer;
+    this.geometry = annotateGeometryByForm[layer][0].value;
+    this.data = this.createDefaultData(layer);
+  }
+
+  setGeometry(value: AnnotateGeometry<AnnotateForm>) {
+    this.geometry = value;
+  }
+
+  setData(data: EquipmentData | ActivityData) {
+    this.data = data;
+  }
+
+  toggleActive() {
+    if (!this.validData) return;
+    this.active = !this.active;
+  }
+
+  stop() {
+    this.active = false;
+  }
 
   private createDefaultData(layer: AnnotateForm) {
     if (layer === "equipment") {
@@ -105,44 +120,6 @@ export class AnnotateState {
         type: "deployment",
       };
     }
-  }
-
-  get active() {
-    return this.#config.active;
-  }
-  get layer() {
-    return this.#config.layer;
-  }
-  get geometry() {
-    return this.#config.geometry;
-  }
-  get data() {
-    return this.#config.data;
-  }
-
-  setLayer(layer: AnnotateForm) {
-    if (this.layer === layer) return;
-
-    this.#config.layer = layer;
-    this.#config.geometry = annotateGeometryByForm[layer][0].value;
-    this.#config.data = this.createDefaultData(layer);
-  }
-
-  setGeometry(value: AnnotateGeometry<AnnotateForm>) {
-    this.#config.geometry = value;
-  }
-
-  setData(data: EquipmentData | ActivityData) {
-    this.#config.data = data;
-  }
-
-  toggleActive() {
-    if (!this.validData) return;
-    this.#config.active = !this.#config.active;
-  }
-
-  stop() {
-    this.#config.active = false;
   }
 }
 

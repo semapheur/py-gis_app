@@ -51,6 +51,7 @@
           label="Geometry"
           options={annotate.geometryOptions}
           value={annotate.geometry}
+          onchange={(v) => annotate.setGeometry(v)}
         />
       {/key}
       <button

@@ -1,4 +1,4 @@
-import { getContext, setContext } from "svelte";
+import { getContext, setContext, untrack } from "svelte";
 import Map from "ol/Map";
 import WebGLTileLayer, { type Style as RasterStyle } from "ol/layer/WebGLTile";
 import VectorLayer from "ol/layer/Vector";
@@ -18,8 +18,15 @@ import {
   shiftKeyOnly,
 } from "ol/events/condition";
 import { Circle, Fill, Stroke, Style, Text } from "ol/style";
+
 import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
-import type { AnnotateForm, AnnotateState } from "$lib/states/annotate.svelte";
+import type {
+  AnnotateForm,
+  AnnotateState,
+  EquipmentData,
+  ActivityData,
+  AnnotateGeometry,
+} from "$lib/states/annotate.svelte";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
@@ -158,8 +165,9 @@ export class ImageViewerState {
   }
 
   attach(target: HTMLElement, options: Options) {
+    if (this.#map) return;
+
     this.initMap(target, options);
-    this.bindAnnotateState(options.annotate);
 
     return () => {
       this.destroy();
@@ -253,11 +261,6 @@ export class ImageViewerState {
       features: select.getFeatures(),
     });
 
-    const draw = new Draw({
-      source: this.#sources[annotate.layer],
-      type: annotate.geometry,
-    });
-
     select.getFeatures().on("add", (e) => {
       const g = e.element.getGeometry();
       if (g instanceof Polygon || g instanceof MultiPolygon) {
@@ -271,17 +274,7 @@ export class ImageViewerState {
       this.syncSelectedFeatures();
     });
 
-    draw.on("drawend", (e) => {
-      if (!annotate.validData) return;
-
-      const label = annotate.label;
-
-      e.feature.setProperties({
-        type: annotate.layer,
-        label,
-        data: structuredClone($state.snapshot(annotate.data)),
-      });
-    });
+    const draw = this.createDrawInteraction(annotate);
 
     this.#interactions = { hover, select, modify, translate, draw };
 
@@ -289,40 +282,27 @@ export class ImageViewerState {
       this.#map!.addInteraction(i),
     );
 
-    this.setMode("edit");
+    this.setMode(annotate.active ? "draw" : "edit");
   }
 
-  private bindAnnotateState(annotate: AnnotateState) {
-    $effect(() => {
-      if (!this.#map) return;
-
-      if (annotate.active) {
-        this.setMode("draw", annotate);
-      } else {
-        this.setMode("edit");
-      }
+  private createDrawInteraction(annotate: AnnotateState) {
+    const draw = new Draw({
+      source: this.#sources[annotate.layer],
+      type: annotate.geometry,
     });
 
-    $effect(() => {
-      if (!annotate.active) return;
-      if (!this.#interactions.draw) return;
-
-      this.#interactions.draw.setProperties({
-        source: this.#sources[annotate.layer],
-        type: annotate.geometry,
+    draw.on("drawend", (e) => {
+      e.feature.setProperties({
+        type: annotate.layer,
+        label: annotate.label,
+        data: structuredClone($state.snapshot(annotate.data)),
       });
     });
+    return draw;
   }
 
-  setMode(mode: ViewerMode, annotate?: AnnotateState) {
+  private setMode(mode: ViewerMode) {
     Object.values(this.#interactions).forEach((i) => i.setActive(false));
-
-    if (mode === "draw" && annotate) {
-      this.#interactions.draw!.setProperties({
-        source: this.#sources[annotate.layer],
-        type: annotate.geometry,
-      });
-    }
 
     for (const key of MODE_INTERACTIONS[mode]) {
       this.#interactions[key].setActive(true);
@@ -337,12 +317,47 @@ export class ImageViewerState {
     ];
   }
 
+  updateDrawInteraction(annotate: AnnotateState) {
+    if (!this.#map) return;
+
+    if (this.#interactions.draw) {
+      this.#map.removeInteraction(this.#interactions.draw);
+    }
+
+    const draw = this.createDrawInteraction(annotate);
+
+    this.#interactions.draw = draw;
+    this.#map.addInteraction(draw);
+
+    this.setMode(annotate.active ? "draw" : "edit");
+  }
+
+  updateFeatureData(feature: Feature, data: EquipmentData | ActivityData) {
+    const type = feature.get("type") as string | null;
+    if (!type) return;
+
+    const label =
+      type === "equipment"
+        ? `${data.id}\n${data.status}\n${data.confidence}`
+        : "";
+
+    feature.set("data", data);
+    feature.set("label", label);
+    feature.changed();
+
+    this.syncSelectedFeatures();
+  }
+
   deleteFeature(feature: Feature) {
     const type = feature.get("type");
     if (!type) return;
 
     const source = this.#sources[type];
     if (!source) return;
+
+    const selected = this.#interactions.select.getFeatures();
+    selected.remove(feature);
+    this.syncSelectedFeatures();
 
     source.removeFeature(feature);
   }

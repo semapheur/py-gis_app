@@ -11,7 +11,7 @@
     label?: string;
     value?: string | null;
     options: readonly OptionInput[];
-    onchange?: (event: Event) => void;
+    onchange?: (value: string) => void;
   }
 
   let { label = "", value = null, options = [], onchange }: Props = $props();
@@ -26,7 +26,11 @@
 </script>
 
 <div class="container">
-  <select id={uid} bind:value {onchange}>
+  <select
+    id={uid}
+    bind:value
+    onchange={(e) => onchange?.(e.currentTarget.value)}
+  >
     <option value="" disabled hidden>
       {placeholder}
     </option>
