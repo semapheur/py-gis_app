@@ -19,12 +19,12 @@
 {#if open}
   <aside class="summary-sidebar">
     <header class="header">
+      <button class="button-close" onclick={() => (open = false)}> ✕ </button>
       <Tabs
         tabs={summaryTabs}
         selected={activeTab}
         onselect={(tab) => (activeTab = tab as SummaryTabs)}
       />
-      <button class="button-close" onclick={() => (open = false)}> ✕ </button>
     </header>
     {#if activeTab === "equipment"}
       <EquipmentSummary />
@@ -39,6 +39,22 @@
     position: absolute;
     top: 0;
     right: 0;
+    padding: 0 var(--size-lg);
     background: rgb(var(--color-primary));
+  }
+
+  .header {
+    display: flex;
+    justify-content: start;
+    gap: var(--size-md);
+    border-bottom: 1px solid rgba(var(--color-text) / 0.5);
+  }
+
+  .button-close {
+    all: unset;
+
+    &:hover {
+      color: red;
+    }
   }
 </style>

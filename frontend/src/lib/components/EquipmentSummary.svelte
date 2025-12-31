@@ -1,5 +1,7 @@
 <script lang="ts">
+  import GeoJSON from "ol/format/GeoJSON";
   import { getImageViewerState } from "$lib/states/image_viewer.svelte";
+  import KebabMenu from "$lib/components/KebabMenu.svelte";
   import CollapsibleList from "$lib/components/CollapsibleList.svelte";
   import type {
     EquipmentConfidence,
@@ -48,16 +50,47 @@
 
     return aggregate;
   });
+
+  function exportFeaturesToGeoJson() {
+    if (!equipmentFeatures.length) return;
+
+    const projection = viewer.projection;
+    if (!projection) return;
+
+    const format = new GeoJSON();
+
+    const geojson = format.writeFeatures(equipmentFeatures, {
+      featureProjection: projection,
+      dataProjection: "EPSG:4326",
+    });
+    const blob = new Blob([geojson], { type: "application/geo+json" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "equipment.json";
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
 </script>
 
 <section class="equipment-summary">
-  <span>Equipment summary</span>
+  <header class="header">
+    <KebabMenu>
+      <button role="menuitem" onclick={exportFeaturesToGeoJson}
+        >Export to GeoJSON</button
+      >
+    </KebabMenu>
+    <span>Equipment count</span>
+  </header>
   {#if Object.keys(summary).length === 0}
     <p>No equipment annotations</p>
   {:else}
     <ul class="summary-list">
       {#each Object.entries(summary) as [id, entry]}
-        <!-- Level 1: Equipment -->
         <CollapsibleList {id}>
           {#snippet header()}
             <span>{entry.total}x {id}</span>
@@ -65,13 +98,11 @@
           {#snippet children()}
             {#each Object.entries(entry.statuses) as [status, s]}
               {@const statusKey = `${id}-${status}`}
-              <!-- Level 2: Status -->
               <CollapsibleList id={statusKey}>
                 {#snippet header()}
                   <span>{s.total}x {status}</span>
                 {/snippet}
                 {#snippet children()}
-                  <!-- Level 3: Confidence (Leaf items) -->
                   {#each Object.entries(s.confidences) as [conf, count]}
                     <li class="inner-item">{count}x {conf}</li>
                   {/each}
@@ -95,6 +126,11 @@
     list-style: none;
     margin: 0;
     padding: 0;
+  }
+
+  .header {
+    display: flex;
+    gap: var(--size-md);
   }
 
   .summary-list {
