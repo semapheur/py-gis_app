@@ -8,17 +8,28 @@
   import { getImageViewerState } from "$lib/states/image_viewer.svelte";
   import { type EquipmentData } from "$lib/states/annotate.svelte";
 
+  type BulkEquipmentPatch = Partial<EquipmentData>;
+
   const viewer = getImageViewerState();
 
   let selectedIndex = $state<number | null>(null);
   let validForm = $state<boolean>(true);
   let editData = $state<EquipmentData | null>(null);
+  let bulkEdit = $state<boolean>(false);
+  let bulkPatch = $state<BulkEquipmentPatch>({});
+  let validBulkForm = $state(true);
 
   const selectedFeatures = $derived(viewer.selectedFeatures);
   const selectedFeature = $derived(
     selectedIndex !== null ? (selectedFeatures[selectedIndex] ?? null) : null,
   );
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
+  const selectedTypes = $derived(
+    Array.from(new Set(selectedFeatures.map((f) => f.get("type")))),
+  );
+  const canBulkEdit = $derived(
+    selectedFeatures.length > 1 && selectedTypes.length === 1,
+  );
   const labels = $derived(
     selectedFeatures.map((f) => f.get("label")?.replace("\n", ", ")),
   );
@@ -62,10 +73,65 @@
   function exportFeaturesToGeoJson() {
     if (!selectedFeatures.length) return;
 
+    const projection = viewer.projection;
+    if (!projection) return;
+
     const format = new GeoJSON();
 
-    const geojson = format.writeFeatures(selectedFeatures);
-    console.log(geojson);
+    const geojson = format.writeFeatures(selectedFeatures, {
+      featureProjection: projection,
+      dataProjection: "EPSG:4326",
+    });
+    const blob = new Blob([geojson], { type: "application/geo+json" });
+
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = "annotations.json";
+    document.body.appendChild(a);
+    a.click();
+
+    document.body.removeChild(a);
+    URL.revokeObjectURL(url);
+  }
+
+  function startBulkEdit() {
+    if (!canBulkEdit) return;
+
+    bulkEdit = true;
+    selectedIndex = null;
+    editData = null;
+  }
+
+  function applyBulkEdit() {
+    if (!validBulkForm) return;
+
+    for (const feature of selectedFeatures) {
+      const data = feature.get("data") as EquipmentData;
+      if (!data) continue;
+
+      viewer.updateFeatureData(feature, {
+        ...data,
+        ...bulkPatch,
+      });
+    }
+
+    bulkEdit = false;
+    bulkPatch = {};
+  }
+
+  function bulkDelete() {
+    const numFeatures = selectedFeatures.length;
+    if (!numFeatures) return;
+
+    const ok = confirm(
+      `Delete ${numFeatures} selected annotation${numFeatures > 1 ? "s" : ""}?`,
+    );
+    if (!ok) return;
+
+    viewer.bulkDeleteFeatures(selectedFeatures);
+    selectedIndex = null;
+    editData = null;
   }
 </script>
 
@@ -76,8 +142,14 @@
         <button role="menuitem" onclick={exportFeaturesToGeoJson}
           >Export to GeoJSON</button
         >
-        <button role="menuitem">Bulk edit</button>
-        <button role="menuitem">Bulk delete</button>
+        {#if selectedFeatures.length > 1}
+          <button
+            role="menuitem"
+            disabled={!canBulkEdit}
+            onclick={startBulkEdit}>Bulk edit</button
+          >
+        {/if}
+        <button role="menuitem" onclick={bulkDelete}>Bulk delete</button>
       </KebabMenu>
       <span class="edit-heading">Selected annotations</span>
     </header>
@@ -108,6 +180,25 @@
           Save
         </button>
         <button class="button-delete" onclick={deleteFeature}> Delete </button>
+      </footer>
+    {:else if bulkEdit}
+      <EquipmentForm
+        value={bulkPatch}
+        bulk
+        onchange={(v) => (bulkPatch = v)}
+        onvalid={(v) => (validBulkForm = v)}
+      />
+
+      <footer class="edit-footer">
+        <button
+          class="button-save"
+          disabled={!validBulkForm}
+          onclick={applyBulkEdit}
+        >
+          Apply to {selectedFeatures.length}
+        </button>
+
+        <button onclick={() => (bulkEdit = false)}> Cancel </button>
       </footer>
     {/if}
   </aside>

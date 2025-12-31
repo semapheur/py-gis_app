@@ -151,6 +151,7 @@ export class ImageViewerState {
   #interactions!: ViewerInteractions;
   #sources: Record<AnnotateForm, VectorSource>;
 
+  #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
 
   constructor() {
@@ -158,20 +159,26 @@ export class ImageViewerState {
       equipment: new VectorSource(),
       activity: new VectorSource(),
     };
+
+    this.#sources.equipment.on("addfeature", () => {
+      this.#equipmentFeatures = this.#sources.equipment.getFeatures().slice();
+    });
+
+    this.#sources.equipment.on("removefeature", () => {
+      this.#equipmentFeatures = this.#sources.equipment.getFeatures().slice();
+    });
+  }
+
+  get projection() {
+    return this.#map?.getView().getProjection() ?? null;
   }
 
   get selectedFeatures() {
     return this.#selectedFeatures;
   }
 
-  attach(target: HTMLElement, options: Options) {
-    if (this.#map) return;
-
-    this.initMap(target, options);
-
-    return () => {
-      this.destroy();
-    };
+  get equipmentFeatures() {
+    return this.#equipmentFeatures;
   }
 
   private destroy() {
@@ -317,6 +324,16 @@ export class ImageViewerState {
     ];
   }
 
+  attach(target: HTMLElement, options: Options) {
+    if (this.#map) return;
+
+    this.initMap(target, options);
+
+    return () => {
+      this.destroy();
+    };
+  }
+
   updateDrawInteraction(annotate: AnnotateState) {
     if (!this.#map) return;
 
@@ -349,7 +366,7 @@ export class ImageViewerState {
   }
 
   deleteFeature(feature: Feature) {
-    const type = feature.get("type");
+    const type = feature.get("type") as AnnotateForm | null;
     if (!type) return;
 
     const source = this.#sources[type];
@@ -357,9 +374,27 @@ export class ImageViewerState {
 
     const selected = this.#interactions.select.getFeatures();
     selected.remove(feature);
-    this.syncSelectedFeatures();
-
     source.removeFeature(feature);
+    this.syncSelectedFeatures();
+  }
+
+  bulkDeleteFeatures(features: Feature[]) {
+    if (!features.length) return;
+
+    const selected = this.#interactions.select.getFeatures();
+
+    for (const feature of features) {
+      const type = feature.get("type") as AnnotateForm | null;
+      if (!type) continue;
+
+      const source = this.#sources[type];
+      if (!source) continue;
+
+      selected.remove(feature);
+      source.removeFeature(feature);
+    }
+
+    this.syncSelectedFeatures();
   }
 }
 

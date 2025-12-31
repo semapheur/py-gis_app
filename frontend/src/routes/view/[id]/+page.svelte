@@ -3,6 +3,7 @@
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
+  import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
   import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
   import { setAnnotateState } from "$lib/states/annotate.svelte";
   import { setImageViewerState } from "$lib/states/image_viewer.svelte";
@@ -11,7 +12,8 @@
   const image: ImageMetadata = $derived(data.image);
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
 
-  let annotateOpen = $state(false);
+  let annotateOpen = $state<boolean>(false);
+  let summaryOpen = $state<boolean>(false);
 
   setAnnotateState();
   setImageViewerState();
@@ -23,9 +25,15 @@
       Add
     </button>
   {/if}
+  {#if !summaryOpen}
+    <button class="toggle-summary" onclick={() => (summaryOpen = !summaryOpen)}>
+      Summary
+    </button>
+  {/if}
   <AnnotateDialog bind:open={annotateOpen} />
   <ImageViewer {image} {radiometricParams} />
   <AnnotationEdit />
+  <AnnotationSummary bind:open={summaryOpen} />
 </div>
 
 <style>
@@ -38,6 +46,13 @@
   .toggle-form {
     position: absolute;
     left: var(--size-lg);
+    bottom: var(--size-lg);
+    z-index: 1;
+  }
+
+  .toggle-summary {
+    position: absolute;
+    right: var(--size-lg);
     bottom: var(--size-lg);
     z-index: 1;
   }
