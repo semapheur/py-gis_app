@@ -39,6 +39,8 @@
   --text-xl: 1.5rem;
 
   --font-bold: 700;
+
+  --duration-normal: 250ms;
 }
 
 html {

@@ -1,5 +1,6 @@
 <script lang="ts">
   import { getImageViewerState } from "$lib/states/image_viewer.svelte";
+  import CollapsibleList from "$lib/components/CollapsibleList.svelte";
   import type {
     EquipmentConfidence,
     EquipmentData,
@@ -47,56 +48,61 @@
 
     return aggregate;
   });
-
-  let openIds = $state<Set<string>>(new Set());
-  let openStatuses = $state<Set<string>>(new Set());
-
-  function toggle(set: Set<string>, key: string) {
-    set.has(key) ? set.delete(key) : set.add(key);
-    return new Set(set);
-  }
 </script>
 
 <section class="equipment-summary">
   <span>Equipment summary</span>
-
   {#if Object.keys(summary).length === 0}
     <p>No equipment annotations</p>
   {:else}
-    <ul>
+    <ul class="summary-list">
       {#each Object.entries(summary) as [id, entry]}
-        <li>
-          <button onclick={() => toggle(openIds, id)}>
-            {openIds.has(id) ? "▾" : "▸"}
-            <strong>{id}</strong> ({entry.total})
-          </button>
-        </li>
-
-        {#if openIds.has(id)}
-          <ul>
+        <!-- Level 1: Equipment -->
+        <CollapsibleList {id}>
+          {#snippet header()}
+            <span>{entry.total}x {id}</span>
+          {/snippet}
+          {#snippet children()}
             {#each Object.entries(entry.statuses) as [status, s]}
-              {@const statusKey = `${id}:${status}`}
-              <li>
-                <button onclick={() => toggle(openStatuses, statusKey)}
-                  >>
-                  {openStatuses.has(statusKey) ? "▾" : "▸"}
-                  {status} ({s.total})
-                </button>
-              </li>
-
-              {#if openStatuses.has(statusKey)}
-                <ul>
+              {@const statusKey = `${id}-${status}`}
+              <!-- Level 2: Status -->
+              <CollapsibleList id={statusKey}>
+                {#snippet header()}
+                  <span>{s.total}x {status}</span>
+                {/snippet}
+                {#snippet children()}
+                  <!-- Level 3: Confidence (Leaf items) -->
                   {#each Object.entries(s.confidences) as [conf, count]}
-                    <li>
-                      {conf}: {count}
-                    </li>
+                    <li class="inner-item">{count}x {conf}</li>
                   {/each}
-                </ul>
-              {/if}
+                {/snippet}
+              </CollapsibleList>
             {/each}
-          </ul>
-        {/if}
+          {/snippet}
+        </CollapsibleList>
       {/each}
     </ul>
   {/if}
 </section>
+
+<style>
+  :root {
+    --arrow-size: 0.4rem;
+    --arrow-gap: 0.5rem;
+  }
+
+  ul {
+    list-style: none;
+    margin: 0;
+    padding: 0;
+  }
+
+  .summary-list {
+    padding-left: var(--size-md);
+  }
+
+  .inner-item {
+    margin-left: var(--arrow-size);
+    padding-left: var(--arrow-gap);
+  }
+</style>

@@ -212,6 +212,7 @@
     top: 0;
     right: 0;
     background: rgb(var(--color-primary));
+    z-index: 1;
   }
 
   .edit-header {
