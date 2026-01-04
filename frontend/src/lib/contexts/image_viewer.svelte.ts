@@ -1,4 +1,4 @@
-import { getContext, setContext, untrack } from "svelte";
+import { getContext, setContext } from "svelte";
 import Map from "ol/Map";
 import WebGLTileLayer, { type Style as RasterStyle } from "ol/layer/WebGLTile";
 import VectorLayer from "ol/layer/Vector";
@@ -25,8 +25,7 @@ import type {
   AnnotateState,
   EquipmentData,
   ActivityData,
-  AnnotateGeometry,
-} from "$lib/states/annotate.svelte";
+} from "$lib/contexts/annotate.svelte";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 

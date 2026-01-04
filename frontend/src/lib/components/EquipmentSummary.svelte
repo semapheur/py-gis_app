@@ -1,13 +1,13 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import { getImageViewerState } from "$lib/states/image_viewer.svelte";
+  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import CollapsibleList from "$lib/components/CollapsibleList.svelte";
   import type {
     EquipmentConfidence,
     EquipmentData,
     EquipmentStatus,
-  } from "$lib/states/annotate.svelte";
+  } from "$lib/contexts/annotate.svelte";
 
   const viewer = getImageViewerState();
 

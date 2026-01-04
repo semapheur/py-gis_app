@@ -21,6 +21,16 @@ type AnnotateGeometryOptions = typeof annotateGeometryByForm;
 export type AnnotateGeometry<F extends keyof AnnotateGeometryOptions> =
   AnnotateGeometryOptions[F][number]["value"];
 
+export interface ActivityData {
+  summary: string;
+  type: ActivityType;
+  observed: string;
+  comment: string;
+}
+
+export const activityTypes = ["Maneuver"] as const;
+export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
+
 export interface EquipmentData {
   id: string | null;
   confidence: EquipmentConfidence;
@@ -33,10 +43,6 @@ export type EquipmentConfidence = Lowercase<
 >;
 export const equipmentStatus = ["Intact", "Damaged", "Destroyed"] as const;
 export type EquipmentStatus = Lowercase<(typeof equipmentStatus)[number]>;
-
-export interface ActivityData {
-  type: string;
-}
 
 const defaultLayer = "equipment";
 

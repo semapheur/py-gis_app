@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { getAnnotateState } from "$lib/states/annotate.svelte";
-  import { getImageViewerState } from "$lib/states/image_viewer.svelte";
+  import { getAnnotateState } from "$lib/contexts/annotate.svelte";
+  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
   import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
 
   interface Props {

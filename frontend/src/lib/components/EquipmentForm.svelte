@@ -6,7 +6,7 @@
     equipmentConfidence,
     equipmentStatus,
     type EquipmentData,
-  } from "$lib/states/annotate.svelte";
+  } from "$lib/contexts/annotate.svelte";
 
   type EquipmentPatch = Partial<EquipmentData>;
 

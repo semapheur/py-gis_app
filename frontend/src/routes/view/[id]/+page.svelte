@@ -5,8 +5,8 @@
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
   import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
   import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
-  import { setAnnotateState } from "$lib/states/annotate.svelte";
-  import { setImageViewerState } from "$lib/states/image_viewer.svelte";
+  import { setAnnotateState } from "$lib/contexts/annotate.svelte";
+  import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
 
   let { data } = $props<{ data: PageData }>();
   const image: ImageMetadata = $derived(data.image);

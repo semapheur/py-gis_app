@@ -8,7 +8,7 @@
     getAnnotateState,
     annotateTabs,
     type EquipmentData,
-  } from "$lib/states/annotate.svelte";
+  } from "$lib/contexts/annotate.svelte";
 
   interface Props {
     open: boolean;
@@ -41,7 +41,10 @@
             onchange={(d) => annotate.setData(d)}
           />
         {:else if annotate.layer === "activity"}
-          <ActivityForm />
+          <ActivityForm
+            value={annotate.data as ActivityData}
+            onchange={(d) => annotate.setData(d)}
+          />
         {/if}
       {/key}
     </main>

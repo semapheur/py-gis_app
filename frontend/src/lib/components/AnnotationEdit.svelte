@@ -5,8 +5,8 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
 
-  import { getImageViewerState } from "$lib/states/image_viewer.svelte";
-  import { type EquipmentData } from "$lib/states/annotate.svelte";
+  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
+  import { type EquipmentData } from "$lib/contexts/annotate.svelte";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
