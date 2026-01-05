@@ -43,6 +43,12 @@
   --duration-normal: 250ms;
 }
 
+*,
+*::before,
+*::after {
+  box-sizing: border-box;
+}
+
 html {
   background-color: rgb(var(--color-primary));
   color: rgb(var(--color-text));

@@ -54,7 +54,6 @@
     & :global(button[role="menuitem"]) {
       all: unset;
       width: 100%;
-      box-sizing: border-box;
       cursor: pointer;
       text-align: left;
       padding: 0 var(--size-md);

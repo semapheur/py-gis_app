@@ -60,6 +60,6 @@
   <TextArea
     label="Comment"
     value={value.comment}
-    onchange={(v) => update("observed", v || bulk ? undefined : v)}
+    onchange={(v) => update("comment", v || bulk ? undefined : v)}
   />
 </form>

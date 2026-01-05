@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import { EditorState, Compartment } from "@codemirror/state";
   import {
     EditorView,
@@ -18,12 +19,16 @@
   }
 
   let { value = $bindable() }: Props = $props();
-  let vimMode = $state(false);
+  let internalValue = $state<string>(value);
+  let vimMode = $state<boolean>(false);
+  let wrapText = $state<boolean>(true);
   //let currentVimStatus = $state<VimModes>("NORMAL");
 
   let view: EditorView | null = null;
+
   const keymapConfig = new Compartment();
   const lineNumberConfig = new Compartment();
+  const wrapConfig = new Compartment();
 
   function getKeymapExtensions(isVim: boolean) {
     if (isVim) {
@@ -52,6 +57,12 @@
 
   function createUpdateListener() {
     return EditorView.updateListener.of((viewUpdate: ViewUpdate) => {
+      if (viewUpdate.docChanged) {
+        const newValue = viewUpdate.state.doc.toString();
+        internalValue = newValue;
+        value = newValue;
+      }
+
       if (viewUpdate.selectionSet && vimMode) {
         viewUpdate.view.dispatch({
           effects: lineNumberConfig.reconfigure(relativeLineNumbers()),
@@ -61,8 +72,10 @@
   }
 
   function attachEditor(element: HTMLElement) {
+    const initialValue = untrack(() => value);
+
     const state = EditorState.create({
-      doc: value,
+      doc: initialValue,
       extensions: [
         EditorState.allowMultipleSelections.of(true),
         history(),
@@ -72,6 +85,7 @@
         lineNumberConfig.of(
           vimMode ? relativeLineNumbers() : absoluteLineNumbers(),
         ),
+        wrapConfig.of(wrapText ? EditorView.lineWrapping : []),
         createUpdateListener(),
       ],
     });
@@ -88,6 +102,19 @@
 
   $effect(() => {
     if (!view) return;
+    if (value === internalValue) return;
+
+    const doc = view.state.doc.toString();
+    if (doc !== value) {
+      view.dispatch({
+        changes: { from: 0, to: doc.length, insert: value },
+      });
+    }
+    internalValue = value;
+  });
+
+  $effect(() => {
+    if (!view) return;
 
     view.dispatch({
       effects: [
@@ -95,6 +122,7 @@
         lineNumberConfig.reconfigure(
           vimMode ? relativeLineNumbers() : absoluteLineNumbers(),
         ),
+        wrapConfig.reconfigure(wrapText ? EditorView.lineWrappoing : []),
       ],
     });
   });
@@ -105,7 +133,11 @@
 
   <div class="status-bar" class:vim-active={vimMode}>
     <div class="status-left">
-      <label>
+      <label class="label">
+        <input bind:checked={wrapText} type="checkbox" />
+        Wrap text
+      </label>
+      <label class="label">
         <input bind:checked={vimMode} type="checkbox" />
         Vim mode
       </label>
@@ -119,6 +151,23 @@
     grid-template-rows: 1fr auto;
     width: 100%;
     height: 100%;
+    min-height: 0;
+  }
+
+  .editor {
+    min-height: 0;
+    height: 100%;
+    overflow: hidden;
+
+    & :global(.cm-editor) {
+      height: 100%;
+    }
+
+    & :global(.cm-scroller) {
+      height: 100%;
+      max-height: 100%;
+      overflow: auto;
+    }
   }
 
   .status-bar {
@@ -126,5 +175,10 @@
     justify-content: space-between;
     align-items: center;
     background: rgb(var(--color-accent));
+    flex-shrink: 0;
+  }
+
+  .label {
+    font-size: var(--text-sm);
   }
 </style>
