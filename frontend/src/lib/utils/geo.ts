@@ -144,6 +144,15 @@ export function parseLatLon(latlonText: string) {
   return [latlon.longitude, latlon.latitude];
 }
 
+function tryParsers<T>(value: string, parsers: Array<(v: string) => T>): T {
+  for (const parse of parsers) {
+    try {
+      return parse(value);
+    } catch {}
+  }
+  throw new Error(`No parser could handle: ${value}`);
+}
+
 export function parseCoordinates(coordinateText: string) {
-  return parseLatLon(coordinateText) || utmToLatLon(coordinateText);
+  return tryParsers(text, [parseLatLon, utmToLatLon]);
 }
