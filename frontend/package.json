@@ -27,11 +27,13 @@
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.39.7",
+    "@openaip/coordinate-parser": "^0.31.0",
     "@replit/codemirror-vim": "^6.3.0",
     "@svar-ui/svelte-core": "^2.4.0",
     "@svar-ui/svelte-grid": "^2.4.0",
     "maplibre-gl": "^5.13.0",
     "ol": "^10.7.0",
+    "proj4": "^2.20.2",
     "svelte-splitpanes": "^8.0.12"
   }
 }

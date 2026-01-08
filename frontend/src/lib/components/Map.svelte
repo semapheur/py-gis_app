@@ -2,7 +2,7 @@
   import * as maplibre from "maplibre-gl";
   import "maplibre-gl/dist/maplibre-gl.css";
   import { type ImagePreviewInfo } from "$lib/utils/types";
-  import { bboxToWkt, type BBox } from "$lib/utils/geometry";
+  import { bboxToWkt, type BBox } from "$lib/utils/geo";
 
   type Coordinates = [
     [number, number],

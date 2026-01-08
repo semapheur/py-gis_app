@@ -20,6 +20,9 @@ importers:
       '@codemirror/view':
         specifier: ^6.39.7
         version: 6.39.8
+      '@openaip/coordinate-parser':
+        specifier: ^0.31.0
+        version: 0.31.0
       '@replit/codemirror-vim':
         specifier: ^6.3.0
         version: 6.3.0(@codemirror/commands@6.10.1)(@codemirror/language@6.12.1)(@codemirror/search@6.5.11)(@codemirror/state@6.5.3)(@codemirror/view@6.39.8)
@@ -35,6 +38,9 @@ importers:
       ol:
         specifier: ^10.7.0
         version: 10.7.0
+      proj4:
+        specifier: ^2.20.2
+        version: 2.20.2
       svelte-splitpanes:
         specifier: ^8.0.12
         version: 8.0.12(svelte@5.45.3)
@@ -301,6 +307,10 @@ packages:
 
   '@marijn/find-cluster-break@1.0.2':
     resolution: {integrity: sha512-l0h88YhZFyKdXIFNfSWpyjStDjGHwZ/U7iobcK1cQQD8sejsONdQtTVU+1wVN1PBw40PiiHB1vA5S7VTfQiP9g==}
+
+  '@openaip/coordinate-parser@0.31.0':
+    resolution: {integrity: sha512-hjAovn9n2MmRy7CEhDWieFJ7EmkPV9pZK2lQVJBEzRQhQChuFxjoZrkgZx8ooJwIsRMc+sDfTdgWRBQk5fBpnA==}
+    engines: {node: '>=24.0.0'}
 
   '@petamoriken/float16@3.9.3':
     resolution: {integrity: sha512-8awtpHXCx/bNpFt4mt2xdkgtgVvKqty8VbjHI/WWWQuEw+KLzFot3f4+LkQY9YmOtq7A5GdOnqoIC8Pdygjk2g==}
@@ -640,6 +650,9 @@ packages:
     resolution: {integrity: sha512-UsIVP34rZdM4TjrjhwBAhbC3HT7AzFx9p/draiAPlLr8/THozZF6WmJnZ9ck4q94uO55z7P7zoGCh+AZVoagsQ==}
     engines: {node: '>=16.14.0', npm: '>=8.1.0'}
 
+  mgrs@1.0.0:
+    resolution: {integrity: sha512-awNbTOqCxK1DBGjalK3xqWIstBZgN6fxsMSiXLs9/spqWkF2pAhb2rrYCFSsr1/tT7PhcDGjZndG8SWYn0byYA==}
+
   minimist@1.2.8:
     resolution: {integrity: sha512-2yyAR8qBkN3YuheJanUpWC5U3bb5osDywNB8RzDVlDwDHbocAJveqqj1u8+SVD7jkWT4yvsHCpWqqWqAxb0zCA==}
 
@@ -688,6 +701,9 @@ packages:
 
   potpack@2.1.0:
     resolution: {integrity: sha512-pcaShQc1Shq0y+E7GqJqvZj8DTthWV1KeHGdi0Z6IAin2Oi3JnLCOfwnCo84qc+HAp52wT9nK9H7FAJp5a44GQ==}
+
+  proj4@2.20.2:
+    resolution: {integrity: sha512-ipfBRfQly0HhHTO7hnC1GfaX8bvroO7VV4KH889ehmADSE8C/qzp2j+Jj6783S9Tj6c2qX/hhYm7oH0kgXzBAA==}
 
   protocol-buffers-schema@3.6.0:
     resolution: {integrity: sha512-TdDRD+/QNdrCGCE7v8340QyuXd4kIWIgapsE2+n/SaGiSSbomYl4TjHlvIoCWRpE7wFt02EpB35VVA2ImcBVqw==}
@@ -838,11 +854,17 @@ packages:
   web-worker@1.5.0:
     resolution: {integrity: sha512-RiMReJrTAiA+mBjGONMnjVDP2u3p9R1vkcGz6gDIrOMT3oGuYwX2WRMYI9ipkphSuE5XKEhydbhNEJh4NY9mlw==}
 
+  wkt-parser@1.5.2:
+    resolution: {integrity: sha512-1ZUiV1FTwSiSrgWzV9KXJuOF2BVW91KY/mau04BhnmgOdroRQea7Q0s5TVqwGLm0D2tZwObd/tBYXW49sSxp3Q==}
+
   xml-utils@1.10.2:
     resolution: {integrity: sha512-RqM+2o1RYs6T8+3DzDSoTRAUfrvaejbVHcp3+thnAtDKo8LskR+HomLajEy5UjTz24rpka7AxVBRR3g2wTUkJA==}
 
   zimmerframe@1.1.4:
     resolution: {integrity: sha512-B58NGBEoc8Y9MWWCQGl/gq9xBCe4IiKM0a2x7GZdQKOW5Exr8S1W24J6OgM1njK8xCRGvAJIL/MxXHf6SkmQKQ==}
+
+  zod@3.25.76:
+    resolution: {integrity: sha512-gzUt/qt81nXsFGKIFcC3YnfEAx5NkunCfnDlvuBSSFS02bcXu4Lmea0AFIUwbLWxWPx3d9p8S5QoaujKcNQxcQ==}
 
   zstddec@0.1.0:
     resolution: {integrity: sha512-w2NTI8+3l3eeltKAdK8QpiLo/flRAr2p8AGeakfMZOXBxOg9HIu4LVDxBi81sYgVhFhdJjv1OrB5ssI8uFPoLg==}
@@ -1035,6 +1057,10 @@ snapshots:
       supercluster: 8.0.1
 
   '@marijn/find-cluster-break@1.0.2': {}
+
+  '@openaip/coordinate-parser@0.31.0':
+    dependencies:
+      zod: 3.25.76
 
   '@petamoriken/float16@3.9.3': {}
 
@@ -1370,6 +1396,8 @@ snapshots:
       supercluster: 8.0.1
       tinyqueue: 3.0.0
 
+  mgrs@1.0.0: {}
+
   minimist@1.2.8: {}
 
   mri@1.2.0: {}
@@ -1409,6 +1437,11 @@ snapshots:
       source-map-js: 1.2.1
 
   potpack@2.1.0: {}
+
+  proj4@2.20.2:
+    dependencies:
+      mgrs: 1.0.0
+      wkt-parser: 1.5.2
 
   protocol-buffers-schema@3.6.0: {}
 
@@ -1546,8 +1579,12 @@ snapshots:
 
   web-worker@1.5.0: {}
 
+  wkt-parser@1.5.2: {}
+
   xml-utils@1.10.2: {}
 
   zimmerframe@1.1.4: {}
+
+  zod@3.25.76: {}
 
   zstddec@0.1.0: {}

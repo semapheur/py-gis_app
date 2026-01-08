@@ -7,6 +7,7 @@
   import {
     getAnnotateState,
     annotateTabs,
+    type ActivityData,
     type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
 
