@@ -1,11 +1,11 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
-  import { parseUtm } from "$lib/utils/geo";
+  import { parseCoordinates } from "$lib/utils/geo/coord";
 
-  let coordinate = $state<string>("");
+  let coordinates = $state<string>("");
 
   function submit() {
-    const latlon = parseUtm(coordinate);
+    const latlon = parseCoordinates(coordinates);
 
     console.log(latlon);
   }
@@ -15,8 +15,8 @@
   <form class="search-form">
     <Input
       label="Coordinate"
-      value={coordinate}
-      oninput={(v) => (coordinate = v)}
+      value={coordinates}
+      oninput={(v) => (coordinates = v)}
     />
     <button onclick={submit}>Parse</button>
   </form>

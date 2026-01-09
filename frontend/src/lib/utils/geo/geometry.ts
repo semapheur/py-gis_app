@@ -1,5 +1,3 @@
-import { MGRS, UTM } from "@ngageoint/mgrs-js";
-
 export type BBox = [
   minLng: number,
   minLat: number,

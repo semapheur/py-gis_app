@@ -1,4 +1,37 @@
-import { UTM, Hemisphere } from "$lib/utils/geo/utm";
+import { UTM } from "$lib/utils/geo/utm";
+
+const BAND_Y_BAND_TRIALS: Record<string, number[]> = {
+  C: [1, 0],
+  D: [1, 0],
+  E: [1],
+  F: [2, 1],
+  G: [2],
+  H: [3, 2],
+  J: [3],
+  K: [4, 3],
+  L: [4],
+  M: [4],
+  N: [0],
+  P: [0],
+  Q: [0, 1],
+  R: [1],
+  S: [1, 2],
+  T: [2],
+  U: [2, 3],
+  V: [3],
+  W: [3, 4],
+  X: [3, 4],
+};
+
+function bandLatitudeRange(band: string): [number, number] {
+  MGRS.validateBand(band);
+
+  const index = band.charCodeAt(0) - "C".charCodeAt(0);
+  const min = -80 + index * 8;
+  const max = band === "X" ? 84 : min + 8;
+
+  return [min, max];
+}
 
 export class MGRS {
   static readonly #columnLetters = ["ABCDEFGH", "JKLMNPQR", "STUVWXYZ"];
@@ -19,7 +52,7 @@ export class MGRS {
   readonly #easting: number;
   readonly #northing: number;
 
-  constructor(
+  private constructor(
     zone: number,
     band: string,
     easting: number,
@@ -30,7 +63,7 @@ export class MGRS {
     this.#zone = zone;
     this.#band = band;
     this.#column = column ?? MGRS.getColumnLetter(zone, easting);
-    this.#row = row ?? MGRS.getRowLetter(zone, easting);
+    this.#row = row ?? MGRS.getRowLetter(zone, northing);
     this.#easting = easting;
     this.#northing = northing;
   }
@@ -78,23 +111,45 @@ export class MGRS {
   public toUTM() {
     const easting = this.getUTMEasting();
     const northing = this.getUTMNorthing();
-    const hemisphere = MGRS.getHemisphere(this.#band);
+    const hemisphere = UTM.getHemisphere(this.#band);
 
     return new UTM(this.#zone, hemisphere, easting, northing);
   }
 
   public getUTMEasting(): number {
     const columnLetters = MGRS.getColumnLetters(this.#zone);
-    const columnIndex = columnLetters.indexOf(this.#column) + 1;
-    const e100kNum = columnIndex * 100000.0;
+    const columnIndex = columnLetters.indexOf(this.#column);
+    const e100kNum = (columnIndex + 1) * 100000.0;
 
     return e100kNum + this.#easting;
   }
 
   public getUTMNorthing(): number {
     const rowLetters = MGRS.getRowLetters(this.#zone);
-    const rowIndex = rowLetters.indexOf(this.#row) + 1;
-    const n100kNum = rowIndex * 100000.0;
+    const rowIndex = rowLetters.indexOf(this.#row);
+    let n100kNum = rowIndex * 100000.0;
+
+    const trials = BAND_Y_BAND_TRIALS[this.#band];
+    if (trials.length === 1) {
+      return trials[0] * 2000000 + n100kNum + this.#northing;
+    }
+
+    const bandSouthLatitude = bandLatitudeRange(this.#band)[0];
+    const bandNorthing = UTM.fromGeographic(0, bandSouthLatitude).northing;
+
+    const nBand = Math.floor(bandNorthing / 100000) * 100000;
+
+    let n2M = 0;
+
+    while (n2M + n100kNum + this.#northing < nBand) {
+      n2M += 2000000;
+    }
+
+    return n2M + n100kNum + this.#northing;
+  }
+
+  public toGeographic(): [number, number] {
+    return this.toUTM().toGeographic();
   }
 
   public static validateBand(letter: string) {
@@ -109,18 +164,14 @@ export class MGRS {
     }
   }
 
-  public static getHemisphere(band: string) {
-    return band < "N" ? Hemisphere.SOUTH : Hemisphere.NORTH;
-  }
-
   public static getColumnLetter(zone: number, easting: number) {
-    const column = ~~Math.floor(easting / 100000) % 20;
+    const column = Math.floor(easting / 100000);
     const columnLetters = MGRS.getColumnLetters(zone);
     return columnLetters.charAt(column - 1);
   }
 
   public static getRowLetter(zone: number, northing: number): string {
-    const row = ~~Math.floor(northing / 100000) % 20;
+    const row = Math.floor(northing / 100000) % 20;
     const rowLetters = MGRS.getRowLetters(zone);
     return rowLetters.charAt(row);
   }
