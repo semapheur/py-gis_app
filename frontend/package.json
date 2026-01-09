@@ -27,6 +27,7 @@
     "@codemirror/search": "^6.5.11",
     "@codemirror/state": "^6.5.2",
     "@codemirror/view": "^6.39.7",
+    "@ngageoint/mgrs-js": "^1.0.0",
     "@openaip/coordinate-parser": "^0.31.0",
     "@replit/codemirror-vim": "^6.3.0",
     "@svar-ui/svelte-core": "^2.4.0",

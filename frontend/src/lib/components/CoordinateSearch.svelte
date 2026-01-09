@@ -1,11 +1,11 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
-  import { parseLatLon } from "$lib/utils/geo";
+  import { parseUtm } from "$lib/utils/geo";
 
   let coordinate = $state<string>("");
 
   function submit() {
-    const latlon = parseLatLon(coordinate);
+    const latlon = parseUtm(coordinate);
 
     console.log(latlon);
   }
