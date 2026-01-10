@@ -1,6 +1,7 @@
 <script lang="ts">
   import "../app.css";
   import favicon from "$lib/assets/favicon.svg";
+  import MenuSidebar from "$lib/components/MenuSidebar.svelte";
 
   let { children } = $props();
 </script>
@@ -9,4 +10,15 @@
   <link rel="icon" href={favicon} />
 </svelte:head>
 
-{@render children()}
+<div class="layout">
+  <MenuSidebar />
+  {@render children()}
+</div>
+
+<style>
+  .layout {
+    display: grid;
+    grid-template-columns: auto 1fr;
+    height: 100%;
+  }
+</style>

@@ -4,12 +4,25 @@
   import Map from "$lib/components/Map.svelte";
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
+  import { WktParser } from "$lib/utils/geo/wkt";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
+  import { setMapLibreState } from "$lib/contexts/maplibre.svelte";
 
   let { data }: { data: PageData } = $props();
 
   let polygon: GeoJSON.Polygon | null = $state(null);
   let imagePreview: ImagePreviewInfo | null = $state(null);
+
+  setMapLibreState();
+
+  $effect(() => {
+    if (!data.wkt) {
+      polygon = null;
+      return;
+    }
+
+    polygon = new WktParser(data.wkt).parsePolygon();
+  });
 
   function onHoverImage(image: ImageMetadata | null) {
     imagePreview = image
@@ -23,21 +36,12 @@
   }
 </script>
 
-<main class="container">
-  <Splitpanes>
-    <Pane>
-      <Map extent={polygon} {imagePreview} />
-    </Pane>
-    <Pane>
-      <ImageFilterForm />
-      <ImageGrid images={data.images} {onHoverImage} />
-    </Pane>
-  </Splitpanes>
-</main>
-
-<style>
-  .container {
-    width: 100%;
-    height: 100%;
-  }
-</style>
+<Splitpanes>
+  <Pane>
+    <Map extent={polygon} {imagePreview} />
+  </Pane>
+  <Pane>
+    <ImageFilterForm />
+    <ImageGrid images={data.images} {onHoverImage} />
+  </Pane>
+</Splitpanes>

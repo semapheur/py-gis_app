@@ -139,7 +139,7 @@ export function setAnnotateState() {
 export function getAnnotateState() {
   const context = getContext<ReturnType<typeof setAnnotateState>>(ANNOTATE_KEY);
   if (!context) {
-    throw new Error("getAnnotateContext must be used within a provider");
+    throw new Error("getAnnotateState must be used within a provider");
   }
   return context;
 }

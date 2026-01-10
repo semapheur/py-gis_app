@@ -323,7 +323,7 @@ export class ImageViewerState {
     ];
   }
 
-  attach(target: HTMLElement, options: Options) {
+  public attach(target: HTMLElement, options: Options) {
     if (this.#map) return;
 
     this.initMap(target, options);
@@ -333,7 +333,7 @@ export class ImageViewerState {
     };
   }
 
-  updateDrawInteraction(annotate: AnnotateState) {
+  public updateDrawInteraction(annotate: AnnotateState) {
     if (!this.#map) return;
 
     if (this.#interactions.draw) {
@@ -348,7 +348,10 @@ export class ImageViewerState {
     this.setMode(annotate.active ? "draw" : "edit");
   }
 
-  updateFeatureData(feature: Feature, data: EquipmentData | ActivityData) {
+  public updateFeatureData(
+    feature: Feature,
+    data: EquipmentData | ActivityData,
+  ) {
     const type = feature.get("type") as string | null;
     if (!type) return;
 
@@ -364,7 +367,7 @@ export class ImageViewerState {
     this.syncSelectedFeatures();
   }
 
-  deleteFeature(feature: Feature) {
+  public deleteFeature(feature: Feature) {
     const type = feature.get("type") as AnnotateForm | null;
     if (!type) return;
 
@@ -377,7 +380,7 @@ export class ImageViewerState {
     this.syncSelectedFeatures();
   }
 
-  bulkDeleteFeatures(features: Feature[]) {
+  public bulkDeleteFeatures(features: Feature[]) {
     if (!features.length) return;
 
     const selected = this.#interactions.select.getFeatures();
@@ -408,7 +411,7 @@ export function getImageViewerState() {
   const context =
     getContext<ReturnType<typeof setImageViewerState>>(IMAGEVIEWER_KEY);
   if (!context) {
-    throw new Error("getAnnotateContext must be used within a provider");
+    throw new Error("getImageViewerState must be used within a provider");
   }
   return context;
 }

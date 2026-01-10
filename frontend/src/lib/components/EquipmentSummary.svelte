@@ -84,7 +84,7 @@
         >Export to GeoJSON</button
       >
     </KebabMenu>
-    <span>Equipment count</span>
+    <span class="heading">Equipment count</span>
   </header>
   {#if Object.keys(summary).length === 0}
     <p>No equipment annotations</p>
@@ -131,6 +131,11 @@
   .header {
     display: flex;
     gap: var(--size-md);
+  }
+
+  .heading {
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
   }
 
   .summary-list {

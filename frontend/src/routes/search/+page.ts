@@ -25,5 +25,6 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
   return {
     images,
+    wkt,
   };
 };

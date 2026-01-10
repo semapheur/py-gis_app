@@ -23,6 +23,14 @@ export class LatLon {
     this.#latitude = normalizedLatitude;
   }
 
+  get latitude() {
+    return this.#latitude;
+  }
+
+  get longitude() {
+    return this.#longitude;
+  }
+
   public print(
     format: LatLonFormat,
     decimals: number | null = null,
