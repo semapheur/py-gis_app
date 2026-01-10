@@ -5,10 +5,11 @@ from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.const import STATIC_DIR
+from src.const import ATTRIBUTE_DB, STATIC_DIR
 from src.hashing import decode_sha256_from_b64
 from src.index.images import get_image_info, get_images_by_intersection
 from src.index.radiometric import get_radiometric_parameters
+from src.spatialite import get_tables
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -31,6 +32,10 @@ class Handler(SimpleHTTPRequestHandler):
     return super().translate_path(path)
 
   def do_GET(self):
+    if self.path == "/api/attribute-tables":
+      self.handle_attribute_tables()
+      return
+
     if self.path.startswith("/api"):
       self.send_error(404, "Unknown GET endpoint")
       return
@@ -125,17 +130,22 @@ class Handler(SimpleHTTPRequestHandler):
 
       remaining -= len(chunk)
 
-  def _handle_json(self, fn: Callable[[P], R]):
+  def _json_response(self, payload: bytes):
+    self.send_response(200)
+    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Length", str(len(payload)))
+    self.end_headers()
+    self.wfile.write(payload)
+
+  def _handle_post(self, fn: Callable[[P], R]):
     try:
       content_length = int(self.headers.get("Content-Length", 0))
       body = self.rfile.read(content_length).decode("utf-8")
-      payload = json.loads(body)
-      result: R = fn(payload)
+      payload_in = json.loads(body)
+      result: R = fn(payload_in)
+      payload_out = json.dumps(result).encode("utf-8")
 
-      self.send_response(200)
-      self.send_header("Content-Type", "application/json")
-      self.end_headers()
-      self.wfile.write(json.dumps(result).encode("utf-8"))
+      self._json_response(payload_out)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -148,7 +158,7 @@ class Handler(SimpleHTTPRequestHandler):
       wkt = payload["wkt"]
       return get_images_by_intersection(wkt)
 
-    self._handle_json(logic)
+    self._handle_post(logic)
 
   def handle_image_info(self):
     class Payload(TypedDict):
@@ -158,7 +168,7 @@ class Handler(SimpleHTTPRequestHandler):
       hash = decode_sha256_from_b64(payload["id"])
       return get_image_info(hash)
 
-    self._handle_json(logic)
+    self._handle_post(logic)
 
   def handle_parametric_params(self):
     class Payload(TypedDict):
@@ -168,7 +178,17 @@ class Handler(SimpleHTTPRequestHandler):
       hash = decode_sha256_from_b64(payload["id"])
       return get_radiometric_parameters(hash, ("noise", "sigma0"))
 
-    self._handle_json(logic)
+    self._handle_post(logic)
+
+  def handle_attribute_tables(self):
+    try:
+      tables = get_tables(ATTRIBUTE_DB)
+
+      payload = json.dumps({"tables": tables}).encode("utf-8")
+      self._json_response(payload)
+
+    except Exception as e:
+      self.send_error(500, f"Server error: {str(e)}")
 
 
 if __name__ == "__main__":

@@ -21,7 +21,7 @@ from typing import (
   Union,
 )
 
-from src.hashing import decode_sha256_from_b64, encode_sha256_to_b64
+from src.hashing import encode_sha256_to_b64
 
 SqliteValue = Union[bytes, int, float, str, None]
 
@@ -265,6 +265,10 @@ class SpatialDatabase:
       self.conn.close()
     self.conn = None
 
+  def _check_connection(self):
+    if self.conn is None:
+      raise RuntimeError("Database not connected")
+
   def _ensure_spatial_metadata(self):
     if self.conn is None:
       raise RuntimeError("Database not connected")
@@ -292,14 +296,28 @@ class SpatialDatabase:
     for sql in table.add_geometry_sql():
       cursor.execute(sql)
 
+  def list_tables(self, include_internal: bool = False) -> list[str]:
+    self._check_connection()
+
+    sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
+
+    if not include_internal:
+      patterns = ("'sqlite_%'", "'spatial_%'", "'idx_%'")
+      sql += " AND name NOT LIKE ".join(patterns)
+
+    sql += " ORDER BY name"
+
+    cursor = self.conn.cursor()
+    cursor.execute(sql)
+    return [row[0] for row in cursor.fetchall()]
+
   def insert_models(
     self,
     models: Sequence[Model],
     on_conflict: Optional[OnConflict] = None,
     returning: Optional[str] = None,
   ) -> Union[list[Any], None]:
-    if self.conn is None:
-      raise RuntimeError("Database not connected")
+    self._check_connection()
 
     if not models:
       return
@@ -341,7 +359,7 @@ class SpatialDatabase:
       sql_parts.append(f"RETURNING {returning}")
 
     sql = " ".join(sql_parts)
-    cursor = self.conn.cursor()
+    cursor = cast(Connection, self.conn).cursor()
 
     if returning is not None:
       results = []
@@ -368,8 +386,7 @@ class SpatialDatabase:
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
   ):
-    if self.conn is None:
-      raise RuntimeError("Database not connected")
+    self._check_connection
 
     table_columns = list(table._fields.keys())
 
@@ -443,7 +460,7 @@ class SpatialDatabase:
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
   ) -> list[Model]:
-    rows, return_columns = self._select_rows(
+    rows, _ = self._select_rows(
       table,
       columns=columns,
       geo_format=geo_format,
@@ -515,6 +532,11 @@ def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:
     (table_name,),
   )
   return cursor.fetchone() is not None
+
+
+def get_tables(db_path: Path) -> list[str]:
+  with SpatialDatabase(db_path) as db:
+    return db.list_tables()
 
 
 @contextmanager

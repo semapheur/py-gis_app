@@ -57,9 +57,8 @@ export class UTM {
 
   public toLatLon(): LatLon {
     const utmProjection = `+proj=utm +zone=${this.#zone} +${this.#hemisphere} +datum=WGS84 +units=m +no_defs`;
-    const wgs84Projection = proj4("WGS84");
 
-    const [lon, lat] = proj4(utmProjection, wgs84Projection, [
+    const [lon, lat] = proj4(utmProjection, "EPSG:4326", [
       this.#easting,
       this.#northing,
     ]);
@@ -78,12 +77,8 @@ export class UTM {
     const hemisphere = lat >= 0 ? "north" : "south";
 
     const utmProjection = `+proj=utm +zone=${zone} +${hemisphere} +datum=WGS84 +units=m +no_defs`;
-    const wgs84Projection = proj4("WGS84");
 
-    const [easting, northing] = proj4(wgs84Projection, utmProjection, [
-      lon,
-      lat,
-    ]);
+    const [easting, northing] = proj4("EPSG:4326", utmProjection, [lon, lat]);
 
     return new UTM(zone, hemisphere, easting, northing);
   }
