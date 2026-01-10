@@ -1,4 +1,5 @@
 import { UTM } from "$lib/utils/geo/utm";
+import { type LatLon } from "$lib/utils/geo/latlon";
 
 const BAND_Y_BAND_TRIALS: Record<string, number[]> = {
   C: [1, 0],
@@ -52,7 +53,7 @@ export class MGRS {
   readonly #easting: number;
   readonly #northing: number;
 
-  private constructor(
+  constructor(
     zone: number,
     band: string,
     easting: number,
@@ -60,6 +61,9 @@ export class MGRS {
     column?: string,
     row?: string,
   ) {
+    UTM.validateZone(zone);
+    MGRS.validateBand(band);
+
     this.#zone = zone;
     this.#band = band;
     this.#column = column ?? MGRS.getColumnLetter(zone, easting);
@@ -77,10 +81,8 @@ export class MGRS {
     }
 
     const zone = Number.parseInt(matches[1]);
-    UTM.validateZone(zone);
 
     const band = matches[2].toUpperCase().charAt(0);
-    MGRS.validateBand(band);
 
     let squareLetters = matches[3];
     if (!squareLetters) {
@@ -148,8 +150,8 @@ export class MGRS {
     return n2M + n100kNum + this.#northing;
   }
 
-  public toGeographic(): [number, number] {
-    return this.toUTM().toGeographic();
+  public toLatLon(): LatLon {
+    return this.toUTM().toLatLon();
   }
 
   public static validateBand(letter: string) {

@@ -1,4 +1,5 @@
 import proj4 from "proj4";
+import { LatLon } from "$lib/utils/geo/latlon";
 
 const hemisphereCodes = {
   N: "north",
@@ -16,13 +17,14 @@ export class UTM {
   static readonly #utmPattern =
     /^(?<zone>\d{1,2})\s*(?:(?<hemisphere>[NS])|(?<band>[C-HJ-NP-X]))\s*(?<easting>\d+(?:\.\d+)?)m?\s*E?\s*(?<northing>\d+(?:\.\d+)?)m?\s*N?$/i;
 
-  private constructor(
+  constructor(
     zone: number,
     hemisphere: Hemisphere,
     easting: number,
     northing: number,
   ) {
     this.#zone = zone;
+    UTM.validateZone(zone);
     this.#hemisphere = hemisphere;
     this.#easting = easting;
     this.#northing = northing;
@@ -39,7 +41,6 @@ export class UTM {
     }
 
     const zone = parseInt(matches.groups.zone);
-    UTM.validateZone(zone);
 
     const hemi = matches.groups.hemisphere;
     const band = matches.groups.band;
@@ -54,14 +55,16 @@ export class UTM {
     return new UTM(zone, hemisphere, easting, northing);
   }
 
-  public toGeographic(): [number, number] {
+  public toLatLon(): LatLon {
     const utmProjection = `+proj=utm +zone=${this.#zone} +${this.#hemisphere} +datum=WGS84 +units=m +no_defs`;
     const wgs84Projection = proj4("WGS84");
 
-    return proj4(utmProjection, wgs84Projection, [
+    const [lon, lat] = proj4(utmProjection, wgs84Projection, [
       this.#easting,
       this.#northing,
     ]);
+
+    return new LatLon(lon, lat);
   }
 
   public static getHemisphere(band: string) {

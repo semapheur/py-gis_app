@@ -1,8 +1,9 @@
 import { Parser } from "@openaip/coordinate-parser";
 import { UTM } from "$lib/utils/geo/utm";
 import { MGRS } from "$lib/utils/geo/mgrs";
+import { LatLon } from "$lib/utils/geo/latlon";
 
-function parseLatLon(latlonText: string): [number, number] {
+function parseLatLon(latlonText: string): LatLon {
   const m = latlonText
     .trim()
     .match(
@@ -17,20 +18,20 @@ function parseLatLon(latlonText: string): [number, number] {
   const parser = new Parser();
   const latlon = parser.parse(latlonText.trim());
 
-  return [latlon.longitude, latlon.latitude];
+  return new LatLon(latlon.longitude, latlon.latitude);
 }
 
 export function parseUtm(utmText: string) {
   const utm = UTM.parse(utmText);
   console.log(utm);
 
-  return utm.toGeographic();
+  return utm.toLatLon();
 }
 
 export function parseMgrs(mgrsText: string) {
   const mgrs = MGRS.parse(mgrsText);
 
-  return mgrs.toGeographic();
+  return mgrs.toLatLon();
 }
 
 function tryParsers<T>(value: string, parsers: Array<(v: string) => T>): T {

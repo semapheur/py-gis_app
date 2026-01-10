@@ -3,11 +3,19 @@
     value?: string | number | null;
     label?: string;
     required?: boolean;
+    fieldSizing?: "content" | "fixed";
     oninput?: (value: string) => void;
   }
 
-  let { value = null, label = "", required = false, oninput }: Props = $props();
+  let {
+    value = null,
+    label = "",
+    required = false,
+    fieldSizing = "fixed",
+    oninput,
+  }: Props = $props();
   let placeholder = $derived(label);
+  let minCh = $derived(Math.max(label.length + 2, 6));
 
   const uid = $props.id();
 </script>
@@ -18,6 +26,7 @@
     {placeholder}
     bind:value
     {required}
+    style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch;`}
     oninput={(e) => oninput?.(e.currentTarget.value)}
   />
   {#if label}
@@ -33,6 +42,7 @@
   .container {
     position: relative;
     margin-top: var(--text-2xs);
+    min-width: 0;
   }
 
   label {
@@ -48,6 +58,7 @@
 
   input {
     padding: var(--size-sm);
+    max-width: 100%;
 
     &::placeholder {
       color: transparent;
