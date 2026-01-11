@@ -19,7 +19,7 @@ polygon = Field(
 
 
 class RadiometricParamsTable(Model):
-  table_name = "radiometric_params"
+  _table_name = "radiometric_params"
   id = HASH_FIELD
   noise = polygon
   sigma0 = polygon

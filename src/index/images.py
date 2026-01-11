@@ -48,7 +48,7 @@ class ImageryType(str, Enum):
 
 
 class ImageIndexTable(Model):
-  table_name = "images"
+  _table_name = "images"
   id = HASH_FIELD
   catalog = Field(int, nullable=False)
   relative_path = Field(

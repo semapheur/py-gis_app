@@ -146,13 +146,13 @@ class ModelMeta(type):
 
 
 class Model(metaclass=ModelMeta):
-  table_name: Optional[str] = None
+  _table_name: Optional[str] = None
   _fields: dict[str, Field] = {}
 
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
-    if cls.table_name is None:
-      cls.table_name = cls.__name__.lower()
+    if cls._table_name is None:
+      cls._table_name = cls.__name__.lower()
 
   def to_dict(self) -> dict[str, SqliteValue]:
     data = {}
@@ -169,7 +169,7 @@ class Model(metaclass=ModelMeta):
 
   @classmethod
   def create_table_sql(cls) -> str:
-    if not cls.table_name:
+    if not cls._table_name:
       raise ValueError(f"{cls.__name__} must define table_name")
 
     columns: list[str] = []
@@ -195,18 +195,18 @@ class Model(metaclass=ModelMeta):
       raise ValueError(f"{cls.__name__} has no fields")
 
     columns_sql = ", ".join(columns)
-    return f"CREATE TABLE IF NOT EXISTS {cls.table_name} ({columns_sql})"
+    return f"CREATE TABLE IF NOT EXISTS {cls._table_name} ({columns_sql})"
 
   @classmethod
   def add_geometry_sql(cls, dimension: str = "XY") -> list[str]:
-    if not cls.table_name:
+    if not cls._table_name:
       raise ValueError(f"{cls.__name__} must define table_name")
 
     sql: list[str] = []
 
     for name, field in cls.geometry_fields().items():
       sql.append(f"""
-        SELECT AddGeometryColumn('{cls.table_name}', '{name}', {field.srid}, '{field.geometry_type}', '{dimension}')
+        SELECT AddGeometryColumn('{cls._table_name}', '{name}', {field.srid}, '{field.geometry_type}', '{dimension}')
       """)
 
     return sql
@@ -230,6 +230,24 @@ class Model(metaclass=ModelMeta):
       field = cls._fields[name]
       raw = row[i]
       value = field.deserialize_from_sql(raw)
+      setattr(obj, name, value)
+
+    return obj
+
+  @classmethod
+  def from_dict(cls, data: dict[str, SqliteValue]):
+    obj = cls.__new__(cls)
+
+    for name, field in cls._fields.items():
+      if name in data:
+        value = data[name]
+      elif field.default is not None:
+        value = field.default
+      elif not field.nullable and not field.primary_key:
+        raise ValueError(f"{cls.__name__}.{name} is required")
+      else:
+        value = None
+
       setattr(obj, name, value)
 
     return obj
@@ -327,7 +345,7 @@ class SqliteDatabase:
       return
 
     table = type(models[0])
-    table_name = table.table_name
+    table_name = table._table_name
     geometry_fields = table.geometry_fields()
 
     rows = []
@@ -433,7 +451,7 @@ class SqliteDatabase:
     if with_clause is not None:
       sql_parts.append(f"WITH {with_clause}")
 
-    sql_parts.append(f"SELECT {column_sql} FROM {table.table_name}")
+    sql_parts.append(f"SELECT {column_sql} FROM {table._table_name}")
 
     if join is not None:
       sql_parts.append(f"{join['join_type']} JOIN {join['expression']}")
@@ -525,7 +543,7 @@ class SqliteDatabase:
 
 
 def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:
-  table_name = table.table_name
+  table_name = table._table_name
   cursor = db.cursor()
 
   cursor.execute(

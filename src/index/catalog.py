@@ -8,7 +8,7 @@ from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SqliteDatab
 
 
 class CatalogTable(Model):
-  table_name = "catalog"
+  _table_name = "catalog"
   id = Field(int, primary_key=True)
   path = Field(
     Path,
