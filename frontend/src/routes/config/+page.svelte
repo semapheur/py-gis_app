@@ -4,18 +4,22 @@
 
   let { data }: { data: PageData } = $props();
   let selectedTable = $state<string>("");
+  let columns = $derived.by(() => {
+    if (!selectedTable) return [];
 
-  console.log(data.tables);
+    return data.schemas[selectedTable].columns;
+  });
 </script>
 
 <div class="page-container">
   <nav class="table-list">
-    {#each data.tables as table}
-      <button>{table}</button>
+    {#each Object.entries(data.schemas) as [tableName, schema]}
+      <button onclick={() => (selectedTable = tableName)}>{schema.label}</button
+      >
     {/each}
   </nav>
   {#if browser}
-    <DataGrid />
+    <DataGrid {columns} data={[]} />
   {/if}
 </div>
 

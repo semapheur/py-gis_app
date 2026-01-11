@@ -5,6 +5,7 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
+from src.attributes.models import get_datagrid_schemas
 from src.const import ATTRIBUTE_DB, STATIC_DIR
 from src.hashing import decode_sha256_from_b64
 from src.index.images import get_image_info, get_images_by_intersection
@@ -32,7 +33,7 @@ class Handler(SimpleHTTPRequestHandler):
     return super().translate_path(path)
 
   def do_GET(self):
-    if self.path == "/api/attribute-tables":
+    if self.path == "/api/attribute-schemas":
       self.handle_attribute_tables()
       return
 
@@ -182,9 +183,9 @@ class Handler(SimpleHTTPRequestHandler):
 
   def handle_attribute_tables(self):
     try:
-      tables = get_tables(ATTRIBUTE_DB)
+      schemas = get_datagrid_schemas()
 
-      payload = json.dumps({"tables": tables}).encode("utf-8")
+      payload = json.dumps({"schemas": schemas}).encode("utf-8")
       self._json_response(payload)
 
     except Exception as e:

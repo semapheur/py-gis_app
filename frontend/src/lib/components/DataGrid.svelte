@@ -2,25 +2,40 @@
   import { Grid } from "@svar-ui/svelte-grid";
   import { Willow } from "@svar-ui/svelte-core";
 
-  const typeOptions = [
-    { id: "vehicle", label: "Vehicle" },
-    { id: "vessel", label: "Vessel" },
-    { id: "submarine", label: "Submarine" },
-    { id: "aircraft", label: "Aircraft" },
-  ];
+  import Modal from "$lib/components/Modal.svelte";
+  import Input from "$lib/components/Input.svelte";
 
-  const columns = [
-    {
-      id: "type",
-      header: "Type",
-      editor: "combo",
-      options: typeOptions,
-    },
-  ];
+  interface Props {
+    columns: Record<string, string>[];
+    data: Record<string, string>[];
+  }
 
-  const data = [{ type: "vehicle" }];
+  let { columns, data }: Props = $props();
+  let api = $state();
+  let showForm = $state<boolean>(false);
+  let newRow = $state<Record<string, any>>({});
+
+  function addRow() {
+    api.exec("add-row", {
+      row: { ...newRow },
+    });
+
+    newRow = {};
+  }
 </script>
 
 <Willow>
-  <Grid {data} {columns} />
+  <div class="toolbar">
+    <button onclick={() => (showForm = !showForm)}>Add</button>
+  </div>
+  <Grid bind:this={api} {data} {columns} />
+
+  <Modal bind:open={showForm}>
+    <form>
+      {#each columns as column}
+        <Input label={column.header} />
+      {/each}
+      <button onclick={addRow}>Add</button>
+    </form>
+  </Modal>
 </Willow>

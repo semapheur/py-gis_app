@@ -34,7 +34,7 @@ EQUIPMENT_COLUMNS = (
 
 BASE_ATTRIBUTE_COLUMNS = (
   {"id": "text", "header": "Text", "editor": "text"},
-  {"id": "description", "header": "Description"},
+  {"id": "description", "header": "Description", "editor": "text"},
 )
 
 
@@ -124,3 +124,15 @@ def create_attribute_tables():
       schema_data.append(attribute_schema)
 
     db.insert_models(schema_data)
+
+
+def get_datagrid_schemas():
+  with SqliteDatabase(ATTRIBUTE_DB) as db:
+    records = db.select_records(DataGridSchemaTable, "*")
+
+  result = {}
+  for record in records:
+    key = record["table_name"]
+    result[key] = {"label": record["label"], "columns": record["columns"]}
+
+  return result
