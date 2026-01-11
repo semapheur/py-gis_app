@@ -3,6 +3,7 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import Select from "$lib/components/Select.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
+  import CloseButton from "$lib/components/CloseButton.svelte";
 
   import {
     getAnnotateState,
@@ -32,7 +33,7 @@
         selected={annotate.layer}
         onselect={(layer: typeof annotate.layer) => annotate.setLayer(layer)}
       />
-      <button class="button-close" onclick={() => (open = false)}> ✕ </button>
+      <CloseButton onclick={() => (open = false)} />
     </header>
     <main>
       {#key annotate.layer}
@@ -96,14 +97,6 @@
     gap: var(--size-sm);
     padding-top: var(--size-sm);
     border-top: 1px solid rgba(var(--color-text) / 0.5);
-  }
-
-  .button-close {
-    all: unset;
-
-    &:hover {
-      color: red;
-    }
   }
 
   .button-annotate {

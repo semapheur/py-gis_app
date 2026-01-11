@@ -1,5 +1,6 @@
 <script lang="ts">
   import { type Snippet } from "svelte";
+  import CloseButton from "$lib/components/CloseButton.svelte";
 
   interface Props {
     open: boolean;
@@ -86,7 +87,7 @@
   <header class="window-header" onpointerdown={startDrag}>
     <div class="header-title">{title}</div>
     <div class="header-buttons">
-      <button class="button-close" onclick={() => (open = false)}> ✕ </button>
+      <CloseButton onclick={() => open = false}
     </div>
   </header>
 
@@ -141,12 +142,4 @@
     clip-path: polygon(100% 100%, 100% 0, 0 100%);
   }
 
-  .button-close {
-    all: unset;
-    cursor: pointer;
-
-    &:hover {
-      color: red;
-    }
-  }
 </style>

@@ -2,15 +2,9 @@
 </script>
 
 <nav class="menu">
-  <a href="/">
-    <button>H</button>
-  </a>
-  <a href="/search">
-    <button>S</button>
-  </a>
-  <a href="/config">
-    <button>C</button>
-  </a>
+  <a href="/"> H </a>
+  <a href="/search"> S </a>
+  <a href="/config"> C </a>
 </nav>
 
 <style>

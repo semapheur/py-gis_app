@@ -33,7 +33,7 @@
   <Modal bind:open={showForm}>
     <form>
       {#each columns as column}
-        <Input label={column.header} />
+        <Input label={column.header} oninput={(v) => (newRow[column.id] = v)} />
       {/each}
       <button onclick={addRow}>Add</button>
     </form>
