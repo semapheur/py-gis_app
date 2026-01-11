@@ -8,46 +8,43 @@
   }
 
   let { open = $bindable(), children }: Props = $props();
-  let dialog: HTMLDialogElement | null = null;
+  let dialog = $state<HTMLDialogElement | null>(null);
 
-  function _onclick(e: MouseEvent & { currentTarget: HTMLDialogElement }) {
-    if (e.target !== e.currentTarget) return;
+  function teleport(element: HTMLElement) {
+    document.body.appendChild(element);
 
-    const rect = e.currentTarget.getBoundingClientRect();
-
-    const clickedOutside =
-      e.clientX < rect.left ||
-      e.clientX > rect.right ||
-      e.clientY < rect.top ||
-      e.clientY > rect.bottom;
-
-    if (clickedOutside) {
-      open = false;
-    }
+    return {
+      destroy() {
+        if (element.parentNode) element.parentNode.removeChild(element);
+      },
+    };
   }
 
   $effect(() => {
     if (!dialog) return;
 
-    if (open && !dialog.open) {
+    if (open) {
       dialog.showModal();
-    } else if (!open && dialog.open) {
+    } else {
       dialog.close();
     }
   });
 </script>
 
-<dialog
-  bind:this={dialog}
-  onclick={_onclick}
-  onclose={() => (open = false)}
-  oncancel={() => (open = false)}
->
-  <header>
-    <CloseButton onclick={() => (open = false)} />
-  </header>
-  {@render children()}
-</dialog>
+{#if open}
+  <dialog
+    bind:this={dialog}
+    onclick={(e) => {
+      if (e.target === dialog) dialog?.close();
+    }}
+    onclose={() => (open = false)}
+  >
+    <header>
+      <CloseButton onclick={() => dialog?.close()} />
+    </header>
+    {@render children()}
+  </dialog>
+{/if}
 
 <style>
   dialog {
