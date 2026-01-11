@@ -29,7 +29,7 @@ from src.spatialite import (
   JoinClause,
   Model,
   OnConflict,
-  SpatialDatabase,
+  SqliteDatabase,
 )
 
 Vec3: TypeAlias = tuple[float, float, float]
@@ -352,7 +352,7 @@ class IndexAction(Enum):
 
 
 def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, None]]:
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB, spatial=True) as db:
     derived_columns = {
       "path": "concat(catalog.path, '/', images.relative_path, '/', images.filename, images.filetype)",
     }
@@ -395,7 +395,7 @@ def index_images(
   thumbnail_dir = STATIC_DIR / "thumbnails"
   thumbnail_dir.mkdir(exist_ok=True)
 
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB, spatial=True) as db:
     db.create_table(ImageIndexTable)
     db.create_table(RadiometricParamsTable)
 
@@ -491,7 +491,7 @@ def index_images(
 
 
 def get_images_by_intersection(polygon_wkt: str):
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB, spatial=True) as db:
     where = "ST_Intersects(footprint, poly.geom)"
     derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
     with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"
@@ -511,7 +511,7 @@ def get_images_by_intersection(polygon_wkt: str):
 
 
 def get_image_info(id: bytes) -> dict:
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB, spatial=True) as db:
     where = "id = :id"
     params = {"id": id}
 

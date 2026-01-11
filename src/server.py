@@ -1,7 +1,7 @@
 import json
 import mimetypes
 import os
-from http.server import SimpleHTTPRequestHandler, ThreadingHTTPServer
+from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
@@ -189,12 +189,3 @@ class Handler(SimpleHTTPRequestHandler):
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
-
-
-if __name__ == "__main__":
-  host = os.getenv("HOST", "0.0.0.0")
-  port = int(os.getenv("PORT", "8080"))
-
-  print(f"Serving {host}:{port}")
-  server = ThreadingHTTPServer((host, port), Handler)
-  server.serve_forever()

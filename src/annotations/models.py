@@ -1,4 +1,4 @@
-from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SpatialDatabase
+from src.spatialite import Model
 
 
 class EquipmentAnnotationTable(Model):

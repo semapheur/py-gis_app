@@ -235,9 +235,10 @@ class Model(metaclass=ModelMeta):
     return obj
 
 
-class SpatialDatabase:
-  def __init__(self, db_path: Path):
+class SqliteDatabase:
+  def __init__(self, db_path: Path, spatial: bool = False):
     self.db_path = db_path
+    self.spatial = spatial
     self.conn = None
 
   def __enter__(self):
@@ -255,9 +256,11 @@ class SpatialDatabase:
       raise ValueError(f"Invalid db path: {self.db_path}")
 
     self.conn = sqlite3.connect(self.db_path)
-    self.conn.enable_load_extension(True)
-    self.conn.load_extension(os.environ["SPATIALITE"])
-    self._ensure_spatial_metadata()
+
+    if self.spatial:
+      self.conn.enable_load_extension(True)
+      self.conn.load_extension(os.environ["SPATIALITE"])
+      self._ensure_spatial_metadata()
 
   def _close(self):
     if self.conn:
@@ -302,8 +305,9 @@ class SpatialDatabase:
     sql = "SELECT name FROM sqlite_master WHERE type = 'table'"
 
     if not include_internal:
-      patterns = ("'sqlite_%'", "'spatial_%'", "'idx_%'")
-      sql += " AND name NOT LIKE ".join(patterns)
+      patterns = ("sqlite_%", "spatial_%", "idx_%")
+      for pattern in patterns:
+        sql += f" AND name NOT LIKE '{pattern}'"
 
     sql += " ORDER BY name"
 
@@ -359,7 +363,7 @@ class SpatialDatabase:
       sql_parts.append(f"RETURNING {returning}")
 
     sql = " ".join(sql_parts)
-    cursor = cast(Connection, self.conn).cursor()
+    cursor = self.conn.cursor()
 
     if returning is not None:
       results = []
@@ -535,7 +539,7 @@ def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:
 
 
 def get_tables(db_path: Path) -> list[str]:
-  with SpatialDatabase(db_path) as db:
+  with SqliteDatabase(db_path) as db:
     return db.list_tables()
 
 

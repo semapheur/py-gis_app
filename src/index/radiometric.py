@@ -2,7 +2,7 @@ import json
 from typing import Literal, TypedDict
 
 from src.const import INDEX_DB
-from src.spatialite import HASH_FIELD, Field, Model, SpatialDatabase
+from src.spatialite import HASH_FIELD, Field, Model, SqliteDatabase
 
 
 class NoiseParameters(TypedDict):
@@ -30,7 +30,7 @@ class RadiometricParamsTable(Model):
 def get_radiometric_parameters(
   hash_id: bytes, factors: tuple[Literal["noise", "sigma0", "beta0", "gamma0"], ...]
 ):
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB) as db:
     rows = db.select_records(
       RadiometricParamsTable,
       columns=factors,

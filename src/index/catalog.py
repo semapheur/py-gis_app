@@ -4,7 +4,7 @@ from typing import Optional, Union, cast
 
 from src.const import INDEX_DB
 from src.path_utils import verify_dir
-from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SpatialDatabase
+from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SqliteDatabase
 
 
 class CatalogTable(Model):
@@ -24,7 +24,7 @@ class CatalogTable(Model):
 
 
 def insert_catalog(
-  db: SpatialDatabase,
+  db: SqliteDatabase,
   path: Path,
   name: str,
 ):
@@ -55,7 +55,7 @@ def insert_catalog(
 
 
 def update_catalog(
-  db: SpatialDatabase,
+  db: SqliteDatabase,
   id: int,
   new_path: Optional[Path] = None,
   new_name: Optional[str] = None,
@@ -101,13 +101,13 @@ def update_catalog(
 def add_calatog(path: Path, name: str):
   verify_dir(path)
 
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB) as db:
     db.create_table(CatalogTable)
     insert_catalog(db, path, name)
 
 
 def get_catalogs() -> dict[int, dict[str, str]]:
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB) as db:
     catalogs = db.select_records(CatalogTable, "*")
 
   result: dict[int, dict[str, str]] = {}
@@ -135,5 +135,5 @@ def edit_catalog(
   if new_path is not None:
     verify_dir(new_path)
 
-  with SpatialDatabase(INDEX_DB) as db:
+  with SqliteDatabase(INDEX_DB) as db:
     update_catalog(db, id, new_path, new_name)
