@@ -1,21 +1,35 @@
 <script lang="ts">
-  import { Grid } from "@svar-ui/svelte-grid";
+  import { Grid, type IColumnConfig } from "@svar-ui/svelte-grid";
   import { Willow } from "@svar-ui/svelte-core";
 
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
 
   interface Props {
-    columns: Record<string, string>[];
+    columns: IColumnConfig[];
     data: Record<string, string>[];
+    autoFill?: Record<string, () => any>;
+    inputIds?: Set<string>;
   }
 
-  let { columns, data }: Props = $props();
+  let { columns, data, autoFill, inputIds }: Props = $props();
   let api = $state();
   let showForm = $state<boolean>(false);
   let newRow = $state<Record<string, any>>({});
+  let inputColumns = $derived.by(() => {
+    if (inputIds === undefined) return columns;
+
+    return columns.filter((c) => inputIds.has(c.id));
+  });
+  $inspect(inputIds);
 
   function addRow() {
+    if (autoFill !== undefined) {
+      Object.entries(autoFill).forEach(([c, fn]) => {
+        newRow[c] = fn();
+      });
+    }
+
     api.exec("add-row", {
       row: { ...newRow },
     });
@@ -32,7 +46,7 @@
 
   <Modal bind:open={showForm}>
     <form>
-      {#each columns as column}
+      {#each inputColumns as column}
         <Input label={column.header} oninput={(v) => (newRow[column.id] = v)} />
       {/each}
       <button onclick={addRow}>Add</button>

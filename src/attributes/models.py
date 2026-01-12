@@ -12,15 +12,15 @@ BASE_ATTRIBUTE_TABLES = (
   "releasability",
 )
 
-META_COLUMNS = (
+META_COLUMNS = [
   {"id": "id", "header": "ID"},
   {"id": "createdByUserId", "header": "Created by"},
   {"id": "createdAtTimestamp", "header": "Created at"},
   {"id": "modifiedByUserId", "header": "Modified by"},
   {"id": "modifiedAtTimestamp", "header": "Modified at"},
-)
+]
 
-EQUIPMENT_COLUMNS = (
+EQUIPMENT_COLUMNS = [
   {"id": "identifier", "header": "Identifier", "editor": "text"},
   {"id": "displayName", "header": "Display name", "editor": "text"},
   {"id": "description", "header": "Description", "editor": "text"},
@@ -30,12 +30,12 @@ EQUIPMENT_COLUMNS = (
   {"id": "alternativeNames", "header": "Alternative names", "editor": "text"},
   {"id": "source", "header": "Source", "editor": "text"},
   {"id": "sourceData", "header": "Source data", "editor": "text"},
-)
+]
 
-BASE_ATTRIBUTE_COLUMNS = (
+BASE_ATTRIBUTE_COLUMNS = [
   {"id": "text", "header": "Text", "editor": "text"},
   {"id": "description", "header": "Description", "editor": "text"},
-)
+]
 
 
 class DataGridSchemaTable(Model):
@@ -103,7 +103,7 @@ def create_attribute_tables():
   schema_data: list[DataGridSchemaTable] = []
   equipment_schema = schema_from_model(
     EquipmentListTable,
-    [*META_COLUMNS, *EQUIPMENT_COLUMNS],
+    EQUIPMENT_COLUMNS,
     "Equipment",
   )
   schema_data.append(equipment_schema)
@@ -118,7 +118,7 @@ def create_attribute_tables():
 
       attribute_schema = schema_from_model(
         model,
-        [*META_COLUMNS, *BASE_ATTRIBUTE_COLUMNS],
+        BASE_ATTRIBUTE_COLUMNS,
         table.capitalize().replace("_", " "),
       )
       schema_data.append(attribute_schema)
