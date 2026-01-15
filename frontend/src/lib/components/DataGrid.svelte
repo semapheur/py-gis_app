@@ -6,9 +6,9 @@
   import Input from "$lib/components/Input.svelte";
 
   interface CUD {
-    create: Record<string, string | number>[];
-    update: Record<string, string | number>[];
-    delete: Record<string, string | number>[];
+    create: Record<string, Record<string, string | number>>[];
+    update: Record<string, Record<string, string | number>>[];
+    delete: Set<string>;
   }
 
   interface Props {
@@ -29,9 +29,9 @@
     return columns.filter((c) => inputIds.has(c.id));
   });
   let cud = $state<CUD>({
-    create: [],
-    update: [],
-    delete: [],
+    create: {} as Record<string, Record<string, string | number>>[],
+    update: {} as Record<string, Record<string, string | number>>[],
+    delete: new Set<string>(),
   });
 
   function addRow() {
@@ -45,7 +45,7 @@
       row: { ...newRow },
     });
 
-    cud.create.push(newRow);
+    cud.create[newRow.id] = newRow;
 
     newRow = {};
   }
@@ -54,6 +54,17 @@
     api.exec("delete-row", {
       id: null,
     });
+
+    // if (Object.hasOwn(cud.create, id)) {
+    // delete cud.create[id]
+    // return
+    // }
+    //
+    // if Object.hasOwn(cud.update, id) {
+    // delete cud.update(cud.update, id)
+    // }
+    //
+    // cud.delete.add(id)
   }
 
   async function saveChanges() {
@@ -62,29 +73,32 @@
     if (
       cud.create.length === 0 &&
       cud.update.length === 0 &&
-      cud.delete.length === 0
+      cud.delete.size === 0
     ) {
       return;
     }
 
     try {
+      const payload = {
+        upsert: [...Object.values(cud.create), ...Object.values(cud.update)],
+        delete: Array.from(cud.delete),
+      };
+
       const res = await fetch(saveApi, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
         },
-        body: JSON.stringify(cud),
+        body: JSON.stringify(payload),
       });
 
       if (!res.ok) {
         throw new Error(await res.text());
       }
 
-      cud = {
-        create: [],
-        update: [],
-        delete: [],
-      };
+      cud.create = {} as Record<string, Record<string, string | number>>[];
+      cud.update = {} as Record<string, Record<string, string | number>>[];
+      cud.delete = new Set<string>();
     } catch (err) {
       console.error("Failed to save grid changes:", err);
     }

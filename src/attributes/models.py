@@ -1,7 +1,17 @@
 import json
+import uuid
+from typing import TypedDict
 
 from src.const import ATTRIBUTE_DB
-from src.spatialite import DATETIME_FIELD, Field, Model, SqliteDatabase
+from src.spatialite import (
+  DATETIME_FIELD,
+  UUID_FIELD,
+  Field,
+  Model,
+  OnConflict,
+  SqliteDatabase,
+  SqliteValue,
+)
 
 BASE_ATTRIBUTE_TABLES = (
   "activity_categories",
@@ -55,7 +65,7 @@ class DataGridSchemaTable(Model):
 
 class EquipmentListTable(Model):
   _table_name = "equipment"
-  id = Field(str, primary_key=True)
+  id = UUID_FIELD
   identifier = Field(str, nullable=False)
   displayName = Field(str, nullable=False)
   description = Field(str)
@@ -75,7 +85,7 @@ def make_attribute_table(table_name: str) -> type[Model]:
   class AttributeTable(Model):
     _table_name = table_name
 
-    id = Field(str, primary_key=True)
+    id = UUID_FIELD
     text = Field(str, nullable=False, unique=True)
     description = Field(str)
     createdByUserId = Field(str)
@@ -140,5 +150,47 @@ def get_datagrid_schemas():
   return result
 
 
-def save_attributes(payload):
-  pass
+class AttributeUpdate(TypedDict):
+  upsert: list[dict[str, SqliteValue]]
+  delete: list[str]
+
+
+def update_attributes(table: str, payload: AttributeUpdate):
+  if table == "equipment":
+    model = EquipmentListTable
+    update_sql = """UPDATE SET
+      identifier = excluded.identifier,
+      displayName = excluded.displayName,
+      description = excluded.description,
+      descriptionShort = excluded.descriptionShort,
+      natoName = excluded.natoName,
+      nativeName = excluded.nativeName,
+      alternativeNames = excluded.alternativeNames
+      source = excluded.source,
+      sourceData = excluded.sourceData,
+      modifiedByUserId = excluded.modifiedByUserId,
+      modifiedAtTimestamp = excluded.modifiedAtTimestamp
+    """
+
+  elif table in BASE_ATTRIBUTE_TABLES:
+    model = make_attribute_table(table)
+    update_sql = """
+      text = excluded.text,
+      description = excluded.description,
+      modifiedByUserId = excluded.modifiedByUserId,
+      modifiedAtTimestamp = excluded.modifiedAtTimestamp
+    """
+
+  else:
+    raise ValueError(f"Invalid table name: {table}")
+
+  upsert_models = [model.from_dict(record) for record in payload["upsert"]]
+  delete_ids = [uuid.UUID(u) for u in payload["delete"]]
+
+  with SqliteDatabase(ATTRIBUTE_DB) as db:
+    if upsert_models:
+      on_conflict = OnConflict(index="id", action=update_sql)
+      db.insert_models(upsert_models, on_conflict)
+
+    if delete_ids:
+      db.delete_by_ids(model, delete_ids)

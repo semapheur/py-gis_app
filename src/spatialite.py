@@ -3,6 +3,7 @@ from __future__ import annotations
 import json
 import os
 import sqlite3
+import uuid
 from contextlib import contextmanager
 from dataclasses import dataclass
 from datetime import datetime
@@ -541,6 +542,53 @@ class SqliteDatabase:
 
     return results
 
+  def delete_by_ids(self, table: type[Model], ids: list[Any]) -> int:
+    self._check_connection()
+
+    table_name = table._table_name
+
+    pk_field = None
+    pk_name = None
+
+    for name, field in table._fields.items():
+      if field.primary_key:
+        pk_field = field
+        pk_name = name
+        break
+
+    if pk_field is None or pk_name is None:
+      raise ValueError(f"{table.__name__} has no primary key field")
+
+    id_type = pk_field.sql_column_type()
+
+    cursor = self.conn.cursor()
+
+    cursor.execute(f"""
+      CREATE TEMPORARY TABLE IF NOT EXISTS temp_delete_ids (
+        id {id_type}
+      )
+    """)
+
+    cursor.execute("DELETE FROM temp_delete_ids")
+
+    serialized_ids = []
+    for i in ids:
+      serialized = pk_field.serialize_to_sql(i)
+      serialized_ids.append((serialized,))
+
+    cursor.executemany("INSERT INTO temp_delete_ids (id) VALUES (?)", serialized_ids)
+
+    cursor.execute(f"""
+      DELETE FROM {table_name}
+      WHERE {pk_name} IN (SELECT id FROM temp_delete_ids)
+    """)
+
+    rows_deleted = cursor.rowcount
+
+    cursor.execute("DROP TABLE temp_delete_ids")
+    self.conn.commit()
+    return rows_deleted
+
 
 def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:
   table_name = table._table_name
@@ -619,6 +667,18 @@ HASH_FIELD = Field(
   sql_type=ColumnType.BLOB,
   primary_key=True,
   to_json=lambda x: encode_sha256_to_b64(x),
+)
+
+UUID_FIELD = Field(
+  uuid.UUID,
+  sql_type=ColumnType.BLOB,
+  primary_key=True,
+  to_sql=lambda u: u
+  if isinstance(u, bytes)
+  else uuid.UUID(u).bytes
+  if isinstance(u, str)
+  else u.bytes,
+  to_python=lambda b: uuid.UUID(bytes=b),
 )
 
 DATETIME_FIELD = Field(

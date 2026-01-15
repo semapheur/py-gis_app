@@ -6,7 +6,12 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.attributes.models import ATTRIBUTE_TABLES, get_datagrid_schemas
+from src.attributes.models import (
+  ATTRIBUTE_TABLES,
+  AttributeUpdate,
+  get_datagrid_schemas,
+  update_attributes,
+)
 from src.const import STATIC_DIR
 from src.hashing import decode_sha256_from_b64
 from src.index.images import get_image_info, get_images_by_intersection
@@ -189,15 +194,11 @@ class Handler(SimpleHTTPRequestHandler):
     self._handle_post(logic)
 
   def handle_save_attributes(self, table: str):
-    class Payload(TypedDict):
-      create: str
-      update: str
-      delete: str
+    def logic(payload: AttributeUpdate):
+      update_attributes(table, payload)
+      return "success"
 
-    def logic(payload: Payload):
-      pass
-
-    pass
+    self._handle_post(logic)
 
   def handle_attribute_tables(self):
     try:
