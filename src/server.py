@@ -1,16 +1,16 @@
 import json
 import mimetypes
 import os
+import re
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.attributes.models import get_datagrid_schemas
-from src.const import ATTRIBUTE_DB, STATIC_DIR
+from src.attributes.models import ATTRIBUTE_TABLES, get_datagrid_schemas
+from src.const import STATIC_DIR
 from src.hashing import decode_sha256_from_b64
 from src.index.images import get_image_info, get_images_by_intersection
 from src.index.radiometric import get_radiometric_parameters
-from src.spatialite import get_tables
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -93,6 +93,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/radiometric-params":
       self.handle_parametric_params()
+      return
+
+    if self.path.startswith("/api/save-attributes"):
+      table = re.match(r"^(?<=/api/save-attributes/)\w+$", self.path)
+      if table is None or table not in ATTRIBUTE_TABLES:
+        self.send_error(404, "Invalid POST endpoint")
+      self.handle_save_attributes(table)
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -180,6 +187,17 @@ class Handler(SimpleHTTPRequestHandler):
       return get_radiometric_parameters(hash, ("noise", "sigma0"))
 
     self._handle_post(logic)
+
+  def handle_save_attributes(self, table: str):
+    class Payload(TypedDict):
+      create: str
+      update: str
+      delete: str
+
+    def logic(payload: Payload):
+      pass
+
+    pass
 
   def handle_attribute_tables(self):
     try:

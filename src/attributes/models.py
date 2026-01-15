@@ -12,6 +12,8 @@ BASE_ATTRIBUTE_TABLES = (
   "releasability",
 )
 
+ATTRIBUTE_TABLES = {"equipment", *BASE_ATTRIBUTE_TABLES}
+
 META_COLUMNS = [
   {"id": "id", "header": "ID"},
   {"id": "createdByUserId", "header": "Created by"},
@@ -136,3 +138,7 @@ def get_datagrid_schemas():
     result[key] = {"label": record["label"], "columns": record["columns"]}
 
   return result
+
+
+def save_attributes(payload):
+  pass

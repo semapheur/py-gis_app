@@ -5,23 +5,34 @@
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
 
+  interface CUD {
+    create: Record<string, string | number>[];
+    update: Record<string, string | number>[];
+    delete: Record<string, string | number>[];
+  }
+
   interface Props {
     columns: IColumnConfig[];
     data: Record<string, string>[];
     autoFill?: Record<string, () => any>;
     inputIds?: Set<string>;
+    saveApi?: string;
   }
 
-  let { columns, data, autoFill, inputIds }: Props = $props();
+  let { columns, data, autoFill, inputIds, saveApi }: Props = $props();
   let api = $state();
   let showForm = $state<boolean>(false);
-  let newRow = $state<Record<string, any>>({});
+  let newRow = $state<Record<string, string | number>>({});
   let inputColumns = $derived.by(() => {
     if (inputIds === undefined) return columns;
 
     return columns.filter((c) => inputIds.has(c.id));
   });
-  $inspect(inputIds);
+  let cud = $state<CUD>({
+    create: [],
+    update: [],
+    delete: [],
+  });
 
   function addRow() {
     if (autoFill !== undefined) {
@@ -34,15 +45,60 @@
       row: { ...newRow },
     });
 
+    cud.create.push(newRow);
+
     newRow = {};
+  }
+
+  function deleteRow() {
+    api.exec("delete-row", {
+      id: null,
+    });
+  }
+
+  async function saveChanges() {
+    if (!saveApi) return;
+
+    if (
+      cud.create.length === 0 &&
+      cud.update.length === 0 &&
+      cud.delete.length === 0
+    ) {
+      return;
+    }
+
+    try {
+      const res = await fetch(saveApi, {
+        method: "POST",
+        headers: {
+          "Content-Type": "application/json",
+        },
+        body: JSON.stringify(cud),
+      });
+
+      if (!res.ok) {
+        throw new Error(await res.text());
+      }
+
+      cud = {
+        create: [],
+        update: [],
+        delete: [],
+      };
+    } catch (err) {
+      console.error("Failed to save grid changes:", err);
+    }
   }
 </script>
 
 <Willow>
   <div class="toolbar">
     <button onclick={() => (showForm = !showForm)}>Add</button>
+    {#if saveApi}
+      <button onclick={() => saveChanges}>Save</button>
+    {/if}
   </div>
-  <Grid bind:this={api} {data} {columns} />
+  <Grid bind:this={api} {data} {columns} multiselect={true} />
 
   <Modal bind:open={showForm}>
     <form>
