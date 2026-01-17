@@ -1,6 +1,10 @@
 <script lang="ts">
-  import { Grid, type IColumnConfig } from "@svar-ui/svelte-grid";
-  import { Willow } from "@svar-ui/svelte-core";
+  import {
+    Grid,
+    HeaderMenu,
+    Tooltip,
+    type IColumnConfig,
+  } from "@svar-ui/svelte-grid";
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
@@ -22,6 +26,8 @@
 
   let { columns, data, autoFill, inputIds, saveApi }: Props = $props();
   let api = $state();
+  let selectedRows = $state([]);
+
   let history = $derived(api?.getReactiveState().history);
   let showForm = $state<boolean>(false);
   let newRow = $state<Record<string, string | number>>({});
@@ -35,6 +41,10 @@
     update: {} as Record<string, Record<string, string | number>>[],
     delete: new Set<string>(),
   });
+
+  $inspect(selectedRows);
+
+  const updateSelected = () => (selectedRows = api.getState().selectedRows);
 
   function handleUndo(api) {
     api.exec("undo");
@@ -62,22 +72,20 @@
 
   function deleteRow() {
     const id = api.getState().selectedRows[0];
-    if (id) {
-    }
-    const gridData = api.getState().data;
+    if (!id) return;
 
     api.exec("delete-row", { id });
 
-    // if (Object.hasOwn(cud.create, id)) {
-    // delete cud.create[id]
-    // return
-    // }
-    //
-    // if Object.hasOwn(cud.update, id) {
-    // delete cud.update(cud.update, id)
-    // }
-    //
-    // cud.delete.add(id)
+    if (Object.hasOwn(cud.create, id)) {
+      delete cud.create[id];
+      return;
+    }
+
+    if (Object.hasOwn(cud.update, id)) {
+      delete cud.update[id];
+    }
+
+    cud.delete.add(id);
   }
 
   async function saveChanges() {
@@ -155,7 +163,7 @@
   }
 </script>
 
-<Willow>
+<div class="grid">
   <div class="toolbar">
     <button onclick={() => handleUndo(api)} disabled={history && !$history.redo}
       >Undo</button
@@ -164,7 +172,9 @@
       >Redo</button
     >
     <button onclick={() => (showForm = !showForm)}>Add</button>
-    <button onclick={() => deleteRow()}>Delete</button>
+    <button onclick={() => deleteRow()} disabled={!selectedRows.length}
+      >Delete</button
+    >
     {#if saveApi}
       <button onclick={() => saveChanges()}>Save</button>
     {/if}
@@ -173,7 +183,18 @@
       <button onclick={() => exportToCsv()}>CSV</button>
     </DropdownMenu>
   </div>
-  <Grid bind:this={api} {data} {columns} multiselect={true} />
+
+  <Tooltip {api}>
+    <HeaderMenu {api}>
+      <Grid
+        bind:this={api}
+        {data}
+        {columns}
+        multiselect={true}
+        onselectrow={updateSelected}
+      />
+    </HeaderMenu>
+  </Tooltip>
 
   <Modal bind:open={showForm}>
     <form>
@@ -183,9 +204,17 @@
       <button onclick={addRow}>Add</button>
     </form>
   </Modal>
-</Willow>
+</div>
 
 <style>
+  .grid {
+    --wx-table-header-background: rgb(var(--color-accent));
+    --wx-table-header-cell-border: 1px solid rgba(var(--color-text) / 0.1);
+    --wx-table-cell-border: 1px solid rgba(var(--color-text) / 0.1);
+    --wx-table-select-background: #eaedf5;
+    --wx-table-select-border: inset 3px 0 rgb(var(--color-text));
+  }
+
   .toolbar {
     display: flex;
     gap: var(--size-md);
