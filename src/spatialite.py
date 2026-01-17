@@ -127,8 +127,8 @@ class Field(Generic[T, S, J]):
     if value is None:
       return None
 
-    if self.from_json:
-      return self.from_json(value)
+    if self.to_json:
+      return self.to_json(value)
 
     return value
 
@@ -530,6 +530,7 @@ class SqliteDatabase:
     limit: Optional[int] = None,
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
+    to_json: bool = False,
   ) -> list[dict[str, Any]]:
     rows, return_columns = self._select_rows(
       table,
@@ -558,7 +559,7 @@ class SqliteDatabase:
         else:
           value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
 
-        result_row[col] = value
+        result_row[col] = field.serialize_to_json(value) if to_json else value
 
       results.append(result_row)
 

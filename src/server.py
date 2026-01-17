@@ -9,7 +9,9 @@ from typing import Any, Callable, TypedDict, TypeVar
 from src.attributes.models import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
-  get_datagrid_schemas,
+  get_attribute_schema,
+  get_attribute_tables,
+  get_attributes,
   update_attributes,
 )
 from src.const import STATIC_DIR
@@ -38,8 +40,8 @@ class Handler(SimpleHTTPRequestHandler):
     return super().translate_path(path)
 
   def do_GET(self):
-    if self.path == "/api/attribute-schemas":
-      self.handle_attribute_tables()
+    if self.path == "/api/attribute-tables":
+      self.get_attribute_tables()
       return
 
     if self.path.startswith("/api"):
@@ -89,15 +91,23 @@ class Handler(SimpleHTTPRequestHandler):
 
   def do_POST(self):
     if self.path == "/api/query-images":
-      self.handle_query_images()
+      self.post_query_images()
       return
 
     if self.path == "/api/image-info":
-      self.handle_image_info()
+      self.post_image_info()
       return
 
     if self.path == "/api/radiometric-params":
-      self.handle_parametric_params()
+      self.post_parametric_params()
+      return
+
+    if self.path == "/api/attribute-schema":
+      self.post_attribute_schema()
+      return
+
+    if self.path == "/api/attribute-data":
+      self.post_attribute_data()
       return
 
     prefix = "/api/update-attributes/"
@@ -107,7 +117,7 @@ class Handler(SimpleHTTPRequestHandler):
         self.send_error(404, "Invalid POST endpoint")
         return
 
-      self.handle_update_attributes(table)
+      self.post_update_attributes(table)
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -166,7 +176,7 @@ class Handler(SimpleHTTPRequestHandler):
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
 
-  def handle_query_images(self):
+  def post_query_images(self):
     class Payload(TypedDict):
       wkt: str
 
@@ -176,7 +186,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def handle_image_info(self):
+  def post_image_info(self):
     class Payload(TypedDict):
       id: str
 
@@ -186,7 +196,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def handle_parametric_params(self):
+  def post_parametric_params(self):
     class Payload(TypedDict):
       id: str
 
@@ -196,18 +206,38 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def handle_update_attributes(self, table: str):
+  def post_update_attributes(self, table: str):
     def logic(payload: AttributeUpdate):
       update_attributes(table, payload)
       return {"message": "Successfully updated attributes"}
 
     self._handle_post(logic)
 
-  def handle_attribute_tables(self):
-    try:
-      schemas = get_datagrid_schemas()
+  def post_attribute_data(self):
+    class Payload(TypedDict):
+      table: str
 
-      payload = json.dumps({"schemas": schemas}).encode("utf-8")
+    def logic(payload: Payload):
+      table = payload["table"]
+      return get_attributes(table)
+
+    self._handle_post(logic)
+
+  def post_attribute_schema(self):
+    class Payload(TypedDict):
+      table: str
+
+    def logic(payload: Payload):
+      table = payload["table"]
+      return get_attribute_schema(table)
+
+    self._handle_post(logic)
+
+  def get_attribute_tables(self):
+    try:
+      tables = get_attribute_tables()
+
+      payload = json.dumps({"tables": tables}).encode("utf-8")
       self._json_response(payload)
 
     except Exception as e:

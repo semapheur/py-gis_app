@@ -138,16 +138,49 @@ def create_attribute_tables():
     db.insert_models(schema_data)
 
 
-def get_datagrid_schemas():
+def get_attribute_tables():
   with SqliteDatabase(ATTRIBUTE_DB) as db:
-    records = db.select_records(DataGridSchemaTable, "*")
+    records = db.select_records(DataGridSchemaTable, columns=("table_name", "label"))
+    return records
 
-  result = {}
-  for record in records:
-    key = record["table_name"]
-    result[key] = {"label": record["label"], "columns": record["columns"]}
 
-  return result
+def validate_attribute_table(table: str):
+  if table not in ATTRIBUTE_TABLES:
+    raise ValueError(f"Invalid attribute table: {table}")
+
+
+def get_attributes(table: str):
+  validate_attribute_table(table)
+
+  if table == "equipment":
+    model = EquipmentListTable
+
+  elif table in BASE_ATTRIBUTE_TABLES:
+    model = make_attribute_table(table)
+
+  else:
+    raise ValueError(f"Invalid table name: {table}")
+
+  with SqliteDatabase(ATTRIBUTE_DB) as db:
+    records = db.select_records(model, "*", to_json=True)
+
+  return {"data": records}
+
+
+def get_attribute_schema(table: str):
+  validate_attribute_table(table)
+
+  with SqliteDatabase(ATTRIBUTE_DB) as db:
+    where = "table_name = :table"
+    params = {"table": table}
+    records = db.select_records(
+      DataGridSchemaTable,
+      columns=("columns",),
+      where=where,
+      params=params,
+    )
+
+  return records[0]
 
 
 class AttributeUpdate(TypedDict):
@@ -156,6 +189,8 @@ class AttributeUpdate(TypedDict):
 
 
 def update_attributes(table: str, payload: AttributeUpdate):
+  validate_attribute_table(table)
+
   if table == "equipment":
     model = EquipmentListTable
     update_sql = """UPDATE SET
