@@ -4,13 +4,13 @@ from typing import TypedDict
 
 from src.const import ATTRIBUTE_DB
 from src.spatialite import (
-  DATETIME_FIELD,
   UUID_FIELD,
   Field,
   Model,
   OnConflict,
   SqliteDatabase,
   SqliteValue,
+  datetime_field,
 )
 
 BASE_ATTRIBUTE_TABLES = (
@@ -59,7 +59,7 @@ class DataGridSchemaTable(Model):
     str,
     nullable=False,
     to_sql=lambda x: json.dumps(x),
-    to_python=lambda x: json.loads(x),
+    from_sql=lambda x: json.loads(x),
   )
 
 
@@ -77,8 +77,8 @@ class EquipmentListTable(Model):
   sourceData = Field(str)
   createdByUserId = Field(str)
   modifiedByUserId = Field(str)
-  createdAtTimestamp = DATETIME_FIELD
-  modifiedAtTimestamp = DATETIME_FIELD
+  createdAtTimestamp = datetime_field(False)
+  modifiedAtTimestamp = datetime_field(True)
 
 
 def make_attribute_table(table_name: str) -> type[Model]:
@@ -90,8 +90,8 @@ def make_attribute_table(table_name: str) -> type[Model]:
     description = Field(str)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
-    createdAtTimestamp = DATETIME_FIELD
-    modifiedAtTimestamp = DATETIME_FIELD
+    createdAtTimestamp = datetime_field(False)
+    modifiedAtTimestamp = datetime_field(True)
 
   AttributeTable.__name__ = f"{table_name.title().replace('_', '')}Table"
   return AttributeTable
@@ -174,7 +174,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
 
   elif table in BASE_ATTRIBUTE_TABLES:
     model = make_attribute_table(table)
-    update_sql = """
+    update_sql = """UPDATE SET
       text = excluded.text,
       description = excluded.description,
       modifiedByUserId = excluded.modifiedByUserId,
@@ -184,8 +184,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
   else:
     raise ValueError(f"Invalid table name: {table}")
 
-  print(payload)
-  upsert_models = [model.from_dict(record) for record in payload["upsert"]]
+  upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 
   with SqliteDatabase(ATTRIBUTE_DB) as db:

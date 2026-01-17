@@ -23,6 +23,7 @@ from typing import (
 )
 
 from src.hashing import encode_sha256_to_b64
+from src.timeutils import datetime_to_unix, unix_to_datetime
 
 SqliteValue = Union[bytes, int, float, str, None]
 
@@ -96,7 +97,13 @@ class Field(Generic[T, S, J]):
 
     return self.sql_type.name
 
+  def validate_nullability(self, value: Optional[Any]):
+    if value is None and not self.nullable:
+      raise ValueError(f"Field {self!r} is non-nullable but received None")
+
   def serialize_to_sql(self, value: Optional[T]) -> Union[S, None]:
+    self.validate_nullability(value)
+
     if value is None:
       return None
 
@@ -115,6 +122,8 @@ class Field(Generic[T, S, J]):
     return self.python_type(value)
 
   def serialize_to_json(self, value: Optional[T]) -> Union[J, None]:
+    self.validate_nullability(value)
+
     if value is None:
       return None
 
@@ -124,6 +133,8 @@ class Field(Generic[T, S, J]):
     return value
 
   def deserialize_from_json(self, value: J) -> Union[T, None]:
+    self.validate_nullability(value)
+
     if value is None:
       return None
 
@@ -368,7 +379,7 @@ class SqliteDatabase:
         if name in geometry_fields:
           row[name] = field.to_wkt(value)
         else:
-          row[name] = value if field.to_sql is None else field.to_sql(value)
+          row[name] = field.serialize_to_sql(value)
 
       rows.append(row)
 
@@ -543,7 +554,7 @@ class SqliteDatabase:
           continue
 
         if field.geometry_type is None:
-          value = field.deserialize_from_sql(row[i], True)
+          value = field.deserialize_from_sql(row[i])
         else:
           value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
 
@@ -684,23 +695,44 @@ UUID_FIELD = Field(
   uuid.UUID,
   sql_type=ColumnType.BLOB,
   primary_key=True,
-  to_sql=lambda u: u
-  if isinstance(u, bytes)
-  else uuid.UUID(u).bytes
-  if isinstance(u, str)
-  else u.bytes,
+  to_sql=lambda u: u.bytes,
   from_sql=lambda b: uuid.UUID(bytes=b),
   to_json=lambda u: str(u),
   from_json=lambda u: uuid.UUID(u),
 )
 
-DATETIME_FIELD = Field(
-  datetime,
-  ColumnType.TEXT,
-  nullable=False,
-  to_sql=lambda x: datetime.isoformat(x, timespec="seconds"),
-  to_python=lambda x: datetime.strptime(x, "%Y-%m-%dT%H:%M:%S"),
-  to_json=lambda x: datetime.isoformat(x, timespec="seconds")
-  if isinstance(x, datetime)
-  else x,
-)
+
+def datetime_field(nullable: bool):
+  return Field(
+    datetime,
+    ColumnType.INTEGER,
+    nullable=nullable,
+    to_sql=lambda x: datetime_to_unix(x),
+    from_sql=lambda x: unix_to_datetime(x),
+    to_json=lambda x: datetime_to_unix(x),
+    from_json=lambda x: unix_to_datetime(x),
+  )
+
+
+def path_field(nullable: bool, unique: bool):
+  return Field(
+    Path,
+    sql_type=ColumnType.TEXT,
+    nullable=nullable,
+    unique=unique,
+    to_sql=lambda x: str(x),
+    from_sql=lambda x: Path(x),
+    to_json=lambda x: str(x),
+    from_json=lambda x: Path(x),
+  )
+
+
+def enum_field(enum: type[Enum], sql_type: ColumnType):
+  return Field(
+    enum,
+    sql_type,
+    to_sql=lambda x: x.value,
+    from_sql=lambda x: enum(x),
+    to_json=lambda x: x.value if isinstance(x, enum) else x,
+    from_json=lambda x: enum(x),
+  )

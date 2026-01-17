@@ -4,23 +4,21 @@ from typing import Optional, Union, cast
 
 from src.const import INDEX_DB
 from src.path_utils import verify_dir
-from src.spatialite import DATETIME_FIELD, ColumnType, Field, Model, SqliteDatabase
+from src.spatialite import (
+  Field,
+  Model,
+  SqliteDatabase,
+  datetime_field,
+  path_field,
+)
 
 
 class CatalogTable(Model):
   _table_name = "catalog"
   id = Field(int, primary_key=True)
-  path = Field(
-    Path,
-    sql_type=ColumnType.TEXT,
-    nullable=False,
-    unique=True,
-    to_sql=lambda x: str(x),
-    to_python=lambda x: Path(x),
-    to_json=lambda x: str(x),
-  )
+  path = path_field(False, True)
   name = Field(str, nullable=False, unique=True)
-  last_indexed = DATETIME_FIELD
+  last_indexed = datetime_field(False)
 
 
 def insert_catalog(

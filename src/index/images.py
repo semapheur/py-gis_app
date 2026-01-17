@@ -22,7 +22,6 @@ from src.index.radiometric import NoiseParameters, RadiometricParamsTable
 from src.math_utils import dot, norm
 from src.sicd_model import SicdObject
 from src.spatialite import (
-  DATETIME_FIELD,
   HASH_FIELD,
   ColumnType,
   Field,
@@ -30,6 +29,9 @@ from src.spatialite import (
   Model,
   OnConflict,
   SqliteDatabase,
+  datetime_field,
+  enum_field,
+  path_field,
 )
 
 Vec3: TypeAlias = tuple[float, float, float]
@@ -51,33 +53,14 @@ class ImageIndexTable(Model):
   _table_name = "images"
   id = HASH_FIELD
   catalog = Field(int, nullable=False)
-  relative_path = Field(
-    Path,
-    sql_type=ColumnType.TEXT,
-    nullable=False,
-    to_sql=lambda x: str(x),
-    to_python=lambda x: Path(x),
-    to_json=lambda x: str(x),
-  )
+  relative_path = path_field(False, False)
   filename = Field(str, nullable=False)
   filetype = Field(str, nullable=False)
   classification = Field(str)
-  datetime_collected = DATETIME_FIELD
+  datetime_collected = datetime_field(False)
   sensor_name = Field(str)
-  sensor_type = Field(
-    ImagerySensorType,
-    ColumnType.TEXT,
-    to_sql=lambda x: x.value,
-    to_python=lambda x: ImagerySensorType(x),
-    to_json=lambda x: x.value if isinstance(x, ImagerySensorType) else x,
-  )
-  image_type = Field(
-    ImageryType,
-    ColumnType.TEXT,
-    to_sql=lambda x: x.value,
-    to_python=lambda x: ImageryType(x),
-    to_json=lambda x: x.value if isinstance(x, ImageryType) else x,
-  )
+  sensor_type = enum_field(ImagerySensorType, ColumnType.TEXT)
+  image_type = enum_field(ImageryType, ColumnType.TEXT)
   footprint = Field(str, geometry_type="POLYGON")
   look_angle = Field(float)
   azimuth_angle = Field(float)

@@ -14,7 +14,7 @@ polygon = Field(
   list[list[float]],
   str,
   to_sql=lambda x: json.dumps(x),
-  to_python=lambda x: json.loads(x),
+  from_sql=lambda x: json.loads(x),
 )
 
 
