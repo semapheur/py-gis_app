@@ -27,6 +27,8 @@ from src.hashing import encode_sha256_to_b64
 SqliteValue = Union[bytes, int, float, str, None]
 
 T = TypeVar("T")
+S = TypeVar("S")
+J = TypeVar("J")
 
 GeoFormat = Literal["AsText", "AsGeoJSON"]
 
@@ -67,18 +69,19 @@ class ColumnType(Enum):
 
 
 @dataclass(slots=True)
-class Field(Generic[T]):
+class Field(Generic[T, S, J]):
   python_type: type[T]
   sql_type: Optional[ColumnType] = None
   primary_key: bool = False
   nullable: bool = True
   unique: bool = False
-  default: Optional[SqliteValue] = None
+  default: Optional[S] = None
   geometry_type: Optional[Geometry] = None
   srid: int = 4326
-  to_sql: Optional[Callable[[T], SqliteValue]] = None
-  to_python: Optional[Callable[[SqliteValue], T]] = None
-  to_json: Optional[Callable[[SqliteValue], Any]] = None
+  to_sql: Optional[Callable[[T], S]] = None
+  from_sql: Optional[Callable[[S], T]] = None
+  to_json: Optional[Callable[[T], J]] = None
+  from_json: Optional[Callable[[J], T]] = None
 
   def __post_init__(self):
     if self.sql_type is None:
@@ -87,37 +90,45 @@ class Field(Generic[T]):
     if self.primary_key:
       self.nullable = False
 
-  def sql_column_type(self) -> str:
+  def sql_column_type(self):
     if self.sql_type is None:
       raise ValueError("sql_type is not set")
 
     return self.sql_type.name
 
-  def serialize_to_sql(self, value: Optional[T]) -> SqliteValue:
+  def serialize_to_sql(self, value: Optional[T]) -> Union[S, None]:
     if value is None:
       return None
-
-    if not isinstance(value, self.python_type):
-      raise TypeError(
-        f"Expected {self.python_type.__name__}, got {type(value).__name__}"
-      )
 
     if self.to_sql:
       return self.to_sql(value)
 
     return value
 
-  def deserialize_from_sql(
-    self, value: SqliteValue, to_json: bool = False
-  ) -> Union[T, None]:
+  def deserialize_from_sql(self, value: S) -> Union[T, None]:
     if value is None:
       return None
 
-    if to_json and self.to_json:
-      return self.to_json(value)
+    if self.from_sql:
+      return self.from_sql(value)
 
-    if self.to_python:
-      return self.to_python(value)
+    return self.python_type(value)
+
+  def serialize_to_json(self, value: Optional[T]) -> Union[J, None]:
+    if value is None:
+      return None
+
+    if self.from_json:
+      return self.from_json(value)
+
+    return value
+
+  def deserialize_from_json(self, value: J) -> Union[T, None]:
+    if value is None:
+      return None
+
+    if self.from_json:
+      return self.from_json(value)
 
     return self.python_type(value)
 
@@ -155,8 +166,8 @@ class Model(metaclass=ModelMeta):
     if cls._table_name is None:
       cls._table_name = cls.__name__.lower()
 
-  def to_dict(self) -> dict[str, SqliteValue]:
-    data = {}
+  def to_dict(self, json: bool = False) -> dict[str, SqliteValue]:
+    data: dict[str, Any] = {}
 
     for name, field in self._fields.items():
       value = getattr(self, name, None)
@@ -164,7 +175,7 @@ class Model(metaclass=ModelMeta):
       if field.geometry_type is not None:
         data[name] = field.to_wkt(value)
       else:
-        data[name] = value
+        data[name] = field.serialize_to_json(value) if json else value
 
     return data
 
@@ -236,12 +247,12 @@ class Model(metaclass=ModelMeta):
     return obj
 
   @classmethod
-  def from_dict(cls, data: dict[str, SqliteValue]):
+  def from_dict(cls, data: dict[str, SqliteValue], json: bool = False):
     obj = cls.__new__(cls)
 
     for name, field in cls._fields.items():
       if name in data:
-        value = data[name]
+        value = field.deserialize_from_json(data[name]) if json else data[name]
       elif field.default is not None:
         value = field.default
       elif not field.nullable and not field.primary_key:
@@ -678,7 +689,9 @@ UUID_FIELD = Field(
   else uuid.UUID(u).bytes
   if isinstance(u, str)
   else u.bytes,
-  to_python=lambda b: uuid.UUID(bytes=b),
+  from_sql=lambda b: uuid.UUID(bytes=b),
+  to_json=lambda u: str(u),
+  from_json=lambda u: uuid.UUID(u),
 )
 
 DATETIME_FIELD = Field(

@@ -100,11 +100,14 @@ class Handler(SimpleHTTPRequestHandler):
       self.handle_parametric_params()
       return
 
-    if self.path.startswith("/api/save-attributes"):
-      table = re.match(r"^(?<=/api/save-attributes/)\w+$", self.path)
-      if table is None or table not in ATTRIBUTE_TABLES:
+    prefix = "/api/update-attributes/"
+    if self.path.startswith(prefix):
+      table = self.path[len(prefix) :]
+      if not table or table not in ATTRIBUTE_TABLES:
         self.send_error(404, "Invalid POST endpoint")
-      self.handle_save_attributes(table)
+        return
+
+      self.handle_update_attributes(table)
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -193,10 +196,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def handle_save_attributes(self, table: str):
+  def handle_update_attributes(self, table: str):
     def logic(payload: AttributeUpdate):
       update_attributes(table, payload)
-      return "success"
+      return {"message": "Successfully updated attributes"}
 
     self._handle_post(logic)
 

@@ -13,21 +13,26 @@
 
   let { data }: { data: PageData } = $props();
   let selectedTable = $state<string>("");
-  let columns = $derived.by(() => {
-    if (!selectedTable) return [];
-
-    return [...metaColumns, ...data.schemas[selectedTable].columns];
-  });
-  let inputIds = $derived.by(() => {
-    if (!selectedTable) return undefined;
-
-    return new Set(data.schemas[selectedTable].columns.map((c) => c.id));
-  });
+  let saveApi = $derived(
+    selectedTable ? `/api/update-attributes/${selectedTable}` : undefined,
+  );
+  let columns = $derived(
+    selectedTable
+      ? [...metaColumns, ...data.schemas[selectedTable].columns]
+      : [],
+  );
+  let inputIds = $derived(
+    selectedTable
+      ? new Set(data.schemas[selectedTable].columns.map((c) => c.id))
+      : undefined,
+  );
 
   const autoFill = {
     id: () => crypto.randomUUID(),
     createdByUserId: () => "",
     createdAtTimestamp: () => Date.now(),
+    modifiedByUserId: () => null,
+    modifiedAtTimestamp: () => null,
   };
 </script>
 
@@ -39,7 +44,7 @@
     {/each}
   </nav>
   {#if browser}
-    <DataGrid {columns} data={[]} {autoFill} {inputIds} />
+    <DataGrid {columns} data={[]} {autoFill} {inputIds} {saveApi} />
   {/if}
 </div>
 

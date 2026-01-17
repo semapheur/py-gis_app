@@ -184,6 +184,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
   else:
     raise ValueError(f"Invalid table name: {table}")
 
+  print(payload)
   upsert_models = [model.from_dict(record) for record in payload["upsert"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 

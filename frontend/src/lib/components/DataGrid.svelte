@@ -109,7 +109,7 @@
   <div class="toolbar">
     <button onclick={() => (showForm = !showForm)}>Add</button>
     {#if saveApi}
-      <button onclick={() => saveChanges}>Save</button>
+      <button onclick={() => saveChanges()}>Save</button>
     {/if}
   </div>
   <Grid bind:this={api} {data} {columns} multiselect={true} />
