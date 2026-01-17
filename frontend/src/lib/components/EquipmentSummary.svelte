@@ -8,6 +8,7 @@
     EquipmentData,
     EquipmentStatus,
   } from "$lib/contexts/annotate.svelte";
+  import { exportFile } from "$lib/utils/io";
 
   const viewer = getImageViewerState();
 
@@ -65,15 +66,8 @@
     });
     const blob = new Blob([geojson], { type: "application/geo+json" });
 
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "equipment.json";
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const fileName = `equipment_${new Date().toISOString().split("T")[0]}.json`;
+    exportFile(blob, fileName);
   }
 </script>
 

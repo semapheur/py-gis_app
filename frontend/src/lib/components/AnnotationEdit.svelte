@@ -1,12 +1,11 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
-
   import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
   import { type EquipmentData } from "$lib/contexts/annotate.svelte";
+  import { exportFile } from "$lib/utils/io";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
@@ -83,16 +82,8 @@
       dataProjection: "EPSG:4326",
     });
     const blob = new Blob([geojson], { type: "application/geo+json" });
-
-    const url = URL.createObjectURL(blob);
-    const a = document.createElement("a");
-    a.href = url;
-    a.download = "annotations.json";
-    document.body.appendChild(a);
-    a.click();
-
-    document.body.removeChild(a);
-    URL.revokeObjectURL(url);
+    const fileName = `annotations_${new Date().toISOString().split("T")[0]}.json`;
+    exportFile(blob, fileName);
   }
 
   function startBulkEdit() {
