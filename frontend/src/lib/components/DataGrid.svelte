@@ -42,7 +42,18 @@
     delete: new Set<string>(),
   });
 
-  $inspect(selectedRows);
+  function init(api) {
+    api.on("update-row", (e) => {
+      const row = e.row;
+
+      if (Object.hasOwn(cud.create, row.id)) {
+        cud.create[row.id] = row;
+        return;
+      }
+
+      cud.update[row.id] = row;
+    });
+  }
 
   const updateSelected = () => (selectedRows = api.getState().selectedRows);
 
@@ -190,6 +201,7 @@
         bind:this={api}
         {data}
         {columns}
+        {init}
         multiselect={true}
         onselectrow={updateSelected}
       />
