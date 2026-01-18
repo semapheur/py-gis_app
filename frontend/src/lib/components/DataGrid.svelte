@@ -25,21 +25,24 @@
   }
 
   let { columns, data, autoFill, inputIds, saveApi }: Props = $props();
+  let gridWrapper: HTMLElement | null = null;
+
   let api = $state();
   let selectedRows = $state([]);
-
-  let history = $derived(api?.getReactiveState().history);
   let showForm = $state<boolean>(false);
   let newRow = $state<Record<string, string | number>>({});
-  let inputColumns = $derived.by(() => {
-    if (inputIds === undefined) return columns;
-
-    return columns.filter((c) => inputIds.has(c.id));
-  });
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
     update: {} as Record<string, Record<string, string | number>>[],
     delete: new Set<string>(),
+  });
+
+  let history = $derived(api?.getReactiveState().history);
+  let numSelectedRows = $derived(selectedRows.length);
+  let inputColumns = $derived.by(() => {
+    if (inputIds === undefined) return columns;
+
+    return columns.filter((c) => inputIds.has(c.id));
   });
 
   function init(api) {
@@ -79,24 +82,33 @@
     cud.create[newRow.id] = newRow;
 
     newRow = {};
+    updateSelected();
+  }
+
+  function selectAllRows() {
+    const allRows = api.getState().data;
+    allRows.forEach((row) => {
+      api.exec("select-row", { id: row.id, toggle: true, mode: true });
+    });
+    updateSelected();
   }
 
   function deleteRow() {
-    const id = api.getState().selectedRows[0];
-    if (!id) return;
+    const ids = api.getState().selectedRows;
+    if (!ids) return;
 
-    api.exec("delete-row", { id });
+    ids.forEach((id) => {
+      api.exec("delete-row", { id });
 
-    if (Object.hasOwn(cud.create, id)) {
-      delete cud.create[id];
-      return;
-    }
+      if (Object.hasOwn(cud.create, id)) {
+        delete cud.create[id];
+      } else if (Object.hasOwn(cud.update, id)) {
+        delete cud.update[id];
+        cud.delete.add(id);
+      }
+    });
 
-    if (Object.hasOwn(cud.update, id)) {
-      delete cud.update[id];
-    }
-
-    cud.delete.add(id);
+    updateSelected();
   }
 
   async function saveChanges() {
@@ -172,10 +184,34 @@
     const fileName = `grid_export_${new Date().toISOString().split("T")[0]}.csv`;
     exportFile(blob, fileName);
   }
+
+  function handleClickOutside(event: MouseEvent) {
+    if (!api || selectedRows.length === 0) return;
+
+    const target = event.target as HTMLElement;
+    const isButton =
+      target.closest("button") || target.closest('[role="button"]');
+
+    if (gridWrapper && !gridWrapper.contains(target) && !isButton) {
+      selectedRows.forEach((id) => {
+        api.exec("select-row", { id: id, toggle: true, mode: false });
+      });
+      // Deselect all rows
+      updateSelected();
+    }
+  }
+
+  $effect(() => {
+    document.addEventListener("pointerdown", handleClickOutside);
+
+    return () => {
+      document.removeEventListener("pointerdown", handleClickOutside);
+    };
+  });
 </script>
 
-<div class="grid">
-  <div class="toolbar">
+<div class="grid-container">
+  <div class="grid-toolbar">
     <button onclick={() => handleUndo(api)} disabled={history && !$history.redo}
       >Undo</button
     >
@@ -183,6 +219,7 @@
       >Redo</button
     >
     <button onclick={() => (showForm = !showForm)}>Add</button>
+    <button onclick={() => selectAllRows()}>Select all</button>
     <button onclick={() => deleteRow()} disabled={!selectedRows.length}
       >Delete</button
     >
@@ -195,40 +232,61 @@
     </DropdownMenu>
   </div>
 
-  <Tooltip {api}>
-    <HeaderMenu {api}>
-      <Grid
-        bind:this={api}
-        {data}
-        {columns}
-        {init}
-        multiselect={true}
-        onselectrow={updateSelected}
-      />
-    </HeaderMenu>
-  </Tooltip>
+  <div class="grid" bind:this={gridWrapper}>
+    <Tooltip {api}>
+      <HeaderMenu {api}>
+        <Grid
+          bind:this={api}
+          {data}
+          {columns}
+          {init}
+          multiselect={true}
+          onselectrow={updateSelected}
+        />
+      </HeaderMenu>
+    </Tooltip>
+  </div>
 
-  <Modal bind:open={showForm}>
-    <form>
-      {#each inputColumns as column}
-        <Input label={column.header} oninput={(v) => (newRow[column.id] = v)} />
-      {/each}
-      <button onclick={addRow}>Add</button>
-    </form>
-  </Modal>
+  <div class="grid-footer">
+    {#if numSelectedRows > 0}
+      <span>{numSelectedRows} rows selected</span>
+    {/if}
+  </div>
 </div>
 
+<Modal bind:open={showForm}>
+  <form>
+    {#each inputColumns as column}
+      <Input label={column.header} oninput={(v) => (newRow[column.id] = v)} />
+    {/each}
+    <button onclick={addRow}>Add</button>
+  </form>
+</Modal>
+
 <style>
+  .grid-container {
+    display: grid;
+    grid-template-rows: auto 1fr auto;
+  }
+
   .grid {
     --wx-table-header-background: rgb(var(--color-accent));
     --wx-table-header-cell-border: 1px solid rgba(var(--color-text) / 0.1);
     --wx-table-cell-border: 1px solid rgba(var(--color-text) / 0.1);
     --wx-table-select-background: #eaedf5;
     --wx-table-select-border: inset 3px 0 rgb(var(--color-text));
+    --wx-color-primary-font: rgb(var(--color-primary));
+    overflow-y: scroll;
   }
 
-  .toolbar {
+  .grid-toolbar {
     display: flex;
     gap: var(--size-md);
+  }
+
+  .grid-footer {
+    min-height: calc(1rem + var(--size-sm));
+    padding: var(--size-sm);
+    background: rgb(var(--color-accent));
   }
 </style>
