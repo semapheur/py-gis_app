@@ -35,18 +35,18 @@ META_COLUMNS = [
 EQUIPMENT_COLUMNS = [
   {"id": "identifier", "header": "Identifier", "editor": "text"},
   {"id": "displayName", "header": "Display name", "editor": "text"},
-  {"id": "description", "header": "Description", "editor": "text"},
+  {"id": "description", "header": "Description", "editor": "textarea"},
   {"id": "descriptionShort", "header": "Description (short)", "editor": "text"},
   {"id": "natoName", "header": "NATO name", "editor": "text"},
   {"id": "nativeName", "header": "Native name", "editor": "text"},
   {"id": "alternativeNames", "header": "Alternative names", "editor": "text"},
   {"id": "source", "header": "Source", "editor": "text"},
-  {"id": "sourceData", "header": "Source data", "editor": "text"},
+  {"id": "sourceData", "header": "Source data", "editor": "textarea"},
 ]
 
 BASE_ATTRIBUTE_COLUMNS = [
   {"id": "text", "header": "Text", "editor": "text"},
-  {"id": "description", "header": "Description", "editor": "text"},
+  {"id": "description", "header": "Description", "editor": "textarea"},
 ]
 
 

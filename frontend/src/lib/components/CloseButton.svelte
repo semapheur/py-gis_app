@@ -11,6 +11,7 @@
 <style>
   button {
     all: unset;
+    cursor: pointer;
 
     &:hover {
       color: red;

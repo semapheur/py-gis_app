@@ -9,7 +9,7 @@
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
-  import { exportFile } from "$lib/utils/io";
+  import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
   import TextArea from "$lib/components/TextArea.svelte";
   import { reset } from "ol/transform";
 
@@ -48,7 +48,6 @@
   });
 
   let selectedRows = $state([]);
-  let dataToEdit = $state<Record<string, string | number>>({});
   let editRow = $state<Record<string, string | number>>({});
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
@@ -78,13 +77,13 @@
   }
 
   function openEdit(id: string) {
-    const row = api.getRow(id);
+    const row = structuredClone(api.getRow(id));
 
     form.open = true;
     form.mode = "edit";
     form.rowId = id;
     form.initial = row;
-    editRow = structuredClone(row);
+    editRow = row;
   }
 
   function openAdd() {
@@ -114,26 +113,27 @@
       });
     }
 
+    const addRow = structuredClone($state.snapshot(editRow));
     api.exec("add-row", {
-      row: structuredClone($state.snapshot(editRow)),
+      row: addRow,
     });
-    cud.create[editRow.id] = editRow;
+    cud.create[editRow.id] = addRow;
   }
 
   function saveEdit() {
     if (!form.rowId) return;
 
-    const tempRow = structuredClone($state.snapshot(editRow));
+    const saveRow = structuredClone($state.snapshot(editRow));
 
     api.exec("update-row", {
       id: form.rowId,
-      row: tempRow,
+      row: saveRow,
     });
 
     if (cud.create.hasOwnProperty(form.rowId)) {
-      cud.create[form.rowId] = tempRow;
+      cud.create[form.rowId] = saveRow;
     } else if (cud.update.hasOwnProperty(form.rowId)) {
-      cud.update[form.rowId] = tempRow;
+      cud.update[form.rowId] = saveRow;
     }
   }
 
@@ -249,6 +249,31 @@
     exportFile(blob, fileName);
   }
 
+  async function importData(file: File) {
+    try {
+      const text = await file.text();
+      let importedRows: Record<string, string | number>[] = [];
+
+      if (file.name.endsWith(".json")) {
+        importedRows = parseJson(text);
+      } else if (file.name.endsWith(".csv")) {
+        importedRows = parseCsv(text);
+      } else {
+        throw new Error("Unsupported file type. Please use .json or .csv");
+      }
+
+      importedRows.forEach((row) => {
+        api.exec("add-row", { row });
+        cud.create[row.id] = row;
+      });
+
+      console.log(`Successfully imported ${importedRows.length} rows`);
+    } catch (error) {
+      console.log("Import failed:", error);
+      alert(`Import failed: ${error.message}`);
+    }
+  }
+
   function handleClickOutside(event: MouseEvent) {
     if (!api || selectedRows.length === 0) return;
 
@@ -275,10 +300,10 @@
 
 <div class="grid-container">
   <div class="grid-toolbar">
-    <button onclick={() => handleUndo(api)} disabled={history && !$history.redo}
+    <button onclick={() => handleUndo(api)} disabled={history && !$history.undo}
       >Undo</button
     >
-    <button onclick={() => handleRedo(api)} disabled={history && !$history.undo}
+    <button onclick={() => handleRedo(api)} disabled={history && !$history.redo}
       >Redo</button
     >
     <button onclick={openAdd}>Add</button>
@@ -293,7 +318,7 @@
     </DropdownMenu>
   </div>
 
-  <div class="grid" bind:this={gridWrapper}>
+  <div class="grid" bind:this={gridWrapper} undo>
     <Willow>
       <Tooltip {api}>
         <HeaderMenu {api}>

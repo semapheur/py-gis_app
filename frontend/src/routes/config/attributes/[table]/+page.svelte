@@ -28,7 +28,6 @@
 
   let saveApi = $derived(table ? `/api/update-attributes/${table}` : undefined);
   let columns = $derived([...metaColumns, ...data.columns]);
-  let inputIds = $derived(new Set(data.columns.map((c) => c.id)));
 
   const autoFill = {
     id: () => crypto.randomUUID(),
@@ -40,5 +39,5 @@
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.data} {autoFill} {inputIds} {saveApi} />
+  <DataGrid {columns} data={data.data} {autoFill} {saveApi} />
 {/if}
