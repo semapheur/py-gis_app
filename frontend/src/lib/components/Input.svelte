@@ -17,6 +17,12 @@
   let placeholder = $derived(label);
   let minCh = $derived(Math.max(label.length + 2, 6));
 
+  let internal = $state(value ?? "");
+
+  $effect(() => {
+    internal = value ?? "";
+  });
+
   const uid = $props.id();
 </script>
 
@@ -24,7 +30,7 @@
   <input
     id={uid}
     {placeholder}
-    bind:value
+    bind:value={internal}
     {required}
     style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch;`}
     oninput={(e) => oninput?.(e.currentTarget.value)}

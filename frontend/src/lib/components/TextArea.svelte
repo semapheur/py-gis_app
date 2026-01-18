@@ -31,6 +31,13 @@
   let placeholder = $derived(label);
   let editorTitle = $derived(`Edit: ${label}`);
   let openEditor = $state<boolean>(false);
+
+  let internal = $state(value ?? "");
+
+  $effect(() => {
+    internal = value ?? "";
+  });
+
   const uid = $props.id();
 </script>
 
@@ -38,7 +45,7 @@
   <textarea
     id={uid}
     {placeholder}
-    bind:value
+    bind:value={internal}
     {required}
     {rows}
     style:resize
@@ -60,7 +67,7 @@
 
 {#if openEditor}
   <Window bind:open={openEditor} title={editorTitle}>
-    <TextEditor bind:value />
+    <TextEditor bind:value={internal} />
   </Window>
 {/if}
 

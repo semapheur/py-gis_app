@@ -3,17 +3,29 @@
     Grid,
     HeaderMenu,
     Tooltip,
+    Willow,
     type IColumnConfig,
   } from "@svar-ui/svelte-grid";
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import { exportFile } from "$lib/utils/io";
+  import TextArea from "$lib/components/TextArea.svelte";
+  import { reset } from "ol/transform";
+
+  type FormMode = "add" | "edit";
 
   interface CUD {
     create: Record<string, Record<string, string | number>>[];
     update: Record<string, Record<string, string | number>>[];
     delete: Set<string>;
+  }
+
+  interface FormState {
+    open: boolean;
+    mode: FormMode;
+    rowId: string | null;
+    initial: Record<string, string | number>;
   }
 
   interface Props {
@@ -24,13 +36,20 @@
     saveApi?: string;
   }
 
-  let { columns, data, autoFill, inputIds, saveApi }: Props = $props();
+  let { columns, data, autoFill, saveApi }: Props = $props();
   let gridWrapper: HTMLElement | null = null;
 
   let api = $state();
+  let form = $state<FormState>({
+    open: false,
+    mode: "add",
+    rowId: null,
+    initial: {},
+  });
+
   let selectedRows = $state([]);
-  let showForm = $state<boolean>(false);
-  let newRow = $state<Record<string, string | number>>({});
+  let dataToEdit = $state<Record<string, string | number>>({});
+  let editRow = $state<Record<string, string | number>>({});
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
     update: {} as Record<string, Record<string, string | number>>[],
@@ -39,22 +58,12 @@
 
   let history = $derived(api?.getReactiveState().history);
   let numSelectedRows = $derived(selectedRows.length);
-  let inputColumns = $derived.by(() => {
-    if (inputIds === undefined) return columns;
-
-    return columns.filter((c) => inputIds.has(c.id));
-  });
+  let editColumns = $derived(columns.filter((c) => c.hasOwnProperty("editor")));
 
   function init(api) {
-    api.on("update-row", (e) => {
-      const row = e.row;
-
-      if (Object.hasOwn(cud.create, row.id)) {
-        cud.create[row.id] = row;
-        return;
-      }
-
-      cud.update[row.id] = row;
+    api.intercept("open-editor", ({ id }) => {
+      openEdit(id);
+      return false;
     });
   }
 
@@ -68,21 +77,76 @@
     api.exec("redo");
   }
 
+  function openEdit(id: string) {
+    const row = api.getRow(id);
+
+    form.open = true;
+    form.mode = "edit";
+    form.rowId = id;
+    form.initial = row;
+    editRow = structuredClone(row);
+  }
+
+  function openAdd() {
+    form.open = true;
+    form.mode = "add";
+    form.rowId = null;
+    form.initial = {};
+    editRow = {};
+  }
+
+  function resetAddForm() {
+    form.initial = {};
+    editRow = {};
+  }
+
+  function closeForm() {
+    form.open = false;
+    form.rowId = null;
+    form.initial = {};
+    editRow = {};
+  }
+
   function addRow() {
     if (autoFill !== undefined) {
       Object.entries(autoFill).forEach(([c, fn]) => {
-        newRow[c] = fn();
+        editRow[c] = fn();
       });
     }
 
     api.exec("add-row", {
-      row: { ...newRow },
+      row: structuredClone($state.snapshot(editRow)),
+    });
+    cud.create[editRow.id] = editRow;
+  }
+
+  function saveEdit() {
+    if (!form.rowId) return;
+
+    const tempRow = structuredClone($state.snapshot(editRow));
+
+    api.exec("update-row", {
+      id: form.rowId,
+      row: tempRow,
     });
 
-    cud.create[newRow.id] = newRow;
+    if (cud.create.hasOwnProperty(form.rowId)) {
+      cud.create[form.rowId] = tempRow;
+    } else if (cud.update.hasOwnProperty(form.rowId)) {
+      cud.update[form.rowId] = tempRow;
+    }
+  }
 
-    newRow = {};
-    updateSelected();
+  function saveForm(event: PointerEvent) {
+    event.preventDefault();
+
+    if (form.mode === "add") {
+      addRow();
+      resetAddForm();
+    } else {
+      saveEdit();
+      closeForm();
+    }
   }
 
   function selectAllRows() {
@@ -100,9 +164,9 @@
     ids.forEach((id) => {
       api.exec("delete-row", { id });
 
-      if (Object.hasOwn(cud.create, id)) {
+      if (cud.create.hasOwnProperty(id)) {
         delete cud.create[id];
-      } else if (Object.hasOwn(cud.update, id)) {
+      } else if (cud.update.hasOwnProperty(id)) {
         delete cud.update[id];
         cud.delete.add(id);
       }
@@ -196,7 +260,6 @@
       selectedRows.forEach((id) => {
         api.exec("select-row", { id: id, toggle: true, mode: false });
       });
-      // Deselect all rows
       updateSelected();
     }
   }
@@ -218,33 +281,33 @@
     <button onclick={() => handleRedo(api)} disabled={history && !$history.undo}
       >Redo</button
     >
-    <button onclick={() => (showForm = !showForm)}>Add</button>
-    <button onclick={() => selectAllRows()}>Select all</button>
-    <button onclick={() => deleteRow()} disabled={!selectedRows.length}
-      >Delete</button
-    >
+    <button onclick={openAdd}>Add</button>
+    <button onclick={selectAllRows}>Select all</button>
+    <button onclick={deleteRow} disabled={!selectedRows.length}>Delete</button>
     {#if saveApi}
-      <button onclick={() => saveChanges()}>Save</button>
+      <button onclick={saveChanges}>Save</button>
     {/if}
     <DropdownMenu label="Export">
-      <button onclick={() => exportToJson()}>JSON</button>
-      <button onclick={() => exportToCsv()}>CSV</button>
+      <button onclick={exportToJson}>JSON</button>
+      <button onclick={exportToCsv}>CSV</button>
     </DropdownMenu>
   </div>
 
   <div class="grid" bind:this={gridWrapper}>
-    <Tooltip {api}>
-      <HeaderMenu {api}>
-        <Grid
-          bind:this={api}
-          {data}
-          {columns}
-          {init}
-          multiselect={true}
-          onselectrow={updateSelected}
-        />
-      </HeaderMenu>
-    </Tooltip>
+    <Willow>
+      <Tooltip {api}>
+        <HeaderMenu {api}>
+          <Grid
+            bind:this={api}
+            {data}
+            {columns}
+            {init}
+            multiselect={true}
+            onselectrow={updateSelected}
+          />
+        </HeaderMenu>
+      </Tooltip>
+    </Willow>
   </div>
 
   <div class="grid-footer">
@@ -254,12 +317,27 @@
   </div>
 </div>
 
-<Modal bind:open={showForm}>
-  <form>
-    {#each inputColumns as column}
-      <Input label={column.header} oninput={(v) => (newRow[column.id] = v)} />
+<Modal bind:open={form.open}>
+  <form onsubmit={saveForm}>
+    {#each editColumns as column}
+      {#if column.editor === "text"}
+        <Input
+          value={form.initial[column.id]}
+          label={column.header}
+          oninput={(v) => (editRow[column.id] = v)}
+        />
+      {:else if column.editor === "textarea"}
+        <TextArea
+          value={form.initial[column.id]}
+          label={column.header}
+          oninput={(v) => editRow[column.id]}
+        />
+      {/if}
     {/each}
-    <button onclick={addRow}>Add</button>
+
+    <button type="submit"
+      >{form.mode === "add" ? "Add row" : "Save changes"}</button
+    >
   </form>
 </Modal>
 
@@ -270,12 +348,7 @@
   }
 
   .grid {
-    --wx-table-header-background: rgb(var(--color-accent));
-    --wx-table-header-cell-border: 1px solid rgba(var(--color-text) / 0.1);
-    --wx-table-cell-border: 1px solid rgba(var(--color-text) / 0.1);
-    --wx-table-select-background: #eaedf5;
-    --wx-table-select-border: inset 3px 0 rgb(var(--color-text));
-    --wx-color-primary-font: rgb(var(--color-primary));
+    height: 100%;
     overflow-y: scroll;
   }
 

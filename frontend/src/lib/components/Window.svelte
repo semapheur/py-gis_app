@@ -87,7 +87,7 @@
   <header class="window-header" onpointerdown={startDrag}>
     <div class="header-title">{title}</div>
     <div class="header-buttons">
-      <CloseButton onclick={() => open = false}
+      <CloseButton onclick={() => (open = false)} />
     </div>
   </header>
 
@@ -141,5 +141,4 @@
     background: rgba(var(--color-text) / 0.5);
     clip-path: polygon(100% 100%, 100% 0, 0 100%);
   }
-
 </style>
