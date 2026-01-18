@@ -11,7 +11,6 @@
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
   import TextArea from "$lib/components/TextArea.svelte";
-  import { reset } from "ol/transform";
 
   type FormMode = "add" | "edit";
 
@@ -38,6 +37,8 @@
 
   let { columns, data, autoFill, saveApi }: Props = $props();
   let gridWrapper: HTMLElement | null = null;
+  let fileInput: HTMLInputElement | null = null;
+  let isDragging = $state<boolean>(false);
 
   let api = $state();
   let form = $state<FormState>({
@@ -262,15 +263,57 @@
         throw new Error("Unsupported file type. Please use .json or .csv");
       }
 
+      const columnIds = new Set(columns.map((c) => c.id));
+
       importedRows.forEach((row) => {
-        api.exec("add-row", { row });
-        cud.create[row.id] = row;
+        const rowColumns = new Set(Object.keys(row));
+        const validColumns = columnIds.intersection(rowColumns);
+        const filteredRow = Object.fromEntries(
+          Object.entries(row).filter(([key]) => validColumns.has(key)),
+        );
+
+        api.exec("add-row", { row: filteredRow });
+        cud.create[filteredRow.id] = filteredRow;
       });
 
       console.log(`Successfully imported ${importedRows.length} rows`);
     } catch (error) {
       console.log("Import failed:", error);
       alert(`Import failed: ${error.message}`);
+    }
+  }
+
+  function onfileselect(event: Event) {
+    const input = event.target as HTMLInputElement;
+    const file = input.files?.[0];
+
+    if (file) {
+      importData(file);
+    }
+    input.value = "";
+  }
+
+  function openFileDialog() {
+    fileInput?.click();
+  }
+
+  function handleDragOver(event: DragEvent) {
+    event.preventDefault();
+    isDragging = true;
+  }
+
+  function handleDragLeave(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+  }
+
+  function handleDrop(event: DragEvent) {
+    event.preventDefault();
+    isDragging = false;
+
+    const file = event.dataTransfer?.files[0];
+    if (file) {
+      importData(file);
     }
   }
 
@@ -316,9 +359,32 @@
       <button onclick={exportToJson}>JSON</button>
       <button onclick={exportToCsv}>CSV</button>
     </DropdownMenu>
+    <button onclick={openFileDialog}>Import</button>
   </div>
 
-  <div class="grid" bind:this={gridWrapper} undo>
+  <input
+    type="file"
+    accept=".json,.csv"
+    bind:this={fileInput}
+    onchange={onfileselect}
+    style="display: none"
+  />
+
+  <div
+    class="grid"
+    class:dragging={isDragging}
+    bind:this={gridWrapper}
+    ondragover={handleDragOver}
+    ondragleave={handleDragLeave}
+    ondrop={handleDrop}
+    role="drag"
+    undo
+  >
+    {#if isDragging}
+      <div class="drop-overlay">
+        <div class="drop-message">Drop file to import</div>
+      </div>
+    {/if}
     <Willow>
       <Tooltip {api}>
         <HeaderMenu {api}>
@@ -355,7 +421,7 @@
         <TextArea
           value={form.initial[column.id]}
           label={column.header}
-          oninput={(v) => editRow[column.id]}
+          oninput={(v) => (editRow[column.id] = v)}
         />
       {/if}
     {/each}
@@ -375,6 +441,35 @@
   .grid {
     height: 100%;
     overflow-y: scroll;
+
+    &.dragging {
+      outline: 2px dashed #4a90e2;
+      outline-offset: -2px;
+    }
+  }
+
+  .drop-overlay {
+    position: absolute;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(74, 144, 226, 0.1);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+    z-index: 10;
+  }
+
+  .drop-message {
+    background: #4a90e2;
+    color: rgb(var(--color-text));
+    padding: 1rem 2rem;
+    border-radius: var(--size-sm);
+    font-size: var(--text-lg);
+    font-weight: var(--font-bold);
+    box-shadow: 0 4px 12px rgba(0 0 0 0.15);
   }
 
   .grid-toolbar {

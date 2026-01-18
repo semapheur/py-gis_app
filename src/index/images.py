@@ -2,7 +2,7 @@ import json
 import math
 import tempfile
 import warnings
-from datetime import datetime
+from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
 from typing import Literal, TypeAlias, Union, cast
@@ -17,7 +17,7 @@ from src.gdal_utils import (
   gdalwarp,
 )
 from src.hashing import hash_geotiff
-from src.index.catalog import CatalogTable, get_catalogs
+from src.index.catalog import CatalogTable, get_catalogs, update_index_time
 from src.index.radiometric import NoiseParameters, RadiometricParamsTable
 from src.math_utils import dot, norm
 from src.sicd_model import SicdObject
@@ -469,6 +469,10 @@ def index_images(
     on_conflict = OnConflict(index="id", action=update_sql)
     db.insert_models(image_index, on_conflict)
 
+    current_timestamp = datetime.now(timezone.utc)
+    with SqliteDatabase(INDEX_DB) as db:
+      update_index_time(db, catalog_id, current_timestamp)
+
     if radiometric_index:
       db.insert_models(radiometric_index)
 
@@ -490,6 +494,7 @@ def get_images_by_intersection(polygon_wkt: str):
       join=join,
       where=where,
       params=params,
+      to_json=True,
     )
 
 

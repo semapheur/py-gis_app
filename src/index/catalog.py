@@ -11,6 +11,7 @@ from src.spatialite import (
   datetime_field,
   path_field,
 )
+from src.timeutils import datetime_to_unix
 
 
 class CatalogTable(Model):
@@ -18,7 +19,7 @@ class CatalogTable(Model):
   id = Field(int, primary_key=True)
   path = path_field(False, True)
   name = Field(str, nullable=False, unique=True)
-  last_indexed = datetime_field(False)
+  last_indexed = datetime_field(True)
 
 
 def insert_catalog(
@@ -30,24 +31,24 @@ def insert_catalog(
     raise RuntimeError("Database not connected")
 
   cursor = db.conn.cursor()
+  full_path = str(path.resolve())
 
   cursor.execute("SELECT id FROM catalog WHERE name = ?", (name,))
   row = cursor.fetchone()
-  if not row:
+  if row:
     raise ValueError(f"Catalog name already exists: {name}")
 
-  cursor.execute("SELECT id FROM catalog WHERE path = ?", (path,))
+  cursor.execute("SELECT id FROM catalog WHERE path = ?", (full_path,))
   row = cursor.fetchone()
-  if not row:
+  if row:
     raise ValueError(f"Catalog path already exists: {path}")
 
-  now = datetime.now().isoformat(timespec="seconds")
   cursor.execute(
     """
-    INSERT INTO catalog (path, name, last_indexed)
-    VALUES (?, ?, ?)
+    INSERT INTO catalog (path, name)
+    VALUES (?, ?)
   """,
-    (str(path.resolve()), name, now),
+    (full_path, name),
   )
   db.conn.commit()
 
@@ -135,3 +136,22 @@ def edit_catalog(
 
   with SqliteDatabase(INDEX_DB) as db:
     update_catalog(db, id, new_path, new_name)
+
+
+def update_index_time(db: SqliteDatabase, id: int, index_time: datetime):
+  timestamp = datetime_to_unix(index_time)
+
+  if db.conn is None:
+    raise RuntimeError("Database not connected")
+
+  cursor = db.conn.cursor()
+
+  cursor.execute(
+    """
+    UPDATE catalog
+    SET last_indexed = ?
+    WHERE id = ?
+  """,
+    (timestamp, id),
+  )
+  db.conn.commit()

@@ -1,6 +1,7 @@
 <script lang="ts">
   import Tabs from "$lib/components/Tabs.svelte";
   import EquipmentSummary from "$lib/components/EquipmentSummary.svelte";
+  import CloseButton from "$lib/components/CloseButton.svelte";
 
   const summaryTabs = [
     { name: "Equipment", value: "equipment" },
@@ -19,7 +20,7 @@
 {#if open}
   <aside class="summary-sidebar">
     <header class="header">
-      <button class="button-close" onclick={() => (open = false)}> ✕ </button>
+      <CloseButton onclick={() => (open = false)} />
       <Tabs
         tabs={summaryTabs}
         selected={activeTab}
@@ -48,13 +49,5 @@
     justify-content: start;
     gap: var(--size-md);
     border-bottom: 1px solid rgba(var(--color-text) / 0.5);
-  }
-
-  .button-close {
-    all: unset;
-
-    &:hover {
-      color: red;
-    }
   }
 </style>
