@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { getContext } from "svelte";
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
 
@@ -18,6 +19,9 @@
   }
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
+
+  const { confidence, status } = getContext("equipment-options");
+  console.log(confidence);
 
   function update<K extends keyof EquipmentData>(key: K, v: EquipmentData[K]) {
     const next = { ...value, [key]: v };

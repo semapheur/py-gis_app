@@ -1,30 +1,62 @@
+import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
 
+async function fetchJson<T>(
+  fetch: typeof globalThis.fetch,
+  input: RequestInfo,
+  init?: RequestInit,
+  message = "Request failed",
+): Promise<T> {
+  const response = await fetch(input, init);
+
+  if (!response.ok) {
+    throw error(response.status, message);
+  }
+
+  return response.json() as Promise<T>;
+}
+
 export const load: PageLoad = async ({ params, fetch }) => {
   const id = params.id;
-  const request = {
+  if (!params.id) throw error(400, "Missing image id");
+
+  const postRequest: RequestInit = {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ id }),
   };
 
-  const imageResult = await fetch("/api/image-info", request);
-  if (!imageResult.ok) {
-    throw new Error("Failed to fetch image info");
-  }
+  const [confidenceOptions, statusOptions, imageInfo] = await Promise.all([
+    fetchJson(
+      fetch,
+      "/api/get-attributes/observation_confidence",
+      undefined,
+      "Failed to fetch observation confidence attributes",
+    ),
+    fetchJson(
+      fetch,
+      "/api/get-attributes/equipment_status",
+      undefined,
+      "Failed to fetch equipment status attributes",
+    ),
+    fetchJson<ImageMetadata>(
+      fetch,
+      "/api/image-info",
+      postRequest,
+      "Failed to fetch image info",
+    ),
+  ]);
 
-  const image: ImageMetadata = await imageResult.json();
+  const radiometricParams =
+    imageInfo.image_type === "slc"
+      ? await fetchJson<RadiometricParams>(
+          fetch,
+          "/api/radiometric-params",
+          postRequest,
+          "Failed to fetch radiometric parameters",
+        )
+      : null;
 
-  let radiometricParams: RadiometricParams | null = null;
-
-  if (image.image_type === "slc") {
-    const radiometricResult = await fetch("/api/radiometric-params", request);
-    if (!radiometricResult.ok) {
-      throw new Error("Failed to fetch radiometric parameters");
-    }
-    radiometricParams = await radiometricResult.json();
-  }
-
-  return { image, radiometricParams };
+  return { imageInfo, radiometricParams, confidenceOptions, statusOptions };
 };

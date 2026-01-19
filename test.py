@@ -7,7 +7,7 @@ from src.index.images import index_images
 if __name__ == "__main__":
   # create_attribute_tables()
 
-  # catalog_path = Path("C:/Users/danfy/Documents/Projects/py-gis_app/data")
-  # add_calatog(catalog_path, "test")
+  catalog_path = Path("C:/Users/danfy/Documents/Projects/py-gis_app/data")
+  add_calatog(catalog_path, "test")
 
   index_images(1)

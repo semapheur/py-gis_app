@@ -470,8 +470,7 @@ def index_images(
     db.insert_models(image_index, on_conflict)
 
     current_timestamp = datetime.now(timezone.utc)
-    with SqliteDatabase(INDEX_DB) as db:
-      update_index_time(db, catalog_id, current_timestamp)
+    update_index_time(db, catalog_id, current_timestamp)
 
     if radiometric_index:
       db.insert_models(radiometric_index)

@@ -1,5 +1,5 @@
-import type { PageLoad } from "./$types";
 import { error } from "@sveltejs/kit";
+import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ params, fetch }) => {
   const table = params.table;
@@ -8,15 +8,9 @@ export const load: PageLoad = async ({ params, fetch }) => {
     throw error(400, "Missing table parameter");
   }
 
-  const request = {
-    method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ table }),
-  };
-
   const [schemaResponse, dataResponse] = await Promise.all([
-    fetch("/api/attribute-schema", request),
-    fetch("/api/attribute-data", request),
+    fetch(`/api/attribute-schema/${table}`),
+    fetch(`/api/attribute-data/${table}`),
   ]);
 
   if (!schemaResponse.ok) {

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { setContext } from "svelte";
   import type { PageData } from "./$types";
   import ImageViewer from "$lib/components/ImageViewer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
@@ -14,6 +15,11 @@
 
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
+
+  setContext("equipment-options", {
+    confidence: data.confidenceOptions,
+    status: data.statusOptions,
+  });
 
   setAnnotateState();
   setImageViewerState();

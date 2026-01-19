@@ -149,7 +149,7 @@ def validate_attribute_table(table: str):
     raise ValueError(f"Invalid attribute table: {table}")
 
 
-def get_attributes(table: str):
+def get_attribute_data(table: str, options: bool = False):
   validate_attribute_table(table)
 
   if table == "equipment":
@@ -162,9 +162,11 @@ def get_attributes(table: str):
     raise ValueError(f"Invalid table name: {table}")
 
   with SqliteDatabase(ATTRIBUTE_DB) as db:
-    records = db.select_records(model, "*", to_json=True)
+    if options:
+      derived_columns = {"label": "text", "value": "id"}
+      return db.select_records(model, derived=derived_columns, to_json=True)
 
-  return {"data": records}
+    return db.select_records(model, "*", to_json=True)
 
 
 def get_attribute_schema(table: str):

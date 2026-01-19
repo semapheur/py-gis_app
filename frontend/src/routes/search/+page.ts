@@ -1,3 +1,4 @@
+import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import type { ImageMetadata } from "$lib/utils/types";
 
@@ -18,7 +19,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
   });
 
   if (!response.ok) {
-    throw new Error("Failed to fetch images intersecting extent");
+    throw error(response.status, "Failed to fetch images intersecting extent");
   }
 
   const images: ImageMetadata = await response.json();
