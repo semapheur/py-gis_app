@@ -23,7 +23,7 @@ export type AnnotateGeometry<F extends keyof AnnotateGeometryOptions> =
 
 export interface ActivityData {
   summary: string;
-  type: ActivityType;
+  type: string;
   observed: string;
   comment: string;
 }
@@ -33,8 +33,8 @@ export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 export interface EquipmentData {
   id: string | null;
-  confidence: EquipmentConfidence;
-  status: EquipmentStatus;
+  confidence: string;
+  status: string;
 }
 
 export const equipmentConfidence = ["High", "Medium", "Low"] as const;

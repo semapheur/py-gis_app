@@ -3,23 +3,19 @@
   import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import CollapsibleList from "$lib/components/CollapsibleList.svelte";
-  import type {
-    EquipmentConfidence,
-    EquipmentData,
-    EquipmentStatus,
-  } from "$lib/contexts/annotate.svelte";
+  import type { EquipmentData } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
 
   const viewer = getImageViewerState();
 
   interface StatusCount {
     total: number;
-    confidences: Record<EquipmentConfidence, number>;
+    confidences: Record<string, number>;
   }
 
   interface EquipmentCount {
     total: number;
-    statuses: Record<EquipmentStatus, StatusCount>;
+    statuses: Record<string, StatusCount>;
   }
 
   type Summary = Record<string, EquipmentCount>;

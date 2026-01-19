@@ -164,7 +164,11 @@ def get_attribute_data(table: str, options: bool = False):
   with SqliteDatabase(ATTRIBUTE_DB) as db:
     if options:
       derived_columns = {"label": "text", "value": "id"}
-      return db.select_records(model, derived=derived_columns, to_json=True)
+      result = db.select_records(model, derived=derived_columns, to_json=True)
+      for option in result:
+        option["value"] = str(uuid.UUID(bytes=option["value"]))
+
+      return result
 
     return db.select_records(model, "*", to_json=True)
 

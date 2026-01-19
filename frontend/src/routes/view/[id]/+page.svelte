@@ -17,8 +17,8 @@
   let summaryOpen = $state<boolean>(false);
 
   setContext("equipment-options", {
-    confidence: data.confidenceOptions,
-    status: data.statusOptions,
+    confidence: data.confidenceOptions.options,
+    status: data.statusOptions.options,
   });
 
   setAnnotateState();

@@ -3,11 +3,7 @@
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
 
-  import {
-    equipmentConfidence,
-    equipmentStatus,
-    type EquipmentData,
-  } from "$lib/contexts/annotate.svelte";
+  import { type EquipmentData } from "$lib/contexts/annotate.svelte";
 
   type EquipmentPatch = Partial<EquipmentData>;
 
@@ -21,7 +17,6 @@
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
   const { confidence, status } = getContext("equipment-options");
-  console.log(confidence);
 
   function update<K extends keyof EquipmentData>(key: K, v: EquipmentData[K]) {
     const next = { ...value, [key]: v };
@@ -51,13 +46,13 @@
     oninput={(v) => update("id", v || (bulk ? undefined : v))}
   />
   <Select
-    options={equipmentConfidence}
+    options={confidence}
     label="Confidence"
     value={value.confidence}
     onchange={(v) => update("confidence", v || (bulk ? undefined : v))}
   />
   <Select
-    options={equipmentStatus}
+    options={status}
     label="Status"
     value={value.status}
     onchange={(v) => update("status", v || (bulk ? undefined : v))}
