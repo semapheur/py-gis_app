@@ -235,3 +235,8 @@ def update_attributes(table: str, payload: AttributeUpdate):
 
     if delete_ids:
       db.delete_by_ids(model, delete_ids)
+
+
+def search_equipment(query):
+  with SqliteDatabase(ATTRIBUTE_DB) as db:
+    ...

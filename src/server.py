@@ -1,7 +1,6 @@
 import json
 import mimetypes
 import os
-import re
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
@@ -12,6 +11,7 @@ from src.attributes.models import (
   get_attribute_data,
   get_attribute_schema,
   get_attribute_tables,
+  search_equipment,
   update_attributes,
 )
 from src.const import STATIC_DIR
@@ -108,7 +108,7 @@ class Handler(SimpleHTTPRequestHandler):
         self._stream_file(f, file_size)
 
   def do_POST(self):
-    if self.path == "/api/query-images":
+    if self.path == "/api/search-images":
       self._post_query_images()
       return
 
@@ -118,6 +118,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/radiometric-params":
       self._post_parametric_params()
+      return
+
+    if self.path == "/api/search-equipment":
+      self._post_search_equipment()
       return
 
     prefix = "/api/update-attributes/"
@@ -209,6 +213,16 @@ class Handler(SimpleHTTPRequestHandler):
     def logic(payload: Payload):
       hash = decode_sha256_from_b64(payload["id"])
       return get_radiometric_parameters(hash, ("noise", "sigma0"))
+
+    self._handle_post(logic)
+
+  def _post_search_equipment(self):
+    class Payload(TypedDict):
+      query: str
+
+    def logic(payload: Payload):
+      query = payload["query"]
+      return search_equipment(query)
 
     self._handle_post(logic)
 

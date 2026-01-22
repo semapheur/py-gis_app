@@ -191,6 +191,14 @@ class Model(metaclass=ModelMeta):
     return data
 
   @classmethod
+  def rowid(cls) -> Union[str, None]:
+    for name, field in cls._fields.items():
+      if field.primary_key:
+        return name
+
+    return None
+
+  @classmethod
   def create_table_sql(cls) -> str:
     if not cls._table_name:
       raise ValueError(f"{cls.__name__} must define table_name")
@@ -339,6 +347,52 @@ class SqliteDatabase:
 
     for sql in table.add_geometry_sql():
       cursor.execute(sql)
+
+  def create_fts_table(self, table: type[Model], columns: Sequence[str]):
+    self._check_connection()
+
+    table_name = table._table_name
+    fts_name = f"{table_name}_fts"
+    rowid = table.rowid()
+    fts_columns = ",".join(columns)
+    fts_options = f"{fts_columns}content='{table_name}'content_rowid='{rowid}'"
+
+    create_sql = (
+      f"""CREATE VIRTUAL TABLE IF NOT EXISTS {fts_name} USING fts5({fts_options})"""
+    )
+
+    new = [f"new.{c}" for c in columns]
+
+    trigger_after_insert = f"""
+    CREATE TRIGGER {table_name}_ai AFTER INSERT ON {table_name}
+    BEGIN
+      INSERT INTO {fts_name}({rowid}, {fts_columns})
+      VALUES ({new});
+    END
+    """
+
+    update_parts = [f"{c} = new.{c}" for c in columns]
+    trigger_after_update = f"""CREATE TRIGGER {table_name}_au AFTER UPDATE ON {table_name}
+    BEGIN
+      UPDATE {fts_name}
+      SET {",".join(update_parts)}
+      WHERE rowid = new.{rowid};
+    END
+    """
+
+    trigger_after_delete = f"""
+      CREATE TRIGGER {table_name}_ad AFTER DELETE ON {table_name}
+      BEGIN
+        DELETE FROM {fts_name}
+        WHERE rowid = old.{rowid};
+      END
+    """
+
+    cursor = self.conn.cursor()
+    cursor.execute(create_sql)
+    cursor.execute(trigger_after_insert)
+    cursor.execute(trigger_after_update)
+    cursor.execute(trigger_after_delete)
 
   def list_tables(self, include_internal: bool = False) -> list[str]:
     self._check_connection()

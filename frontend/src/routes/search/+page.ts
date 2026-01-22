@@ -12,7 +12,7 @@ export const load: PageLoad = async ({ fetch, url }) => {
     throw new Error("Invalid WKT encoding");
   }
 
-  const response = await fetch("/api/query-images", {
+  const response = await fetch("/api/search-images", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
     body: JSON.stringify({ wkt }),
