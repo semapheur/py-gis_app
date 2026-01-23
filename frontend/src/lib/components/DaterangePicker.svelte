@@ -305,7 +305,7 @@
 <div class="datepicker">
   <div class="input-wrapper">
     <Input
-      label="Date interval"
+      placeholder="Date interval"
       value={range.start && range.end
         ? `${formatDate(range.start)} - ${formatDate(range.end)}`
         : range.start

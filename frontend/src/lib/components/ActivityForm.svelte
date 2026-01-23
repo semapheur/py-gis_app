@@ -42,7 +42,7 @@
 
 <form class="form">
   <Input
-    label="Summary"
+    placeholder="Summary"
     value={value.summary}
     oninput={(v) => update("summary", v || (bulk ? undefined : v))}
   />

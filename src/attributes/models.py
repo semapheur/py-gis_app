@@ -217,7 +217,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
       descriptionShort = excluded.descriptionShort,
       natoName = excluded.natoName,
       nativeName = excluded.nativeName,
-      alternativeNames = excluded.alternativeNames
+      alternativeNames = excluded.alternativeNames,
       source = excluded.source,
       sourceData = excluded.sourceData,
       modifiedByUserId = excluded.modifiedByUserId,

@@ -1,21 +1,24 @@
 <script lang="ts">
   interface Props {
     value?: string | number | null;
-    label?: string;
+    placeholder?: string;
     required?: boolean;
     fieldSizing?: "content" | "fixed";
     oninput?: (value: string) => void;
+    onfocus?: () => void;
+    onblur?: () => void;
   }
 
   let {
     value = null,
-    label = "",
+    placeholder,
     required = false,
     fieldSizing = "fixed",
     oninput,
+    onfocus,
+    onblur,
   }: Props = $props();
-  let placeholder = $derived(label);
-  let minCh = $derived(Math.max(label.length + 2, 6));
+  let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
 
   let internal = $state(value ?? "");
 
@@ -34,9 +37,11 @@
     {required}
     style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch;`}
     oninput={(e) => oninput?.(e.currentTarget.value)}
+    {onfocus}
+    {onblur}
   />
-  {#if label}
-    <label for={uid}>{label}</label>
+  {#if placeholder}
+    <label for={uid}>{placeholder}</label>
   {/if}
 </div>
 

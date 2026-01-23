@@ -414,7 +414,7 @@
       {#if column.editor === "text"}
         <Input
           value={form.initial[column.id]}
-          label={column.header}
+          placeholder={column.header}
           oninput={(v) => (editRow[column.id] = v)}
         />
       {:else if column.editor === "textarea"}

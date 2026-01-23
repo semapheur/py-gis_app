@@ -355,18 +355,18 @@ class SqliteDatabase:
     fts_name = f"{table_name}_fts"
     rowid = table.rowid()
     fts_columns = ",".join(columns)
-    fts_options = f"{fts_columns}content='{table_name}'content_rowid='{rowid}'"
+    fts_options = f"{fts_columns},content='{table_name}',content_rowid='{rowid}'"
 
     create_sql = (
       f"""CREATE VIRTUAL TABLE IF NOT EXISTS {fts_name} USING fts5({fts_options})"""
     )
 
-    new = [f"new.{c}" for c in columns]
+    new = ",".join([f"new.{rowid}"] + [f"new.{c}" for c in columns])
 
     trigger_after_insert = f"""
     CREATE TRIGGER {table_name}_ai AFTER INSERT ON {table_name}
     BEGIN
-      INSERT INTO {fts_name}({rowid}, {fts_columns})
+      INSERT INTO {fts_name}(rowid,{fts_columns})
       VALUES ({new});
     END
     """

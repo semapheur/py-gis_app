@@ -1,7 +1,9 @@
 <script lang="ts">
   import { getContext } from "svelte";
-  import Input from "$lib/components/Input.svelte";
+  import { error } from "@sveltejs/kit";
+  import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
+  import { type SelectOption } from "$lib/utils/types";
 
   import { type EquipmentData } from "$lib/contexts/annotate.svelte";
 
@@ -37,14 +39,27 @@
     const full = v as EquipmentData;
     return Boolean(full.id && full.status && full.confidence);
   }
+
+  async function searchEquipment(query: string) {
+    const response = await fetch("/api/search-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ query }),
+    });
+
+    if (!response.ok) {
+      throw error(
+        response.status,
+        "Failed to fetch images intersecting extent",
+      );
+    }
+
+    return (await response.json()) as SelectOption[];
+  }
 </script>
 
 <form class="form">
-  <Input
-    label="Equipment"
-    value={value.id ?? ""}
-    oninput={(v) => update("id", v || (bulk ? undefined : v))}
-  />
+  <Autocomplete placeholder="Equipment" fetchOptions={searchEquipment} />
   <Select
     options={confidence}
     label="Confidence"

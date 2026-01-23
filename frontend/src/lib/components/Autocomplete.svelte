@@ -1,18 +1,17 @@
 <script lang="ts">
-  interface Option<T = string> {
-    label: string;
-    value: T;
-  }
+  import Input from "$lib/components/Input.svelte";
+  import { type SelectOption } from "$lib/utils/types";
 
   interface Props {
-    value: Option;
-    fetchOptions: (query: string) => Option[];
+    value?: SelectOption;
+    placeholder?: string;
+    fetchOptions: (query: string) => SelectOption[];
   }
 
-  let { value = $bindable(), fetchOptions }: Props = $props();
+  let { value = $bindable(), placeholder, fetchOptions }: Props = $props();
 
   let query = $state<string>("");
-  let options = $state<Option[]>([]);
+  let options = $state<SelectOption[]>([]);
   let open = $state<boolean>(false);
 
   $effect(() => {
@@ -25,7 +24,7 @@
     open = true;
   });
 
-  function select(option: Option) {
+  function select(option: SelectOption) {
     value = option;
     query = option.label;
     open = false;
@@ -41,13 +40,7 @@
 </script>
 
 <div class="autocomplete">
-  <input
-    type="text"
-    bind:value={query}
-    onfocus={() => (open = true)}
-    {onblur}
-    autocomplete="off"
-  />
+  <Input value={query} {placeholder} onfocus={() => (open = true)} {onblur} />
 
   {#if open && options.length}
     <ul class="dropdown">

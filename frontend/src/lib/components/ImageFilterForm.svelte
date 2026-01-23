@@ -31,10 +31,10 @@
 
 <div class="container">
   <form class="form" on:submit={submitForm}>
-    <Input label="File name" name="filename" bind:value={filename} />
-    <Input label="Min coverage" name="coverage" bind:value={coverage} />
+    <Input placeholder="File name" name="filename" bind:value={filename} />
+    <Input placeholder="Min coverage" name="coverage" bind:value={coverage} />
     <Input
-      label="Min IIRS"
+      placeholder="Min IIRS"
       type="number"
       min="0"
       max="9"
@@ -42,7 +42,7 @@
       bind:value={iirs}
     />
     <Input
-      label="Max GSD"
+      placeholder="Max GSD"
       type="number"
       min="0"
       name="max_gsd"

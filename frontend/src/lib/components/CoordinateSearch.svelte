@@ -26,7 +26,7 @@
 <div class="container">
   <form class="search-form">
     <Input
-      label="Coordinate"
+      placeholder="Coordinate"
       value={coordinates}
       fieldSizing="content"
       oninput={(v) => (coordinates = v)}

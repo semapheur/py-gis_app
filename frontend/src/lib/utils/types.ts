@@ -36,3 +36,8 @@ export interface RadiometricParams {
   noise: NoiseParams;
   sigma0: number[][];
 }
+
+export interface SelectOption<T = string> {
+  label: string;
+  value: T;
+}
