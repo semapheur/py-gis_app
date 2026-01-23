@@ -30,12 +30,13 @@
   interface Props {
     columns: IColumnConfig[];
     data: Record<string, string>[];
-    autoFill?: Record<string, () => any>;
+    addFill?: Record<string, () => any>;
+    editFill?: Record<string, () => any>;
     inputIds?: Set<string>;
     saveApi?: string;
   }
 
-  let { columns, data, autoFill, saveApi }: Props = $props();
+  let { columns, data, addFill, editFill, saveApi }: Props = $props();
   let gridWrapper: HTMLElement | null = null;
   let fileInput: HTMLInputElement | null = null;
   let isDragging = $state<boolean>(false);
@@ -108,8 +109,8 @@
   }
 
   function addRow() {
-    if (autoFill !== undefined) {
-      Object.entries(autoFill).forEach(([c, fn]) => {
+    if (addFill !== undefined) {
+      Object.entries(addFill).forEach(([c, fn]) => {
         editRow[c] = fn();
       });
     }
@@ -123,6 +124,12 @@
 
   function saveEdit() {
     if (!form.rowId) return;
+
+    if (editFill !== undefined) {
+      Object.entries(editFill).forEach(([c, fn]) => {
+        editRow[c] = fn();
+      });
+    }
 
     const saveRow = structuredClone($state.snapshot(editRow));
 

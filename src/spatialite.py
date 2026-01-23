@@ -353,21 +353,20 @@ class SqliteDatabase:
 
     table_name = table._table_name
     fts_name = f"{table_name}_fts"
-    rowid = table.rowid()
     fts_columns = ",".join(columns)
-    fts_options = f"{fts_columns},content='{table_name}',content_rowid='{rowid}'"
+    fts_options = f"{fts_columns},content='{table_name}'"
 
     create_sql = (
       f"""CREATE VIRTUAL TABLE IF NOT EXISTS {fts_name} USING fts5({fts_options})"""
     )
 
-    new = ",".join([f"new.{rowid}"] + [f"new.{c}" for c in columns])
+    new = ",".join([f"new.{c}" for c in columns])
 
     trigger_after_insert = f"""
     CREATE TRIGGER {table_name}_ai AFTER INSERT ON {table_name}
     BEGIN
       INSERT INTO {fts_name}(rowid,{fts_columns})
-      VALUES ({new});
+      VALUES (new.rowid,{new});
     END
     """
 
@@ -376,7 +375,7 @@ class SqliteDatabase:
     BEGIN
       UPDATE {fts_name}
       SET {",".join(update_parts)}
-      WHERE rowid = new.{rowid};
+      WHERE rowid = new.rowid;
     END
     """
 
@@ -384,7 +383,7 @@ class SqliteDatabase:
       CREATE TRIGGER {table_name}_ad AFTER DELETE ON {table_name}
       BEGIN
         DELETE FROM {fts_name}
-        WHERE rowid = old.{rowid};
+        WHERE rowid = old.rowid;
       END
     """
 
@@ -475,6 +474,7 @@ class SqliteDatabase:
   def _select_rows(
     self,
     table: type[Model],
+    from_table: Optional[str] = None,
     columns: Optional[Union[Literal["*"], tuple[str, ...]]] = None,
     geo_format: GeoFormat = "AsGeoJSON",
     derived: Optional[dict[str, str]] = None,
@@ -505,7 +505,7 @@ class SqliteDatabase:
     else:
       columns = tuple() if columns is None else tuple(table_columns)
 
-    table_name = table._table_name
+    table_name = from_table if from_table is not None else table._table_name
     geometry_fields = table.geometry_fields()
 
     sql_columns: list[str] = []
@@ -529,7 +529,7 @@ class SqliteDatabase:
     if with_clause is not None:
       sql_parts.append(f"WITH {with_clause}")
 
-    sql_parts.append(f"SELECT {column_sql} FROM {table._table_name}")
+    sql_parts.append(f"SELECT {column_sql} FROM {table_name}")
 
     if join is not None:
       sql_parts.append(f"{join['join_type']} JOIN {join['expression']}")
@@ -576,6 +576,7 @@ class SqliteDatabase:
   def select_records(
     self,
     table: type[Model],
+    from_table: Optional[str] = None,
     columns: Optional[Union[Literal["*"], tuple[str, ...]]] = None,
     geo_format: GeoFormat = "AsGeoJSON",
     derived: Optional[dict[str, str]] = None,
@@ -589,6 +590,7 @@ class SqliteDatabase:
   ) -> list[dict[str, Any]]:
     rows, return_columns = self._select_rows(
       table,
+      from_table=from_table,
       columns=columns,
       geo_format=geo_format,
       derived=derived,

@@ -249,18 +249,21 @@ def update_attributes(table: str, payload: AttributeUpdate):
 
 
 def search_equipment(query: str):
-  columns = ("id", "displayName")
+  columns = {"id": "equipment.id", "displayName": "equipment.displayName"}
   where = "equipment_fts MATCH :query"
-  params = {"query": query}
+  params = {"query": f'"{query}"'}
   join = JoinClause(
-    join_type="LEFT", expression="equipment_fts ON equipment.id = equipment_fts.rowid"
+    join_type="LEFT",
+    expression="equipment ON equipment.rowid = equipment_fts.rowid",
   )
 
   with SqliteDatabase(ATTRIBUTE_DB) as db:
     return db.select_records(
       EquipmentListTable,
-      columns=columns,
+      from_table="equipment_fts",
+      derived=columns,
       join=join,
       where=where,
       params=params,
+      to_json=True,
     )

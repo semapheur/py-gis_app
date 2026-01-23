@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { onMount, onDestroy } from "svelte";
   import Input from "$lib/components/Input.svelte";
   import { type SelectOption } from "$lib/utils/types";
 
@@ -14,14 +15,22 @@
   let options = $state<SelectOption[]>([]);
   let open = $state<boolean>(false);
 
+  let container: HTMLDivElement;
+  let timeout: ReturnType<typeof setTimeout>;
+
   $effect(() => {
+    clearTimeout(timeout);
+
     if (query.length < 2) {
       options = [];
+      open = false;
       return;
     }
 
-    options = fetchOptions(query);
-    open = true;
+    timeout = setTimeout(async () => {
+      options = await fetchOptions(query);
+      open = true;
+    }, 200);
   });
 
   function select(option: SelectOption) {
@@ -30,17 +39,45 @@
     open = false;
   }
 
-  function onblur() {
+  function handlePointerDown(e: PointerEvent) {
+    const path = e.composedPath();
+
+    if (path.includes(container)) {
+      return;
+    }
+
+    open = false;
+
     if (!value || query !== value.label) {
       query = "";
       value = null;
     }
-    open = false;
   }
+
+  function handleKeydown(e: KeyboardEvent) {
+    if (e.key === "Escape") {
+      open = false;
+    }
+  }
+
+  onMount(() => {
+    document.addEventListener("pointerdown", handlePointerDown);
+    document.addEventListener("keydown", handleKeydown);
+  });
+
+  onDestroy(() => {
+    document.removeEventListener("pointerdown", handlePointerDown);
+    document.removeEventListener("keydown", handleKeydown);
+  });
 </script>
 
-<div class="autocomplete">
-  <Input value={query} {placeholder} onfocus={() => (open = true)} {onblur} />
+<div class="autocomplete" bind:this={container}>
+  <Input
+    value={query}
+    {placeholder}
+    oninput={(v) => (query = v)}
+    onfocus={() => (open = true)}
+  />
 
   {#if open && options.length}
     <ul class="dropdown">
@@ -59,9 +96,11 @@
   }
 
   .dropdown {
+    list-style: none;
     position: absolute;
     width: 100%;
     z-index: 10;
+    background: rgb(var(--color-accent));
   }
 
   li {

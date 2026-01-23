@@ -29,15 +29,20 @@
   let saveApi = $derived(table ? `/api/update-attributes/${table}` : undefined);
   let columns = $derived([...metaColumns, ...data.columns]);
 
-  const autoFill = {
+  const addFill = {
     id: () => crypto.randomUUID(),
     createdByUserId: () => "",
     createdAtTimestamp: () => Date.now(),
     modifiedByUserId: () => null,
     modifiedAtTimestamp: () => null,
   };
+
+  const editFill = {
+    modifiedByUserId: () => "",
+    modifiedAtTimestamp: () => Date.now(),
+  };
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.data} {autoFill} {saveApi} />
+  <DataGrid {columns} data={data.data} {addFill} {editFill} {saveApi} />
 {/if}

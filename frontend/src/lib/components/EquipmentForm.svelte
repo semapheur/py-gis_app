@@ -41,17 +41,14 @@
   }
 
   async function searchEquipment(query: string) {
-    const response = await fetch("/api/search-images", {
+    const response = await fetch("/api/search-equipment", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ query }),
     });
 
     if (!response.ok) {
-      throw error(
-        response.status,
-        "Failed to fetch images intersecting extent",
-      );
+      throw error(response.status, "Failed to search equipment");
     }
 
     return (await response.json()) as SelectOption[];
