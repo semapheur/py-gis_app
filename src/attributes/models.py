@@ -6,6 +6,7 @@ from src.const import ATTRIBUTE_DB
 from src.spatialite import (
   UUID_FIELD,
   Field,
+  JoinClause,
   Model,
   OnConflict,
   SqliteDatabase,
@@ -20,6 +21,15 @@ BASE_ATTRIBUTE_TABLES = (
   "activity_likelihood",
   "classification",
   "releasability",
+)
+
+FTS_COLUMNS = (
+  "displayName",
+  "description",
+  "descriptionShort",
+  "natoName",
+  "nativeName",
+  "alternativeNames",
 )
 
 ATTRIBUTE_TABLES = {"equipment", *BASE_ATTRIBUTE_TABLES}
@@ -123,6 +133,7 @@ def create_attribute_tables():
   with SqliteDatabase(ATTRIBUTE_DB) as db:
     db.create_table(DataGridSchemaTable)
     db.create_table(EquipmentListTable)
+    db.create_fts_table(EquipmentListTable, FTS_COLUMNS)
 
     for table in BASE_ATTRIBUTE_TABLES:
       model = make_attribute_table(table)
@@ -237,6 +248,19 @@ def update_attributes(table: str, payload: AttributeUpdate):
       db.delete_by_ids(model, delete_ids)
 
 
-def search_equipment(query):
+def search_equipment(query: str):
+  columns = ("id", "displayName")
+  where = "equipment_fts MATCH :query"
+  params = {"query": query}
+  join = JoinClause(
+    join_type="LEFT", expression="equipment_fts ON equipment.id = equipment_fts.rowid"
+  )
+
   with SqliteDatabase(ATTRIBUTE_DB) as db:
-    ...
+    return db.select_records(
+      EquipmentListTable,
+      columns=columns,
+      join=join,
+      where=where,
+      params=params,
+    )

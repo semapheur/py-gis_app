@@ -505,15 +505,16 @@ class SqliteDatabase:
     else:
       columns = tuple() if columns is None else tuple(table_columns)
 
+    table_name = table._table_name
     geometry_fields = table.geometry_fields()
 
     sql_columns: list[str] = []
     returned_columns: list[str] = []
     for col in columns:
       if col in geometry_fields:
-        sql_columns.append(f"{geo_format}({col}) AS {col}")
+        sql_columns.append(f"{geo_format}({table_name}.{col}) AS {col}")
       else:
-        sql_columns.append(col)
+        sql_columns.append(f"{table_name}.{col} AS {col}")
 
       returned_columns.append(col)
 
