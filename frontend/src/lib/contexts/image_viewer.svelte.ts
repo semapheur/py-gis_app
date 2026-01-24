@@ -357,7 +357,7 @@ export class ImageViewerState {
 
     const label =
       type === "equipment"
-        ? `${data.id}\n${data.status}\n${data.confidence}`
+        ? `${data.equipment?.label}\n${data.confidence.label}\n${data.status.label}`
         : "";
 
     feature.set("data", data);

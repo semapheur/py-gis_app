@@ -53,7 +53,7 @@
     <footer class="footer">
       {#key annotate.layer}
         <Select
-          label="Geometry"
+          placeholder="Geometry"
           options={annotate.geometryOptions}
           value={annotate.geometry}
           onchange={(v) => annotate.setGeometry(v)}

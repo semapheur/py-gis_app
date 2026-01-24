@@ -4,12 +4,13 @@
   import { type SelectOption } from "$lib/utils/types";
 
   interface Props {
-    value: SelectOption | null;
+    value?: SelectOption | null;
     placeholder?: string;
     fetchOptions: (query: string) => SelectOption[];
+    onchange?: (value: SelectOption | null) => void;
   }
 
-  let { value = $bindable(), placeholder, fetchOptions }: Props = $props();
+  let { value = null, placeholder, fetchOptions, onchange }: Props = $props();
 
   let query = $state<string>("");
   let options = $state<SelectOption[]>([]);
@@ -17,6 +18,10 @@
 
   let container: HTMLDivElement;
   let timeout: ReturnType<typeof setTimeout>;
+
+  $effect(() => {
+    query = value?.label ?? "";
+  });
 
   $effect(() => {
     clearTimeout(timeout);
@@ -34,8 +39,12 @@
   });
 
   function select(option: SelectOption) {
-    value = option;
-    query = option.label;
+    onchange?.(option);
+    open = false;
+  }
+
+  function clear() {
+    onchange?.(null);
     open = false;
   }
 
@@ -81,7 +90,7 @@
     {placeholder}
     oninput={(v) => {
       query = v;
-      value = null;
+      onchange?.(null);
     }}
     {onblur}
   />

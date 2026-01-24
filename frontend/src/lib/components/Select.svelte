@@ -5,24 +5,28 @@
     disabled?: boolean;
   }
 
-  type OptionInput = string | SelectOption;
+  type OptionInput<T = string> = T | SelectOption<T>;
 
-  interface Props {
-    label?: string;
-    value?: string | null;
+  interface Props<T = string> {
+    placeholder?: string | null;
+    value?: T | null;
     options: readonly OptionInput[];
-    onchange?: (value: string) => void;
+    onchange?: (value: T) => void;
   }
 
-  let { label = "", value = null, options = [], onchange }: Props = $props();
-  let placeholder = $derived(label);
+  const uid = $props.id();
+  let {
+    placeholder = null,
+    value = null,
+    options = [],
+    onchange,
+  }: Props = $props();
+
   const normalizedOptions = $derived(
     options.map((o) =>
       typeof o === "string" ? { label: o, value: o.toLowerCase() } : o,
     ),
   );
-
-  const uid = $props.id();
 </script>
 
 <div class="container">
@@ -31,9 +35,11 @@
     bind:value
     onchange={(e) => onchange?.(e.currentTarget.value)}
   >
-    <option value="" disabled hidden>
-      {placeholder}
-    </option>
+    {#if placeholder}
+      <option value="" disabled hidden>
+        {placeholder}
+      </option>
+    {/if}
 
     {#each normalizedOptions as o}
       <option value={o.value} disabled={o.disabled}>
@@ -42,8 +48,8 @@
     {/each}
   </select>
 
-  {#if label}
-    <label for={uid}>{label}</label>
+  {#if placeholder}
+    <label for={uid}>{placeholder}</label>
   {/if}
 </div>
 

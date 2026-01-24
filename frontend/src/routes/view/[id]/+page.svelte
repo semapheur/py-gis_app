@@ -10,15 +10,15 @@
   import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
 
   let { data } = $props<{ data: PageData }>();
-  const image: ImageMetadata = $derived(data.image);
+  const image: ImageMetadata = $derived(data.imageInfo);
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
 
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
 
   setContext("equipment-options", {
-    confidence: data.confidenceOptions.options,
-    status: data.statusOptions.options,
+    confidenceOptions: data.confidenceOptions.options,
+    statusOptions: data.statusOptions.options,
   });
 
   setAnnotateState();

@@ -21,6 +21,11 @@ type AnnotateGeometryOptions = typeof annotateGeometryByForm;
 export type AnnotateGeometry<F extends keyof AnnotateGeometryOptions> =
   AnnotateGeometryOptions[F][number]["value"];
 
+export interface AnnotateValue {
+  id: string;
+  label: string;
+}
+
 export interface ActivityData {
   summary: string;
   type: string;
@@ -32,17 +37,10 @@ export const activityTypes = ["Maneuver"] as const;
 export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 export interface EquipmentData {
-  id: string | null;
-  confidence: string;
-  status: string;
+  equipment: AnnotateValue | null;
+  confidence: AnnotateValue | null;
+  status: AnnotateValue | null;
 }
-
-export const equipmentConfidence = ["High", "Medium", "Low"] as const;
-export type EquipmentConfidence = Lowercase<
-  (typeof equipmentConfidence)[number]
->;
-export const equipmentStatus = ["Intact", "Damaged", "Destroyed"] as const;
-export type EquipmentStatus = Lowercase<(typeof equipmentStatus)[number]>;
 
 const defaultLayer = "equipment";
 
@@ -56,10 +54,21 @@ export class AnnotateState {
     this.createDefaultData(defaultLayer),
   );
 
+  value = $derived.by(() => {
+    if (this.layer === "equipment") {
+      const d = this.data as EquipmentData;
+      return {
+        equipment: d.equipment?.id,
+        confidence: d.equipment?.id,
+        status: d.status?.id,
+      };
+    }
+  });
+
   label = $derived.by(() => {
     if (this.layer === "equipment") {
       const d = this.data as EquipmentData;
-      return `${d.id}\n${d.confidence}\n${d.status}`;
+      return `${d.equipment?.label}\n${d.confidence?.label}\n${d.status?.label}`;
     }
 
     if (this.layer === "activity") {
@@ -72,7 +81,7 @@ export class AnnotateState {
   validData = $derived.by(() => {
     if (this.layer === "equipment") {
       const d = this.data as EquipmentData;
-      return !!d?.id;
+      return d.equipment && d.confidence && d.status;
     }
 
     if (this.layer === "activity") {
@@ -115,9 +124,9 @@ export class AnnotateState {
   private createDefaultData(layer: AnnotateForm) {
     if (layer === "equipment") {
       return {
-        id: null,
-        confidence: equipmentConfidence[0].toLowerCase() as EquipmentConfidence,
-        status: equipmentStatus[0].toLowerCase() as EquipmentStatus,
+        equipment: null,
+        confidence: null,
+        status: null,
       } satisfies EquipmentData;
     }
 

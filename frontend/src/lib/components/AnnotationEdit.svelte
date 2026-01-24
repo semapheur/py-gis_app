@@ -30,7 +30,7 @@
     selectedFeatures.length > 1 && selectedTypes.length === 1,
   );
   const labels = $derived(
-    selectedFeatures.map((f) => f.get("label")?.replace("\n", ", ")),
+    selectedFeatures.map((f) => f.get("label")?.replaceAll("\n", ", ")),
   );
 
   $effect(() => {
@@ -40,7 +40,7 @@
       return;
     }
 
-    editData = structuredClone(selectedFeature.get("data") ?? null);
+    editData = selectedFeature.get("data") ?? null;
   });
 
   $effect(() => {
@@ -49,16 +49,13 @@
     }
   });
 
-  function commit(data: EquipmentData) {
-    if (!selectedFeature) return;
-
-    viewer.updateFeatureData(selectedFeature, data);
-  }
-
   function saveEdits() {
-    if (!editData || !validForm) return;
+    if (!editData || !validForm || !selectedFeature) return;
 
-    commit(editData);
+    viewer.updateFeatureData(
+      selectedFeature,
+      structuredClone($state.snapshot(editData)),
+    );
   }
 
   function deleteFeature() {
@@ -102,7 +99,7 @@
       if (!data) continue;
 
       viewer.updateFeatureData(feature, {
-        ...data,
+        ...structuredClone(data),
         ...bulkPatch,
       });
     }
