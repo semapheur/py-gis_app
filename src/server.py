@@ -5,7 +5,7 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.annotations.models import AnnotationUpdate, update_annotation
+from src.annotations.models import AnnotationUpdate, get_annotations, update_annotation
 from src.attributes.models import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
@@ -61,6 +61,12 @@ class Handler(SimpleHTTPRequestHandler):
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
       self._get_attributes(table)
+      return
+
+    prefix = "/api/get-annotations/"
+    if self.path.startswith(prefix):
+      image_id = self.path[len(prefix) :]
+      self._get_annotations(image_id)
       return
 
     if self.path.startswith("/api"):
@@ -171,7 +177,9 @@ class Handler(SimpleHTTPRequestHandler):
 
       remaining -= len(chunk)
 
-  def _json_response(self, payload: bytes):
+  def _json_response(self, object: R):
+    payload = json.dumps(object).encode("utf-8")
+
     self.send_response(200)
     self.send_header("Content-Type", "application/json")
     self.send_header("Content-Length", str(len(payload)))
@@ -184,9 +192,8 @@ class Handler(SimpleHTTPRequestHandler):
       body = self.rfile.read(content_length).decode("utf-8")
       payload_in = json.loads(body)
       result: R = fn(payload_in)
-      payload_out = json.dumps(result).encode("utf-8")
 
-      self._json_response(payload_out)
+      self._json_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -252,8 +259,8 @@ class Handler(SimpleHTTPRequestHandler):
   def _get_attribute_tables(self):
     try:
       tables = get_attribute_tables()
-      payload = json.dumps({"tables": tables}).encode("utf-8")
-      self._json_response(payload)
+      result = {"tables": tables}
+      self._json_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -265,8 +272,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     try:
       attribute_schema = get_attribute_schema(table)
-      payload = json.dumps(attribute_schema).encode("utf-8")
-      self._json_response(payload)
+      self._json_response(attribute_schema)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -278,8 +284,8 @@ class Handler(SimpleHTTPRequestHandler):
 
     try:
       attribute_options = get_attribute_data(table, True)
-      payload = json.dumps({"options": attribute_options}).encode("utf-8")
-      self._json_response(payload)
+      result = {"options": attribute_options}
+      self._json_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -291,8 +297,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     try:
       attribute_data = get_attribute_data(table)
-      payload = json.dumps({"data": attribute_data}).encode("utf-8")
-      self._json_response(payload)
+      result = {"data": attribute_data}
+      self._json_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
+
+  def _get_annotations(self, image_id: str):
+    image_hash = decode_sha256_from_b64(image_id)
+    annotations = get_annotations(image_hash)
+    self._json_response(annotations)

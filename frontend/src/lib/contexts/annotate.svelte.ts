@@ -33,14 +33,21 @@ export interface ActivityData {
   comment: string;
 }
 
-export const activityTypes = ["Maneuver"] as const;
-export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
-
 export interface EquipmentData {
   equipment: AnnotateValue | null;
   confidence: AnnotateValue | null;
   status: AnnotateValue | null;
 }
+
+export interface AnnotationInfo {
+  id: string;
+  geometry: GeoJSON.Point | GeoJSON.Polygon;
+  label: string;
+  data: EquipmentData;
+}
+
+export const activityTypes = ["Maneuver"] as const;
+export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 const defaultLayer = "equipment";
 

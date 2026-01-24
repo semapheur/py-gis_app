@@ -1,6 +1,7 @@
 import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
+import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 
 async function fetchJson<T>(
   fetch: typeof globalThis.fetch,
@@ -27,7 +28,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
     body: JSON.stringify({ id }),
   };
 
-  const [confidenceOptions, statusOptions, imageInfoWithoutId] =
+  const [confidenceOptions, statusOptions, imageInfoWithoutId, annotations] =
     await Promise.all([
       fetchJson(
         fetch,
@@ -47,6 +48,12 @@ export const load: PageLoad = async ({ params, fetch }) => {
         postRequest,
         "Failed to fetch image info",
       ),
+      fetchJson<AnnotationInfo[]>(
+        fetch,
+        `/api/get-annotations/${id}`,
+        undefined,
+        `Failed to fetch annotations for ${id}`,
+      ),
     ]);
 
   const radiometricParams =
@@ -64,5 +71,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
     ...imageInfoWithoutId,
   } as ImageInfo;
 
-  return { imageInfo, radiometricParams, confidenceOptions, statusOptions };
+  return {
+    imageInfo,
+    radiometricParams,
+    confidenceOptions,
+    statusOptions,
+    annotations,
+  };
 };

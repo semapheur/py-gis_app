@@ -19,11 +19,13 @@ import {
 } from "ol/events/condition";
 import { Circle, Fill, Stroke, Style, Text } from "ol/style";
 import WKT from "ol/format/WKT";
+import GeoJSON from "ol/format/GeoJSON";
 
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,
   AnnotateState,
+  AnnotationInfo,
   EquipmentData,
   ActivityData,
 } from "$lib/contexts/annotate.svelte";
@@ -138,7 +140,8 @@ interface ViewerInteractions {
 interface Options {
   imageInfo: Partial<ImageInfo>;
   radiometricParams: RadiometricParams | null;
-  annotate: AnnotateState;
+  annotateState: AnnotateState;
+  annotations?: AnnotationInfo[];
 }
 
 const MODE_INTERACTIONS = {
@@ -229,10 +232,14 @@ export class ImageViewerState {
       layers: [rasterLayer, equipmentLayer, activityLayer],
       view: rasterSource.getView(),
     });
-    this.setupInteractions(options.annotate);
+    this.setupInteractions(options.annotateState);
+
+    if (options.annotations?.length) {
+      this.loadAnnotations(options.annotations);
+    }
   }
 
-  private setupInteractions(annotate: AnnotateState) {
+  private setupInteractions(annotateState: AnnotateState) {
     if (!this.#map) return;
 
     const modifiable = new Collection<Feature>();
@@ -284,7 +291,7 @@ export class ImageViewerState {
       this.syncSelectedFeatures();
     });
 
-    const draw = this.createDrawInteraction(annotate);
+    const draw = this.createDrawInteraction(annotateState);
 
     this.#interactions = { hover, select, modify, translate, draw };
 
@@ -292,20 +299,21 @@ export class ImageViewerState {
       this.#map!.addInteraction(i),
     );
 
-    this.setMode(annotate.active ? "draw" : "edit");
+    this.setMode(annotateState.active ? "draw" : "edit");
   }
 
-  private createDrawInteraction(annotate: AnnotateState) {
+  private createDrawInteraction(annotateState: AnnotateState) {
     const draw = new Draw({
-      source: this.#sources[annotate.layer],
-      type: annotate.geometry,
+      source: this.#sources[annotateState.layer],
+      type: annotateState.geometry,
     });
 
     draw.on("drawend", (e) => {
       e.feature.setProperties({
-        type: annotate.layer,
-        label: annotate.label,
-        data: structuredClone($state.snapshot(annotate.data)),
+        id: crypto.randomUUID(),
+        type: annotateState.layer,
+        label: annotateState.label,
+        data: structuredClone($state.snapshot(annotateState.data)),
       });
 
       this.updateFeature(e.feature, "draw");
@@ -329,6 +337,29 @@ export class ImageViewerState {
     ];
   }
 
+  private loadAnnotations(records: AnnotationInfo[]) {
+    if (!this.#map || !this.projection) return;
+
+    const format = new GeoJSON({
+      featureProjection: this.projection,
+      dataProjection: this.projection,
+    });
+
+    for (const record of records) {
+      const geometry = format.readGeometry(record.geometry);
+      const feature = new Feature({ geometry });
+
+      feature.setProperties({
+        id: record.id,
+        type: "equipment",
+        label: record.label,
+        data: record.data,
+      });
+
+      this.#sources.equipment.addFeature(feature);
+    }
+  }
+
   public attach(target: HTMLElement, options: Options) {
     if (this.#map) return;
 
@@ -339,19 +370,19 @@ export class ImageViewerState {
     };
   }
 
-  public updateDrawInteraction(annotate: AnnotateState) {
+  public updateDrawInteraction(annotateState: AnnotateState) {
     if (!this.#map) return;
 
     if (this.#interactions.draw) {
       this.#map.removeInteraction(this.#interactions.draw);
     }
 
-    const draw = this.createDrawInteraction(annotate);
+    const draw = this.createDrawInteraction(annotateState);
 
     this.#interactions.draw = draw;
     this.#map.addInteraction(draw);
 
-    this.setMode(annotate.active ? "draw" : "edit");
+    this.setMode(annotateState.active ? "draw" : "edit");
   }
 
   public updateFeatureData(
@@ -416,7 +447,7 @@ export class ImageViewerState {
     const payload = {
       type: feature.get("type"),
       data: {
-        id: crypto.randomUUID(),
+        id: feature.get("id"),
         image: this.#image,
         equipment: data.equipment.id,
         confidence: data.confidence.id,

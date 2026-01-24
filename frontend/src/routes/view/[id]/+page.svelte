@@ -12,6 +12,7 @@
   let { data } = $props<{ data: PageData }>();
   const imageInfo: ImageInfo = $derived(data.imageInfo);
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
+  const annotations = $derived(data.annotations);
 
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
@@ -37,7 +38,7 @@
     </button>
   {/if}
   <AnnotateDialog bind:open={annotateOpen} />
-  <ImageViewer {imageInfo} {radiometricParams} />
+  <ImageViewer {imageInfo} {radiometricParams} {annotations} />
   <AnnotationEdit />
   <AnnotationSummary bind:open={summaryOpen} />
 </div>

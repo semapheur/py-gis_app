@@ -1,5 +1,6 @@
 import base64
 import hashlib
+import uuid
 from pathlib import Path
 
 
@@ -20,3 +21,7 @@ def hash_geotiff(image_path: Path) -> bytes:
       hasher.update(chunk)
 
   return hasher.digest()
+
+
+def uuid_bytes_to_str(b: bytes) -> str:
+  return str(uuid.UUID(bytes=b))
