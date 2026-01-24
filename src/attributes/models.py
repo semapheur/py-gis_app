@@ -4,7 +4,6 @@ from typing import TypedDict
 
 from src.const import ATTRIBUTE_DB
 from src.spatialite import (
-  UUID_FIELD,
   Field,
   JoinClause,
   Model,
@@ -12,6 +11,7 @@ from src.spatialite import (
   SqliteDatabase,
   SqliteValue,
   datetime_field,
+  uuid_field,
 )
 
 BASE_ATTRIBUTE_TABLES = (
@@ -75,7 +75,7 @@ class DataGridSchemaTable(Model):
 
 class EquipmentListTable(Model):
   _table_name = "equipment"
-  id = UUID_FIELD
+  id = uuid_field(True)
   identifier = Field(str, nullable=False)
   displayName = Field(str, nullable=False)
   description = Field(str)
@@ -93,7 +93,7 @@ class EquipmentListTable(Model):
 
 class EquipmentSearch(Model):
   _table_name = "equipment_fts"
-  value = UUID_FIELD
+  value = uuid_field(True)
   label = Field(str, nullable=False)
 
 
@@ -101,7 +101,7 @@ def make_attribute_table(table_name: str) -> type[Model]:
   class AttributeTable(Model):
     _table_name = table_name
 
-    id = UUID_FIELD
+    id = uuid_field(True)
     text = Field(str, nullable=False, unique=True)
     description = Field(str)
     createdByUserId = Field(str)

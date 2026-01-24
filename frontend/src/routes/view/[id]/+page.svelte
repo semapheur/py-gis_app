@@ -5,12 +5,12 @@
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
   import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
-  import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+  import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
   import { setAnnotateState } from "$lib/contexts/annotate.svelte";
   import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
 
   let { data } = $props<{ data: PageData }>();
-  const image: ImageMetadata = $derived(data.imageInfo);
+  const imageInfo: ImageInfo = $derived(data.imageInfo);
   const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
 
   let annotateOpen = $state<boolean>(false);
@@ -37,7 +37,7 @@
     </button>
   {/if}
   <AnnotateDialog bind:open={annotateOpen} />
-  <ImageViewer {image} {radiometricParams} />
+  <ImageViewer {imageInfo} {radiometricParams} />
   <AnnotationEdit />
   <AnnotationSummary bind:open={summaryOpen} />
 </div>

@@ -1,14 +1,14 @@
 <script lang="ts">
   import { getAnnotateState } from "$lib/contexts/annotate.svelte";
   import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
-  import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+  import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 
   interface Props {
-    image: ImageMetadata | null;
+    imageInfo: ImageInfo | null;
     radiometricParams: RadiometricParams | null;
   }
 
-  let { image = null, radiometricParams = null }: Props = $props();
+  let { imageInfo = null, radiometricParams = null }: Props = $props();
   const annotate = getAnnotateState();
   const viewer = getImageViewerState();
 
@@ -17,11 +17,11 @@
   });
 </script>
 
-{#if image}
+{#if imageInfo}
   <div
     class="map"
     {@attach (el) => {
-      viewer.attach(el, { image, radiometricParams, annotate });
+      viewer.attach(el, { imageInfo, radiometricParams, annotate });
     }}
   ></div>
 {/if}

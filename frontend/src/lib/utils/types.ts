@@ -1,23 +1,26 @@
 export interface ImageStats {}
 
-export interface ImageMetadata {
-  id?: string;
+export interface ImageInfo {
+  id: string;
+  filename: string;
+  classification: string;
+  image_type: "grd" | "pan" | "ms" | "slc";
+}
+
+export interface ImageMetadata extends ImageInfo {
   catalog: number;
   relative_path: string;
-  filename: string;
   filetype: string;
-  classification: string;
-  datetime_collected: string;
+  datetime_collected: number;
   sensor_name: string;
   sensor_type: "eo" | "sar";
-  image_type: "grd" | "pan" | "ms" | "slc";
   footprint?: GeoJSON.Polygon; // WKT
   look_angle: number;
   azimuth_angle: number;
   ground_sample_distance_row: number;
   ground_sample_distance_col: number;
   interpretation_rating: number;
-  coverage?: number;
+  coverage: number;
 }
 
 export interface ImagePreviewInfo {

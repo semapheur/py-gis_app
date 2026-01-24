@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
 import type { PageLoad } from "./$types";
-import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 
 async function fetchJson<T>(
   fetch: typeof globalThis.fetch,
@@ -27,29 +27,30 @@ export const load: PageLoad = async ({ params, fetch }) => {
     body: JSON.stringify({ id }),
   };
 
-  const [confidenceOptions, statusOptions, imageInfo] = await Promise.all([
-    fetchJson(
-      fetch,
-      "/api/get-attributes/observation_confidence",
-      undefined,
-      "Failed to fetch observation confidence attributes",
-    ),
-    fetchJson(
-      fetch,
-      "/api/get-attributes/equipment_status",
-      undefined,
-      "Failed to fetch equipment status attributes",
-    ),
-    fetchJson<ImageMetadata>(
-      fetch,
-      "/api/image-info",
-      postRequest,
-      "Failed to fetch image info",
-    ),
-  ]);
+  const [confidenceOptions, statusOptions, imageInfoWithoutId] =
+    await Promise.all([
+      fetchJson(
+        fetch,
+        "/api/get-attributes/observation_confidence",
+        undefined,
+        "Failed to fetch observation confidence attributes",
+      ),
+      fetchJson(
+        fetch,
+        "/api/get-attributes/equipment_status",
+        undefined,
+        "Failed to fetch equipment status attributes",
+      ),
+      fetchJson<Partial<ImageInfo>>(
+        fetch,
+        "/api/image-info",
+        postRequest,
+        "Failed to fetch image info",
+      ),
+    ]);
 
   const radiometricParams =
-    imageInfo.image_type === "slc"
+    imageInfoWithoutId.image_type === "slc"
       ? await fetchJson<RadiometricParams>(
           fetch,
           "/api/radiometric-params",
@@ -57,6 +58,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
           "Failed to fetch radiometric parameters",
         )
       : null;
+
+  const imageInfo = {
+    id,
+    ...imageInfoWithoutId,
+  } as ImageInfo;
 
   return { imageInfo, radiometricParams, confidenceOptions, statusOptions };
 };

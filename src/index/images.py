@@ -22,7 +22,6 @@ from src.index.radiometric import NoiseParameters, RadiometricParamsTable
 from src.math_utils import dot, norm
 from src.sicd_model import SicdObject
 from src.spatialite import (
-  HASH_FIELD,
   ColumnType,
   Field,
   JoinClause,
@@ -31,6 +30,7 @@ from src.spatialite import (
   SqliteDatabase,
   datetime_field,
   enum_field,
+  hash_field,
   path_field,
 )
 
@@ -51,7 +51,7 @@ class ImageryType(str, Enum):
 
 class ImageIndexTable(Model):
   _table_name = "images"
-  id = HASH_FIELD
+  id = hash_field(True)
   catalog = Field(int, nullable=False)
   relative_path = path_field(False, False)
   filename = Field(str, nullable=False)

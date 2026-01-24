@@ -18,8 +18,9 @@ import {
   shiftKeyOnly,
 } from "ol/events/condition";
 import { Circle, Fill, Stroke, Style, Text } from "ol/style";
+import WKT from "ol/format/WKT";
 
-import type { ImageMetadata, RadiometricParams } from "$lib/utils/types";
+import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,
   AnnotateState,
@@ -135,7 +136,7 @@ interface ViewerInteractions {
 }
 
 interface Options {
-  image: ImageMetadata;
+  imageInfo: Partial<ImageInfo>;
   radiometricParams: RadiometricParams | null;
   annotate: AnnotateState;
 }
@@ -149,6 +150,7 @@ export class ImageViewerState {
   #map: Map | null = null;
   #interactions!: ViewerInteractions;
   #sources: Record<AnnotateForm, VectorSource>;
+  #image: string | null = null;
 
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
@@ -187,10 +189,12 @@ export class ImageViewerState {
   }
 
   private initMap(target: HTMLElement, options: Options) {
+    this.#image = options.imageInfo.id!;
+
     const rasterSource = new GeoTIFF({
       sources: [
         {
-          url: "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //`http://localhost:8080/cog/${options.image.filename}.cog.tif`,
+          url: "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //`http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`,
         },
       ],
     });
@@ -303,6 +307,8 @@ export class ImageViewerState {
         label: annotate.label,
         data: structuredClone($state.snapshot(annotate.data)),
       });
+
+      this.updateFeature(e.feature, "draw");
     });
     return draw;
   }
@@ -397,6 +403,36 @@ export class ImageViewerState {
     }
 
     this.syncSelectedFeatures();
+  }
+
+  public updateFeature(feature: Feature, mode: "draw" | "edit") {
+    const geometry = feature.getGeometry();
+    if (geometry === undefined) return;
+
+    const format = new WKT();
+
+    const data = feature.get("data");
+
+    const payload = {
+      type: feature.get("type"),
+      data: {
+        id: crypto.randomUUID(),
+        image: this.#image,
+        equipment: data.equipment.id,
+        confidence: data.confidence.id,
+        status: data.status.id,
+        geometry: format.writeGeometry(geometry),
+        createdByUserId: mode === "draw" ? "" : null,
+        modifiedByUserId: mode === "edit" ? "" : null,
+        createdAtTimestamp: mode === "draw" ? Date.now() : null,
+        modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
+      },
+    };
+
+    fetch("/api/update-annotation", {
+      method: "POST",
+      body: JSON.stringify(payload),
+    });
   }
 }
 

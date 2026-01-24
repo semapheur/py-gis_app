@@ -5,6 +5,7 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
+from src.annotations.models import AnnotationUpdate, update_annotation
 from src.attributes.models import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
@@ -130,6 +131,10 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_update_attributes(table)
       return
 
+    if self.path == "/api/update-annotation":
+      self._post_update_annotation()
+      return
+
     self.send_error(404, "Unknown POST endpoint")
 
   def do_OPTIONS(self):
@@ -234,6 +239,13 @@ class Handler(SimpleHTTPRequestHandler):
     if not table or table not in ATTRIBUTE_TABLES:
       self.send_error(404, "Invalid POST endpoint")
       return
+
+    self._handle_post(logic)
+
+  def _post_update_annotation(self):
+    def logic(payload: AnnotationUpdate):
+      update_annotation(payload)
+      return {"message": "Successfully updated annotations"}
 
     self._handle_post(logic)
 

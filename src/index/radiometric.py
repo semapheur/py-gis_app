@@ -2,7 +2,7 @@ import json
 from typing import Literal, TypedDict
 
 from src.const import INDEX_DB
-from src.spatialite import HASH_FIELD, ColumnType, Field, Model, SqliteDatabase
+from src.spatialite import ColumnType, Field, Model, SqliteDatabase, hash_field
 
 
 class NoiseParameters(TypedDict):
@@ -20,7 +20,7 @@ polygon = Field(
 
 class RadiometricParamsTable(Model):
   _table_name = "radiometric_params"
-  id = HASH_FIELD
+  id = hash_field(True)
   noise = polygon
   sigma0 = polygon
   beta0 = polygon

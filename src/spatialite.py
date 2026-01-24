@@ -22,7 +22,7 @@ from typing import (
   Union,
 )
 
-from src.hashing import encode_sha256_to_b64
+from src.hashing import decode_sha256_from_b64, encode_sha256_to_b64
 from src.timeutils import datetime_to_unix, unix_to_datetime
 
 SqliteValue = Union[bytes, int, float, str, None]
@@ -742,22 +742,26 @@ def insert_records(
   db.cursor().executemany(sql, rows)
 
 
-HASH_FIELD = Field(
-  bytes,
-  sql_type=ColumnType.BLOB,
-  primary_key=True,
-  to_json=lambda x: encode_sha256_to_b64(x),
-)
+def hash_field(primary: bool):
+  return Field(
+    bytes,
+    sql_type=ColumnType.BLOB,
+    primary_key=primary,
+    from_json=lambda x: decode_sha256_from_b64(x),
+    to_json=lambda x: encode_sha256_to_b64(x),
+  )
 
-UUID_FIELD = Field(
-  uuid.UUID,
-  sql_type=ColumnType.BLOB,
-  primary_key=True,
-  to_sql=lambda u: u.bytes,
-  from_sql=lambda b: uuid.UUID(bytes=b),
-  to_json=lambda u: str(u),
-  from_json=lambda u: uuid.UUID(u),
-)
+
+def uuid_field(primary: bool):
+  return Field(
+    uuid.UUID,
+    sql_type=ColumnType.BLOB,
+    primary_key=primary,
+    to_sql=lambda u: u.bytes,
+    from_sql=lambda b: uuid.UUID(bytes=b),
+    to_json=lambda u: str(u),
+    from_json=lambda u: uuid.UUID(u),
+  )
 
 
 def datetime_field(nullable: bool):
