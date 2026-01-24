@@ -91,6 +91,12 @@ class EquipmentListTable(Model):
   modifiedAtTimestamp = datetime_field(True)
 
 
+class EquipmentSearch(Model):
+  _table_name = "equipment_fts"
+  value = UUID_FIELD
+  label = Field(str, nullable=False)
+
+
 def make_attribute_table(table_name: str) -> type[Model]:
   class AttributeTable(Model):
     _table_name = table_name
@@ -181,7 +187,7 @@ def get_attribute_data(table: str, options: bool = False):
 
       return result
 
-    return db.select_records(model, "*", to_json=True)
+    return db.select_records(model, columns="*", to_json=True)
 
 
 def get_attribute_schema(table: str):
@@ -249,7 +255,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
 
 
 def search_equipment(query: str):
-  columns = {"id": "equipment.id", "displayName": "equipment.displayName"}
+  columns = {"value": "equipment.id", "label": "equipment.displayName"}
   where = "equipment_fts MATCH :query"
   params = {"query": f'"{query}"'}
   join = JoinClause(
@@ -259,8 +265,7 @@ def search_equipment(query: str):
 
   with SqliteDatabase(ATTRIBUTE_DB) as db:
     return db.select_records(
-      EquipmentListTable,
-      from_table="equipment_fts",
+      EquipmentSearch,
       derived=columns,
       join=join,
       where=where,

@@ -107,7 +107,7 @@ def add_calatog(path: Path, name: str):
 
 def get_catalogs() -> dict[int, dict[str, str]]:
   with SqliteDatabase(INDEX_DB) as db:
-    catalogs = db.select_records(CatalogTable, "*")
+    catalogs = db.select_records(CatalogTable, columns="*")
 
   result: dict[int, dict[str, str]] = {}
   for row in catalogs:

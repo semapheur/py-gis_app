@@ -4,7 +4,7 @@
   import { type SelectOption } from "$lib/utils/types";
 
   interface Props {
-    value?: SelectOption;
+    value: SelectOption | null;
     placeholder?: string;
     fetchOptions: (query: string) => SelectOption[];
   }
@@ -21,7 +21,7 @@
   $effect(() => {
     clearTimeout(timeout);
 
-    if (query.length < 2) {
+    if (!query || query.length < 2) {
       options = [];
       open = false;
       return;
@@ -40,11 +40,7 @@
   }
 
   function handlePointerDown(e: PointerEvent) {
-    const path = e.composedPath();
-
-    if (path.includes(container)) {
-      return;
-    }
+    if (container.contains(e.target as Node)) return;
 
     open = false;
 
@@ -54,6 +50,16 @@
     }
   }
 
+  function onblur() {
+    setTimeout(() => {
+      open = false;
+      if (!value || query !== value.label) {
+        query = "";
+        value = null;
+      }
+    }, 150);
+  }
+
   function handleKeydown(e: KeyboardEvent) {
     if (e.key === "Escape") {
       open = false;
@@ -61,12 +67,10 @@
   }
 
   onMount(() => {
-    document.addEventListener("pointerdown", handlePointerDown);
     document.addEventListener("keydown", handleKeydown);
   });
 
   onDestroy(() => {
-    document.removeEventListener("pointerdown", handlePointerDown);
     document.removeEventListener("keydown", handleKeydown);
   });
 </script>
@@ -75,14 +79,22 @@
   <Input
     value={query}
     {placeholder}
-    oninput={(v) => (query = v)}
-    onfocus={() => (open = true)}
+    oninput={(v) => {
+      query = v;
+      value = null;
+    }}
+    {onblur}
   />
 
-  {#if open && options.length}
+  {#if open && options?.length && !value}
     <ul class="dropdown">
       {#each options as option}
-        <li onpointerdown={() => select(option)}>
+        <li
+          onpointerdown={(e) => {
+            e.stopPropagation();
+            select(option);
+          }}
+        >
           {option.label}
         </li>
       {/each}
@@ -99,12 +111,17 @@
     list-style: none;
     position: absolute;
     width: 100%;
+    max-height: calc(10 * var(--text-xs));
+    margin: 0;
+    padding: 0;
+    overflow-y: scroll;
     z-index: 10;
     background: rgb(var(--color-accent));
   }
 
   li {
-    padding: var(--size-md);
+    padding: 0 var(--size-md);
     cursor: pointer;
+    font-size: var(--text-xs);
   }
 </style>

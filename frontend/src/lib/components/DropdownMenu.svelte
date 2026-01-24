@@ -16,13 +16,9 @@
     showDropdown = !showDropdown;
   }
 
-  function close() {
-    showDropdown = false;
-  }
-
   function handleClickOutside(event: MouseEvent) {
     if (!container.contains(event.target as Node)) {
-      close();
+      showDropdown = false;
     }
   }
 </script>
