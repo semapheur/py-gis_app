@@ -51,22 +51,10 @@ class AnnotationUpdate(TypedDict):
   data: dict[str, Union[int, str, None]]
 
 
-def update_annotation(payload: AnnotationUpdate):
-  annotation_type = payload.pop("type", None)
-  if annotation_type is None or annotation_type not in ("equipment", "activity"):
-    raise ValueError(f"Annotation type missing in payload: {payload}")
+def update_annotations(payloads: list[AnnotationUpdate]):
+  wkt_pattern = re.compile(r"^(SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
 
-  data = payload.get("data")
-  if not data:
-    raise ValueError(f"Annotation data missing in payload: {payload}")
-
-  geometry_wkt = data.get("geometry", "")
-  match = re.search("^(POINT|POLYGON)", geometry_wkt)
-  if match is None:
-    raise ValueError(f"Invalid WKT: {geometry_wkt}")
-
-  geometry = match.group()
-  model = equipment_annotation_model(geometry)
+  upsert_models: dict[str, list[type[Model]]] = {"equipment": [], "activity": []}
 
   update_sql = """UPDATE SET
     equipment = excluded.equipment,
@@ -77,11 +65,33 @@ def update_annotation(payload: AnnotationUpdate):
     modifiedAtTimestamp = excluded.modifiedAtTimestamp
   """
 
-  upsert_model = [model.from_dict(data, True)]
   on_conflict = OnConflict(index="id", action=update_sql)
 
+  for payload in payloads:
+    annotation_type = payload.get("type")
+
+    if annotation_type not in upsert_models:
+      raise ValueError(f"Invalid annotation type: {annotation_type}")
+
+    data = payload.get("data")
+    if data is None:
+      raise ValueError("Missing annotation data")
+
+    geometry_wkt = data.get("geometry", "")
+    match = wkt_pattern.search(geometry_wkt)
+    if match is None:
+      raise ValueError(f"Invalid WKT: {geometry_wkt}")
+
+    geometry = match.group(1)
+    model_cls = equipment_annotation_model(geometry)
+    upsert_models[annotation_type].append(model_cls.from_dict(data, True))
+
   with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
-    db.insert_models(upsert_model, on_conflict)
+    for models in upsert_models.values():
+      if not models:
+        continue
+
+      db.insert_models(models, on_conflict)
 
 
 def get_annotations(image_id: bytes):

@@ -271,13 +271,6 @@ export class ImageViewerState {
       },
     });
 
-    const modify = new Modify({ features: modifiable });
-
-    const translate = new Translate({
-      condition: platformModifierKeyOnly,
-      features: select.getFeatures(),
-    });
-
     select.getFeatures().on("add", (e) => {
       const g = e.element.getGeometry();
       if (g instanceof Polygon || g instanceof MultiPolygon) {
@@ -285,10 +278,22 @@ export class ImageViewerState {
       }
       this.syncSelectedFeatures();
     });
-
     select.getFeatures().on("remove", (e) => {
       modifiable.remove(e.element);
       this.syncSelectedFeatures();
+    });
+
+    const modify = new Modify({ features: modifiable });
+    modify.on("modifyend", (e) => {
+      this.persistFeatures(e.features.getArray(), "edit");
+    });
+
+    const translate = new Translate({
+      condition: platformModifierKeyOnly,
+      features: select.getFeatures(),
+    });
+    translate.on("translateend", (e) => {
+      this.persistFeatures(e.features.getArray(), "edit");
     });
 
     const draw = this.createDrawInteraction(annotateState);
@@ -316,7 +321,7 @@ export class ImageViewerState {
         data: structuredClone($state.snapshot(annotateState.data)),
       });
 
-      this.updateFeature(e.feature, "draw");
+      this.persistFeatures([e.feature], "draw");
     });
     return draw;
   }
@@ -402,6 +407,7 @@ export class ImageViewerState {
     feature.changed();
 
     this.syncSelectedFeatures();
+    this.persistFeatures([feature], "edit");
   }
 
   public deleteFeature(feature: Feature) {
@@ -436,32 +442,39 @@ export class ImageViewerState {
     this.syncSelectedFeatures();
   }
 
-  public updateFeature(feature: Feature, mode: "draw" | "edit") {
-    const geometry = feature.getGeometry();
-    if (geometry === undefined) return;
-
+  public persistFeatures(features: Feature[], mode: "draw" | "edit") {
     const format = new WKT();
 
-    const data = feature.get("data");
+    const payload = features
+      .map((feature) => {
+        const geometry = feature.getGeometry();
+        if (geometry === undefined) return null;
 
-    const payload = {
-      type: feature.get("type"),
-      data: {
-        id: feature.get("id"),
-        image: this.#image,
-        equipment: data.equipment.id,
-        confidence: data.confidence.id,
-        status: data.status.id,
-        geometry: format.writeGeometry(geometry),
-        createdByUserId: mode === "draw" ? "" : null,
-        modifiedByUserId: mode === "edit" ? "" : null,
-        createdAtTimestamp: mode === "draw" ? Date.now() : null,
-        modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
-      },
-    };
+        const data = feature.get("data");
+
+        return {
+          type: feature.get("type"),
+          data: {
+            id: feature.get("id"),
+            image: this.#image,
+            equipment: data.equipment.id,
+            confidence: data.confidence.id,
+            status: data.status.id,
+            geometry: format.writeGeometry(geometry),
+            createdByUserId: mode === "draw" ? "" : null,
+            modifiedByUserId: mode === "edit" ? "" : null,
+            createdAtTimestamp: mode === "draw" ? Date.now() : null,
+            modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
+          },
+        };
+      })
+      .filter(Boolean);
+
+    if (!payload.length) return;
 
     fetch("/api/update-annotation", {
       method: "POST",
+      headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
   }
