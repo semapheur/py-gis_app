@@ -213,7 +213,14 @@ export class ImageViewerState {
 
     const rasterLayer = new WebGLTileLayer({
       source: rasterSource,
-      style: rasterStyle,
+      style: {
+        color: ["array", ["band", 1], ["band", 2], ["band", 3], 1],
+        gamma: 1,
+        brightness: 0,
+        contrast: 0,
+        saturation: 0,
+        exposure: 0,
+      },
     });
 
     const equipmentLayer = new VectorLayer({
@@ -395,7 +402,7 @@ export class ImageViewerState {
 
     if (!payload.length) return;
 
-    fetch("/api/update-annotation", {
+    fetch("/api/update-annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
@@ -447,7 +454,7 @@ export class ImageViewerState {
     this.persistFeatures([feature], "edit");
   }
 
-  public async removeFeatures(features: Feature[]) {
+  public removeFeatures(features: Feature[]) {
     const selected = this.#interactions.select.getFeatures();
     const payload: Record<string, string[]> = {};
 
@@ -472,9 +479,9 @@ export class ImageViewerState {
 
     this.syncSelectedFeatures();
 
-    if (!payload) return;
+    if (Object.keys(payload).length === 0) return;
 
-    await fetch("/api/delete-annotations", {
+    fetch("/api/delete-annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

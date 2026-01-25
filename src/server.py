@@ -142,8 +142,12 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_update_attributes(table)
       return
 
-    if self.path == "/api/update-annotation":
-      self._post_update_annotation()
+    if self.path == "/api/update-annotations":
+      self._post_update_annotations()
+      return
+
+    if self.path == "/api/delete-annotations":
+      self._post_delete_annotations()
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -254,7 +258,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def _post_update_annotation(self):
+  def _post_update_annotations(self):
     def logic(payload: list[AnnotationUpdate]):
       update_annotations(payload)
       return {"message": "Successfully updated annotations"}

@@ -1,10 +1,11 @@
 import json
 import re
+import uuid
 from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
 from src.const import ANNOTATION_DB, ATTRIBUTE_DB
-from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
+from src.hashing import uuid_bytes_to_str
 from src.spatialite import (
   Field,
   Model,
@@ -52,7 +53,7 @@ class AnnotationUpdate(TypedDict):
 
 
 def update_annotations(payloads: list[AnnotationUpdate]):
-  wkt_pattern = re.compile(r"^(SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
+  wkt_pattern = re.compile(r"^(?:SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
 
   upsert_models: dict[str, list[type[Model]]] = {"equipment": [], "activity": []}
 
@@ -66,6 +67,7 @@ def update_annotations(payloads: list[AnnotationUpdate]):
   """
 
   on_conflict = OnConflict(index="id", action=update_sql)
+  print(payloads)
 
   for payload in payloads:
     annotation_type = payload.get("type")
@@ -150,7 +152,7 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
     )
 
     return {
-      "id": encode_sha256_to_b64(r["id"]),
+      "id": uuid_bytes_to_str(r["id"]),
       "geometry": json.loads(r["geometry"]),
       "label": label,
       "data": {
