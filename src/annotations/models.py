@@ -94,6 +94,42 @@ def update_annotations(payloads: list[AnnotationUpdate]):
       db.insert_models(models, on_conflict)
 
 
+def delete_annotations(payload: dict[str, list[str]]):
+  supported_keys = {"equipment": {"point", "polygon"}, "activity": {"multipolygon"}}
+
+  def parse_key(key: str) -> tuple[str, str]:
+    try:
+      annotation_type, geometry = key.split("_", 1)
+
+    except ValueError:
+      raise ValueError(f"Invalid payload key format: {key}")
+
+    if annotation_type not in supported_keys:
+      raise ValueError(f"Unsupported annotation type: {annotation_type}")
+
+    if geometry not in supported_keys[annotation_type]:
+      raise ValueError(f"Unsupported geometry type for '{annotation_type}': {geometry}")
+
+    return annotation_type, geometry
+
+  def resolve_model(annotation_type: str, geometry: str):
+    if annotation_type == "equipment":
+      return equipment_annotation_model(geometry)
+
+    if annotation_type == "activity":
+      raise NotImplementedError("Annotation deletion not implemented for activity")
+
+    raise RuntimeError(f"Invalid annotation type: {annotation_type}")
+
+  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+    for key, ids in payload.items():
+      annotation_type, geometry = parse_key(key)
+      model = resolve_model(annotation_type, geometry)
+
+      uuids = [uuid.UUID(u) for u in ids]
+      db.delete_by_ids(model, uuids)
+
+
 def get_annotations(image_id: bytes):
   return [
     *get_annotations_by_geometry(image_id, "POINT"),

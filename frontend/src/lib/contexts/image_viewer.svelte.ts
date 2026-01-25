@@ -365,6 +365,43 @@ export class ImageViewerState {
     }
   }
 
+  private persistFeatures(features: Feature[], mode: "draw" | "edit") {
+    const format = new WKT();
+
+    const payload = features
+      .map((feature) => {
+        const geometry = feature.getGeometry();
+        if (geometry === undefined) return null;
+
+        const data = feature.get("data");
+
+        return {
+          type: feature.get("type"),
+          data: {
+            id: feature.get("id"),
+            image: this.#image,
+            equipment: data.equipment.id,
+            confidence: data.confidence.id,
+            status: data.status.id,
+            geometry: format.writeGeometry(geometry),
+            createdByUserId: mode === "draw" ? "" : null,
+            modifiedByUserId: mode === "edit" ? "" : null,
+            createdAtTimestamp: mode === "draw" ? Date.now() : null,
+            modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
+          },
+        };
+      })
+      .filter(Boolean);
+
+    if (!payload.length) return;
+
+    fetch("/api/update-annotation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+  }
+
   public attach(target: HTMLElement, options: Options) {
     if (this.#map) return;
 
@@ -410,69 +447,34 @@ export class ImageViewerState {
     this.persistFeatures([feature], "edit");
   }
 
-  public deleteFeature(feature: Feature) {
-    const type = feature.get("type") as AnnotateForm | null;
-    if (!type) return;
-
-    const source = this.#sources[type];
-    if (!source) return;
-
+  public async removeFeatures(features: Feature[]) {
     const selected = this.#interactions.select.getFeatures();
-    selected.remove(feature);
-    source.removeFeature(feature);
-    this.syncSelectedFeatures();
-  }
-
-  public bulkDeleteFeatures(features: Feature[]) {
-    if (!features.length) return;
-
-    const selected = this.#interactions.select.getFeatures();
+    const payload: Record<string, string[]> = {};
 
     for (const feature of features) {
-      const type = feature.get("type") as AnnotateForm | null;
-      if (!type) continue;
+      const annotationType = feature.get("type") as AnnotateForm | null;
+      if (!annotationType) continue;
 
-      const source = this.#sources[type];
+      const source = this.#sources[annotationType];
       if (!source) continue;
 
       selected.remove(feature);
       source.removeFeature(feature);
+
+      const geometryType = feature.getGeometry()?.getType();
+      if (!geometryType) continue;
+
+      const id = feature.get("id");
+
+      const key = `${annotationType}_${geometryType.toLowerCase()}`;
+      (payload[key] ??= []).push(id);
     }
 
     this.syncSelectedFeatures();
-  }
 
-  public persistFeatures(features: Feature[], mode: "draw" | "edit") {
-    const format = new WKT();
+    if (!payload) return;
 
-    const payload = features
-      .map((feature) => {
-        const geometry = feature.getGeometry();
-        if (geometry === undefined) return null;
-
-        const data = feature.get("data");
-
-        return {
-          type: feature.get("type"),
-          data: {
-            id: feature.get("id"),
-            image: this.#image,
-            equipment: data.equipment.id,
-            confidence: data.confidence.id,
-            status: data.status.id,
-            geometry: format.writeGeometry(geometry),
-            createdByUserId: mode === "draw" ? "" : null,
-            modifiedByUserId: mode === "edit" ? "" : null,
-            createdAtTimestamp: mode === "draw" ? Date.now() : null,
-            modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
-          },
-        };
-      })
-      .filter(Boolean);
-
-    if (!payload.length) return;
-
-    fetch("/api/update-annotation", {
+    await fetch("/api/delete-annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),

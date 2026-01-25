@@ -61,7 +61,7 @@
   function deleteFeature() {
     if (!selectedFeature) return;
 
-    viewer.deleteFeature(selectedFeature);
+    viewer.removeFeatures([selectedFeature]);
     selectedIndex = null;
     editData = null;
   }
@@ -117,7 +117,7 @@
     );
     if (!ok) return;
 
-    viewer.bulkDeleteFeatures(selectedFeatures);
+    viewer.removeFeatures(selectedFeatures);
     selectedIndex = null;
     editData = null;
   }
