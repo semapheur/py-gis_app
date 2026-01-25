@@ -5,7 +5,12 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.annotations.models import AnnotationUpdate, get_annotations, update_annotation
+from src.annotations.models import (
+  AnnotationUpdate,
+  delete_annotations,
+  get_annotations,
+  update_annotations,
+)
 from src.attributes.models import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
@@ -250,9 +255,16 @@ class Handler(SimpleHTTPRequestHandler):
     self._handle_post(logic)
 
   def _post_update_annotation(self):
-    def logic(payload: AnnotationUpdate):
-      update_annotation(payload)
+    def logic(payload: list[AnnotationUpdate]):
+      update_annotations(payload)
       return {"message": "Successfully updated annotations"}
+
+    self._handle_post(logic)
+
+  def _post_delete_annotations(self):
+    def logic(payload: dict[str, list[str]]):
+      delete_annotations(payload)
+      return {"message": "Successfully deleted annotations"}
 
     self._handle_post(logic)
 
