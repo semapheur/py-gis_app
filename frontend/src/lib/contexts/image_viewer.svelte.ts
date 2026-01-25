@@ -34,6 +34,29 @@ import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
 type ViewerMode = "draw" | "edit";
 
+export interface Enhancement {
+  brightness: number;
+  contrast: number;
+  exposure: number;
+  saturation: number;
+  gamma: number;
+}
+
+interface ViewerInteractions {
+  hover: Select;
+  select: Select;
+  modify: Modify;
+  translate: Translate;
+  draw: Draw;
+}
+
+interface Options {
+  imageInfo: Partial<ImageInfo>;
+  radiometricParams: RadiometricParams | null;
+  annotateState: AnnotateState;
+  annotations?: AnnotationInfo[];
+}
+
 interface ColorScheme {
   fill: (alpha?: number) => string;
   stroke: (alpha?: number) => string;
@@ -129,21 +152,6 @@ const vertexStyle = new Style({
   },
 });
 
-interface ViewerInteractions {
-  hover: Select;
-  select: Select;
-  modify: Modify;
-  translate: Translate;
-  draw: Draw;
-}
-
-interface Options {
-  imageInfo: Partial<ImageInfo>;
-  radiometricParams: RadiometricParams | null;
-  annotateState: AnnotateState;
-  annotations?: AnnotationInfo[];
-}
-
 const MODE_INTERACTIONS = {
   edit: ["hover", "select", "modify", "translate"],
   draw: ["draw"],
@@ -151,6 +159,7 @@ const MODE_INTERACTIONS = {
 
 export class ImageViewerState {
   #map: Map | null = null;
+  #rasterLayer: WebGLTileLayer | null = null;
   #interactions!: ViewerInteractions;
   #sources: Record<AnnotateForm, VectorSource>;
   #image: string | null = null;
@@ -211,16 +220,8 @@ export class ImageViewerState {
         } as RasterStyle)
       : undefined;
 
-    const rasterLayer = new WebGLTileLayer({
+    this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
-      style: {
-        color: ["array", ["band", 1], ["band", 2], ["band", 3], 1],
-        gamma: 1,
-        brightness: 0,
-        contrast: 0,
-        saturation: 0,
-        exposure: 0,
-      },
     });
 
     const equipmentLayer = new VectorLayer({
@@ -236,7 +237,7 @@ export class ImageViewerState {
 
     this.#map = new Map({
       target: target,
-      layers: [rasterLayer, equipmentLayer, activityLayer],
+      layers: [this.#rasterLayer, equipmentLayer, activityLayer],
       view: rasterSource.getView(),
     });
     this.setupInteractions(options.annotateState);
@@ -424,6 +425,19 @@ export class ImageViewerState {
     return () => {
       this.destroy();
     };
+  }
+
+  public updateEnhancement(enhancement: Enhancement) {
+    if (!this.#rasterLayer) return;
+
+    this.#rasterLayer.setStyle({
+      color: ["array", ["band", 1], ["band", 2], ["band", 3], 1],
+      brightness: enhancement.brightness,
+      contrast: enhancement.contrast,
+      exposure: enhancement.exposure,
+      saturation: enhancement.saturation,
+      gamma: enhancement.gamma,
+    });
   }
 
   public updateDrawInteraction(annotateState: AnnotateState) {
