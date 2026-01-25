@@ -67,7 +67,6 @@ def update_annotations(payloads: list[AnnotationUpdate]):
   """
 
   on_conflict = OnConflict(index="id", action=update_sql)
-  print(payloads)
 
   for payload in payloads:
     annotation_type = payload.get("type")
@@ -168,6 +167,10 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
           "id": uuid_bytes_to_str(r["status_id"]),
           "label": r["status_label"],
         },
+        "createdByUserId": r["createdByUserId"],
+        "modifiedByUserId": r["modifiedByUserId"],
+        "createdAtTimestamp": r["createdAtTimestamp"],
+        "modifiedAtTimestamp": r["modifiedAtTimestamp"],
       },
     }
 
@@ -182,7 +185,11 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
       ep.confidence AS confidence_id,
       a.observation_confidence.text AS confidence_label,
       ep.status AS status_id,
-      a.equipment_status.text AS status_label
+      a.equipment_status.text AS status_label,
+      ep.createdByUserId AS createdByUserId,
+      ep.modifiedByUserId AS modifiedByUserId,
+      ep.createdAtTimestamp AS createdAtTimestamp,
+      ep.modifiedAtTimestamp AS modifiedAtTimestamp
     FROM equipment_{geometry.lower()} AS ep
     JOIN a.equipment
       ON a.equipment.id = ep.equipment

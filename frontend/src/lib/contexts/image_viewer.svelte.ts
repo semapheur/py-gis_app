@@ -325,7 +325,13 @@ export class ImageViewerState {
         id: crypto.randomUUID(),
         type: annotateState.layer,
         label: annotateState.label,
-        data: structuredClone($state.snapshot(annotateState.data)),
+        data: {
+          ...$state.snapshot(annotateState.data),
+          createdByUserId: "",
+          modifiedByUserId: null,
+          createdAtTimestamp: Date.now(),
+          modifiedAtTimestmap: null,
+        },
       });
 
       this.persistFeatures([e.feature], "draw");
@@ -391,10 +397,11 @@ export class ImageViewerState {
             confidence: data.confidence.id,
             status: data.status.id,
             geometry: format.writeGeometry(geometry),
-            createdByUserId: mode === "draw" ? "" : null,
-            modifiedByUserId: mode === "edit" ? "" : null,
-            createdAtTimestamp: mode === "draw" ? Date.now() : null,
-            modifiedAtTimestamp: mode === "edit" ? Date.now() : null,
+            createdByUserId: data.createdByUserId,
+            modifiedByUserId: mode === "edit" ? "" : data.modifiedByUserId,
+            createdAtTimestamp: data.createdAtTimestamp,
+            modifiedAtTimestamp:
+              mode === "edit" ? Date.now() : data.modifiedByUserId,
           },
         };
       })
