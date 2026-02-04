@@ -5,7 +5,6 @@
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
   import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
-  import ImageEnhancement from "$lib/components/ImageEnhacement.svelte";
   import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
   import { setAnnotateState } from "$lib/contexts/annotate.svelte";
   import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
