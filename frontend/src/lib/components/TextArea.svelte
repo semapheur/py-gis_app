@@ -12,7 +12,7 @@
 
   interface Props {
     value?: string | null;
-    label?: string;
+    placeholder?: string;
     required?: boolean;
     rows?: number;
     resize?: Resize;
@@ -21,15 +21,14 @@
 
   let {
     value = null,
-    label = "",
+    placeholder = "",
     required = false,
     rows = 4,
     resize = "none",
     oninput,
   }: Props = $props();
 
-  let placeholder = $derived(label);
-  let editorTitle = $derived(`Edit: ${label}`);
+  let editorTitle = $derived(`Edit: ${placeholder}`);
   let openEditor = $state<boolean>(false);
 
   let internal = $state(value ?? "");
@@ -60,8 +59,8 @@
     ✎
   </button>
 
-  {#if label}
-    <label for={uid}>{label}</label>
+  {#if placeholder}
+    <label for={uid}>{placeholder}</label>
   {/if}
 </div>
 

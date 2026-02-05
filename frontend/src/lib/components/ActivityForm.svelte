@@ -53,12 +53,12 @@
     onchange={(v) => update("type", v || (bulk ? undefined : v))}
   />
   <TextArea
-    label="Observed activity"
+    placeholder="Observed activity"
     value={value.observed}
     onchange={(v) => update("observed", v || bulk ? undefined : v)}
   />
   <TextArea
-    label="Comment"
+    placeholder="Comment"
     value={value.comment}
     onchange={(v) => update("comment", v || bulk ? undefined : v)}
   />

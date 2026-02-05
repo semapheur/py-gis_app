@@ -4,7 +4,7 @@ import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector";
 import View from "ol/View.js";
 import XYZ from "ol/source/XYZ";
-import { Draw } from "ol/interaction";
+import { Draw, defaults } from "ol/interaction";
 import VectorSource from "ol/source/Vector";
 import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
 
@@ -40,15 +40,31 @@ export class AreaMapState {
       target: target,
       layers: [mapLayer, polygonLayer],
       view: mapView,
+      interactions: defaults({
+        doubleClickZoom: false,
+      }),
     });
   }
-  private createDrawInteraction() {
+
+  private createDrawInteraction(areaEditorState: AreaEditorState) {
     const draw = new Draw({
       source: this.#polygonSource,
       type: "Polygon",
     });
 
-    draw.on("drawend", (e) => {});
+    draw.on("drawend", (e) => {
+      const feature = e.feature;
+      const geometry = feature.getGeometry();
+
+      if (geometry?.getType() === "Polygon") {
+        areaEditorState.setGeometry(geometry);
+      }
+
+      if (this.#drawInteraction) {
+        this.#map?.removeInteraction(this.#drawInteraction);
+        this.#drawInteraction = null;
+      }
+    });
     return draw;
   }
 
@@ -67,10 +83,15 @@ export class AreaMapState {
 
     if (this.#drawInteraction) {
       this.#map.removeInteraction(this.#drawInteraction);
+      this.#drawInteraction = null;
+      return;
     }
 
-    const draw = this.createDrawInteraction();
+    if (!areaEditorState.drawMode) return;
 
+    this.#polygonSource.clear();
+
+    const draw = this.createDrawInteraction(areaEditorState);
     this.#drawInteraction = draw;
     this.#map.addInteraction(draw);
   }
