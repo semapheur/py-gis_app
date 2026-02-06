@@ -5,13 +5,18 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.annotations.models import (
+from src.const import STATIC_DIR
+from src.hashing import decode_sha256_from_b64
+from src.index.images import get_image_info, get_images_by_intersection
+from src.index.radiometric import get_radiometric_parameters
+from src.models.annotation import (
   AnnotationUpdate,
   delete_annotations,
   get_annotations,
   update_annotations,
 )
-from src.attributes.models import (
+from src.models.areas import AreaUpdate, update_area
+from src.models.attributes import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
   get_attribute_data,
@@ -20,10 +25,6 @@ from src.attributes.models import (
   search_equipment,
   update_attributes,
 )
-from src.const import STATIC_DIR
-from src.hashing import decode_sha256_from_b64
-from src.index.images import get_image_info, get_images_by_intersection
-from src.index.radiometric import get_radiometric_parameters
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -150,6 +151,10 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_delete_annotations()
       return
 
+    if self.path == "/api/update-area":
+      self._post_update_area()
+      return
+
     self.send_error(404, "Unknown POST endpoint")
 
   def do_OPTIONS(self):
@@ -269,6 +274,14 @@ class Handler(SimpleHTTPRequestHandler):
     def logic(payload: dict[str, list[str]]):
       delete_annotations(payload)
       return {"message": "Successfully deleted annotations"}
+
+    self._handle_post(logic)
+
+  def _post_update_area(self):
+    def logic(payload: AreaUpdate):
+      name = update_area(payload)
+      if name is not None:
+        self.send_error(409, f"Area with '{name}' already exist!")
 
     self._handle_post(logic)
 

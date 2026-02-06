@@ -3,6 +3,7 @@
     value?: string | number | null;
     placeholder?: string;
     required?: boolean;
+    invalid?: boolean;
     fieldSizing?: "content" | "fixed";
     oninput?: (value: string) => void;
     onfocus?: () => void;
@@ -13,6 +14,7 @@
     value = null,
     placeholder,
     required = false,
+    invalid = false,
     fieldSizing = "fixed",
     oninput,
     onfocus,
@@ -32,6 +34,7 @@
 <div class="container">
   <input
     id={uid}
+    class:invalid
     {placeholder}
     bind:value={internal}
     {required}
@@ -70,6 +73,10 @@
   input {
     padding: var(--size-sm);
     max-width: 100%;
+
+    &.invalid {
+      border-color: red;
+    }
 
     &::placeholder {
       color: transparent;
