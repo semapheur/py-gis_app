@@ -15,7 +15,7 @@ from src.models.annotation import (
   get_annotations,
   update_annotations,
 )
-from src.models.areas import AreaUpdate, update_area
+from src.models.areas import AreaUpdate, get_areas, update_area
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
@@ -73,6 +73,10 @@ class Handler(SimpleHTTPRequestHandler):
     if self.path.startswith(prefix):
       image_id = self.path[len(prefix) :]
       self._get_annotations(image_id)
+      return
+
+    if self.path == "/api/get-areas":
+      self._get_areas()
       return
 
     if self.path.startswith("/api"):
@@ -336,3 +340,7 @@ class Handler(SimpleHTTPRequestHandler):
     image_hash = decode_sha256_from_b64(image_id)
     annotations = get_annotations(image_hash)
     self._json_response(annotations)
+
+  def _get_areas(self):
+    areas = get_areas()
+    self._json_response(areas)

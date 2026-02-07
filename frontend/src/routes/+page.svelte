@@ -6,6 +6,7 @@
   import CoordinateSearch from "$lib/components/CoordinateSearch.svelte";
 
   import { setMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import AreaBrowser from "$lib/components/AreaBrowser.svelte";
 
   const tabs = [
     { name: "Areas", value: "areas" },
@@ -13,7 +14,7 @@
   ] as const;
   type Tabs = (typeof tabs)[number]["value"];
 
-  let activeTab = $state<Tabs>("coordinates");
+  let activeTab = $state<Tabs>("areas");
 
   setMapLibreState();
 
@@ -35,7 +36,9 @@
       />
     </header>
     <main class="panel-content">
-      {#if activeTab === "coordinates"}
+      {#if activeTab === "areas"}
+        <AreaBrowser />
+      {:else if activeTab === "coordinates"}
         <CoordinateSearch />
       {/if}
     </main>

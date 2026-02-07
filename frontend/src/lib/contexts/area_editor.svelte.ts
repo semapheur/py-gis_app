@@ -50,7 +50,7 @@ export class AreaEditorState {
       id: crypto.randomUUID(),
       name: this.data.name,
       description: this.data.description,
-      polygon: format.writeGeometry(this.data!.geometry),
+      geometry: format.writeGeometry(this.data!.geometry),
       createdByUserId: "",
       createdAtTimestamp: Date.now(),
     };

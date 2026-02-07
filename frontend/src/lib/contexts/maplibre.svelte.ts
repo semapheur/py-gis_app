@@ -10,8 +10,15 @@ type Coordinates = [
   [number, number],
 ];
 
+interface PolygonLink {
+  geometry: GeoJSON.Polygon;
+  label: string;
+  href: string;
+}
+
 export class MapLibreState {
   #map: maplibre.Map | null = null;
+  #isLoaded: boolean = false;
   #resizeObserver: ResizeObserver | null = null;
   #initialExtent: GeoJSON.Polygon | null = null;
 
@@ -47,6 +54,7 @@ export class MapLibreState {
     map.addControl(new maplibre.NavigationControl(), "top-right");
 
     map.on("load", () => {
+      this.#isLoaded = true;
       this.applyInitialExtent();
     });
 
@@ -79,7 +87,7 @@ export class MapLibreState {
     }
   }
 
-  private upsertFootprint(coords: GeoJSON.Position[]) {
+  private upsertPolygon(coords: GeoJSON.Position[]) {
     if (!this.#map) return;
 
     const src = this.#map.getSource("footprint") as
@@ -162,7 +170,7 @@ export class MapLibreState {
     ];
   }
 
-  private reorderFootprint(coords: GeoJSON.Position[]): Coordinates {
+  private reorderPolygon(coords: GeoJSON.Position[]): Coordinates {
     if (!this.#map) return;
     // Maplibre order: top-left, top-right, bottom-right, bottom left
 
@@ -232,11 +240,11 @@ export class MapLibreState {
   }
 
   public setImagePreview(preview: ImagePreviewInfo) {
-    const ordered = this.reorderFootprint(preview.coordinates);
+    const ordered = this.reorderPolygon(preview.coordinates);
     const url = `/thumbnails/${preview.filename}.png`;
 
     this.upsertImageSource("image-preview", url, ordered);
-    this.upsertFootprint(preview.coordinates);
+    this.upsertPolygon(preview.coordinates);
 
     this.fitToPolygon(preview.coordinates, {
       bearing: preview.azimuth_angle,
@@ -278,6 +286,100 @@ export class MapLibreState {
       curve: 1.0,
       essential: true,
       ...options,
+    });
+  }
+
+  public setPolygonLinks(features: PolygonLink[]) {
+    if (!this.#map) return;
+
+    if (!this.#isLoaded) {
+      this.#map.once("load", () => this.setPolygonLinks(features));
+      return;
+    }
+
+    const sourceId = "polygon-links";
+    const fillLayerId = `${sourceId}-fill`;
+    const lineLayerId = `${sourceId}-line`;
+    const labelLayerId = `${sourceId}-label`;
+
+    const geojson: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: features.map((f) => ({
+        type: "Feature",
+        geometry: f.geometry,
+        properties: {
+          label: f.label,
+          href: f.href,
+        },
+      })),
+    };
+
+    const existingSource = this.#map.getSource(sourceId) as
+      | maplibre.GeoJSONSource
+      | undefined;
+
+    if (existingSource) {
+      existingSource.setData(geojson);
+      return;
+    }
+
+    this.#map.addSource(sourceId, {
+      type: "geojson",
+      data: geojson,
+    });
+
+    this.#map.addLayer({
+      id: fillLayerId,
+      type: "fill",
+      source: sourceId,
+      paint: {
+        "fill-color": "#007aff",
+        "fill-opacity": 0.25,
+      },
+    });
+
+    this.#map.addLayer({
+      id: lineLayerId,
+      type: "line",
+      source: sourceId,
+      paint: {
+        "line-color": "#007aff",
+        "line-width": 2,
+      },
+    });
+
+    this.#map.addLayer({
+      id: labelLayerId,
+      type: "symbol",
+      source: sourceId,
+      layout: {
+        "text-field": ["get", "label"],
+        "text-size": 14,
+        "text-anchor": "center",
+      },
+      paint: {
+        "text-color": "#111",
+        "text-halo-color": "#ffffff",
+        "text-halo-width": 2,
+      },
+    });
+
+    this.#map.on("click", fillLayerId, (e) => {
+      const feature = e.features?.[0];
+      const link = feature?.properties?.href;
+
+      if (link) {
+        window.location.href = link;
+      }
+    });
+
+    // Pointer cursor
+    this.#map.on("mouseenter", fillLayerId, () => {
+      this.#map!.getCanvas().style.cursor = "pointer";
+    });
+
+    this.#map.on("mouseleave", fillLayerId, () => {
+      this.#map!.getCanvas().style.cursor = "";
     });
   }
 }

@@ -6,6 +6,7 @@ import View from "ol/View.js";
 import XYZ from "ol/source/XYZ";
 import { Draw, defaults } from "ol/interaction";
 import VectorSource from "ol/source/Vector";
+import { Polygon } from "ol/geom";
 import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
 
 export class AreaMapState {
@@ -57,7 +58,11 @@ export class AreaMapState {
       const geometry = feature.getGeometry();
 
       if (geometry?.getType() === "Polygon") {
-        areaEditorState.setGeometry(geometry);
+        const geometry4326 = geometry
+          .clone()
+          .transform("EPSG:3857", "EPSG:4326") as Polygon;
+
+        areaEditorState.setGeometry(geometry4326);
       }
 
       if (this.#drawInteraction) {

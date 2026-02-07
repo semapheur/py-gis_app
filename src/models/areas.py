@@ -65,3 +65,14 @@ def update_area(payload: AreaUpdate):
 
     model = AreasTable.from_dict(payload, json=True)
     db.insert_models((model,), on_conflict=on_conflict)
+
+
+def get_areas():
+  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+    areas = db.select_records(
+      AreasTable,
+      columns=("id", "name", "geometry"),
+      geo_format="AsGeoJSON",
+      to_json=True,
+    )
+    return areas
