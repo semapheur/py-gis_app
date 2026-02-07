@@ -471,7 +471,7 @@
 
   .drop-message {
     background: #4a90e2;
-    color: rgb(var(--color-text));
+    color: oklch(var(--color-text));
     padding: 1rem 2rem;
     border-radius: var(--size-sm);
     font-size: var(--text-lg);
@@ -487,6 +487,6 @@
   .grid-footer {
     min-height: calc(1rem + var(--size-sm));
     padding: var(--size-sm);
-    background: rgb(var(--color-accent));
+    background: oklch(var(--color-accent));
   }
 </style>

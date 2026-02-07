@@ -1,5 +1,6 @@
 <script lang="ts">
-  import Input from "./Input.svelte";
+  import Input from "$lib/components/Input.svelte";
+  import Button from "$lib/components/Button.svelte";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
 
   interface AreaInfo {
@@ -38,7 +39,7 @@
 <div class="area-browser">
   <form class="area-search">
     <Input placeholder="Name" />
-    <button>Search</button>
+    <Button>Search</Button>
   </form>
   <nav>
     {#each areas as area}

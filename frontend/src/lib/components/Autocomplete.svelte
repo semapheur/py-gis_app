@@ -43,22 +43,6 @@
     open = false;
   }
 
-  function clear() {
-    onchange?.(null);
-    open = false;
-  }
-
-  function handlePointerDown(e: PointerEvent) {
-    if (container.contains(e.target as Node)) return;
-
-    open = false;
-
-    if (!value || query !== value.label) {
-      query = "";
-      value = null;
-    }
-  }
-
   function onblur() {
     setTimeout(() => {
       open = false;
@@ -125,7 +109,7 @@
     padding: 0;
     overflow-y: scroll;
     z-index: 10;
-    background: rgb(var(--color-accent));
+    background: oklch(var(--color-accent));
   }
 
   li {

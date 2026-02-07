@@ -1,5 +1,6 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
+  import Button from "$lib/components/Button.svelte";
   import { parseCoordinates } from "$lib/utils/geo/coord";
   import { LatLon } from "$lib/utils/geo/latlon";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
@@ -31,7 +32,7 @@
       fieldSizing="content"
       oninput={(v) => (coordinates = v)}
     />
-    <button type="button" onclick={submit}>Parse</button>
+    <Button type="button" onclick={submit}>Parse</Button>
   </form>
   {#if history.length > 0}
     <nav>
@@ -41,7 +42,7 @@
           <a href="/search?wkt=${encodeURIComponent(latlon.toWkt())}"
             >{latlon.print("dms", 0)}</a
           >
-          <button type="button" onclick={() => deleteAt(i)}>Delete</button>
+          <Button type="button" onclick={() => deleteAt(i)}>Delete</Button>
         </div>
       {/each}
     </nav>
@@ -62,6 +63,6 @@
     min-width: 0;
     gap: var(--size-sm);
     padding-bottom: var(--size-md);
-    border-bottom: 1px solid rgb(var(--color-accent));
+    border-bottom: 1px solid oklch(var(--color-accent));
   }
 </style>

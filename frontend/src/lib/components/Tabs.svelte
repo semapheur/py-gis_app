@@ -39,7 +39,7 @@
     }
 
     &:not(.selected):hover {
-      color: rgb(var(--color-secondary));
+      color: oklch(var(--color-secondary));
       cursor: pointer;
     }
   }

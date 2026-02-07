@@ -47,8 +47,8 @@
     position: absolute;
     display: flex;
     flex-direction: column;
-    background: rgb(var(--color-accent));
-    border: 1px solid rgba(var(--color-text));
+    background: oklch(var(--color-accent));
+    border: 1px solid oklch(var(--color-text));
     z-index: 1;
 
     & :global(button[role="menuitem"]) {
@@ -59,12 +59,12 @@
       padding: 0 var(--size-md);
 
       &:not(:last-child) {
-        border-bottom: 1px solid rgba(var(--color-text) / 0.5);
+        border-bottom: 1px solid oklch(var(--color-text) / 0.5);
       }
 
       &:hover,
       &:focus-visible {
-        background: rgba(var(--color-primary) / 0.5);
+        background: oklch(var(--color-primary) / 0.5);
       }
     }
   }

@@ -105,7 +105,7 @@
     grid-template-rows: auto 1fr;
     overflow: hidden;
     user-select: none;
-    background: rgb(var(--color-primary));
+    background: oklch(var(--color-primary));
   }
 
   .window-header {
@@ -113,8 +113,8 @@
     display: grid;
     grid-template-columns: 1fr auto;
     padding: 0 var(--size-md);
-    background: rgb(var(--color-accent));
-    color: rgb(var(--color-text));
+    background: oklch(var(--color-accent));
+    color: oklch(var(--color-text));
   }
 
   .header-buttons {
@@ -138,7 +138,7 @@
     width: var(--size-lg);
     height: var(--size-lg);
     cursor: se-resize;
-    background: rgba(var(--color-text) / 0.5);
+    background: oklch(var(--color-text) / 0.5);
     clip-path: polygon(100% 100%, 100% 0, 0 100%);
   }
 </style>

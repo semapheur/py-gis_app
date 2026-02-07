@@ -51,8 +51,8 @@
       content: "";
       width: var(--arrow-size);
       height: var(--arrow-size);
-      border-right: 1px solid rgb(var(--color-text));
-      border-bottom: 1px solid rgb(var(--color-text));
+      border-right: 1px solid oklch(var(--color-text));
+      border-bottom: 1px solid oklch(var(--color-text));
       transform: rotate(-45deg);
       transition: transform var(--duration-normal);
     }
@@ -62,7 +62,7 @@
     display: none;
     margin-left: var(--arrow-size);
     padding-left: var(--arrow-gap);
-    border-left: 1px solid rgb(var(--color-secondary));
+    border-left: 1px solid oklch(var(--color-secondary));
   }
 
   .collapsible-input {

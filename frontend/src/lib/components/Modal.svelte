@@ -10,16 +10,6 @@
   let { open = $bindable(), children }: Props = $props();
   let dialog = $state<HTMLDialogElement | null>(null);
 
-  function teleport(element: HTMLElement) {
-    document.body.appendChild(element);
-
-    return {
-      destroy() {
-        if (element.parentNode) element.parentNode.removeChild(element);
-      },
-    };
-  }
-
   $effect(() => {
     if (!dialog) return;
 

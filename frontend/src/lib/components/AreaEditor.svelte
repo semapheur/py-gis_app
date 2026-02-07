@@ -1,7 +1,8 @@
 <script lang="ts">
   import { getAreaEditorState } from "$lib/contexts/area_editor.svelte";
-  import Input from "./Input.svelte";
-  import TextArea from "./TextArea.svelte";
+  import Input from "$lib/components/Input.svelte";
+  import TextArea from "$lib/components/TextArea.svelte";
+  import Button from "$lib/components/Button.svelte";
 
   const editor = getAreaEditorState();
 </script>
@@ -19,11 +20,11 @@
     />
   </form>
   <div class="button-group">
-    <button onclick={() => editor.toggleDraw()}
-      >{editor.hasPolygon ? "Redraw polygon" : "Draw polygon"}</button
+    <Button onclick={() => editor.toggleDraw()}
+      >{editor.hasPolygon ? "Redraw polygon" : "Draw polygon"}</Button
     >
-    <button disabled={!editor.valid()} onclick={() => editor.persist()}
-      >Save</button
+    <Button disabled={!editor.valid()} onclick={() => editor.persist()}
+      >Save</Button
     >
   </div>
 </aside>

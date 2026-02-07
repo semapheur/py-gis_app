@@ -20,12 +20,12 @@
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
 
-  --color-primary: 245 245 244;
-  --color-accent: 214 211 209;
-  --color-secondary: 161 98 7;
-  --color-text: 9 9 11;
-  --color-positive: 101 163 13;
-  --color-negative: 220 38 38;
+  --color-primary: 98.5% 0.001 106.423;
+  --color-accent: 70.9% 0.01 56.259;
+  --color-secondary: 82.8% 0.189 84.429;
+  --color-text: 21.6% 0.006 56.043;
+  --color-positive: 79.2% 0.209 151.711;
+  --color-negative: 63.7% 0.237 25.331;
 
   --size-xs: 0.125rem;
   --size-sm: 0.25rem;
@@ -50,8 +50,8 @@
 }
 
 html {
-  background-color: rgb(var(--color-primary));
-  color: rgb(var(--color-text));
+  background-color: oklch(var(--color-primary));
+  color: oklch(var(--color-text));
 }
 
 html,

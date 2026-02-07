@@ -41,13 +41,13 @@
     top: 0;
     right: 0;
     padding: 0 var(--size-lg);
-    background: rgb(var(--color-primary));
+    background: oklch(var(--color-primary));
   }
 
   .header {
     display: flex;
     justify-content: start;
     gap: var(--size-md);
-    border-bottom: 1px solid rgba(var(--color-text) / 0.5);
+    border-bottom: 1px solid oklch(var(--color-text) / 0.5);
   }
 </style>

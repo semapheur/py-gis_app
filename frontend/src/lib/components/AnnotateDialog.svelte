@@ -3,6 +3,7 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import Select from "$lib/components/Select.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
+  import Button from "$lib/components/Button.svelte";
   import CloseButton from "$lib/components/CloseButton.svelte";
 
   import {
@@ -59,14 +60,14 @@
           onchange={(v) => annotate.setGeometry(v)}
         />
       {/key}
-      <button
+      <Button
         class="button-annotate"
         class:draw={annotate.active}
         disabled={!annotate.validData}
         onclick={() => annotate.toggleActive()}
       >
         {annotate.active ? "Stop" : "Annotate"}
-      </button>
+      </Button>
     </footer>
   </div>
 {/if}
@@ -80,7 +81,7 @@
     bottom: var(--size-sm);
     left: var(--size-sm);
     z-index: 2;
-    background: rgb(var(--color-primary));
+    background: oklch(var(--color-primary));
     border-radius: var(--size-md);
     padding: var(--size-md);
   }
@@ -88,7 +89,7 @@
   .header {
     display: flex;
     justify-content: space-between;
-    border-bottom: 1px solid rgba(var(--color-text) / 0.5);
+    border-bottom: 1px solid oklch(var(--color-text) / 0.5);
   }
 
   .footer {
@@ -96,14 +97,14 @@
     justify-content: end;
     gap: var(--size-sm);
     padding-top: var(--size-sm);
-    border-top: 1px solid rgba(var(--color-text) / 0.5);
+    border-top: 1px solid oklch(var(--color-text) / 0.5);
   }
 
   .button-annotate {
-    background: rgba(var(--color-positive) / 0.8);
+    background: oklch(var(--color-positive) / 0.8);
 
     &.draw {
-      background: rgb(var(--color-negative));
+      background: oklch(var(--color-negative));
     }
   }
 </style>

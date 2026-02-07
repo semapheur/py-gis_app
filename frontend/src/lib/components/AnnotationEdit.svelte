@@ -3,6 +3,7 @@
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
+  import Button from "$lib/components/Button.svelte";
   import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
   import { type EquipmentData } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
@@ -164,10 +165,17 @@
         {/if}
       {/key}
       <footer class="edit-footer">
-        <button class="button-save" disabled={!validForm} onclick={saveEdits}>
+        <Button
+          background="oklch(var(--color-positive))"
+          disabled={!validForm}
+          onclick={saveEdits}
+        >
           Save
-        </button>
-        <button class="button-delete" onclick={deleteFeature}> Delete </button>
+        </Button>
+        <Button
+          background="oklch(var(--color-negative))"
+          onclick={deleteFeature}>Delete</Button
+        >
       </footer>
     {:else if bulkEdit}
       <EquipmentForm
@@ -178,13 +186,13 @@
       />
 
       <footer class="edit-footer">
-        <button
-          class="button-save"
+        <Button
+          background="oklch(var(--color-positive))"
           disabled={!validBulkForm}
           onclick={applyBulkEdit}
         >
           Apply to {selectedFeatures.length}
-        </button>
+        </Button>
 
         <button onclick={() => (bulkEdit = false)}> Cancel </button>
       </footer>
@@ -199,27 +207,19 @@
     position: absolute;
     top: 0;
     right: 0;
-    background: rgb(var(--color-primary));
+    background: oklch(var(--color-primary));
     z-index: 1;
   }
 
   .edit-header {
     display: flex;
     gap: var(--size-md);
-    border-bottom: 1px solid rgb(var(--color-text));
+    border-bottom: 1px solid oklch(var(--color-text));
   }
 
   .edit-heading {
     margin: 0;
     font-size: var(--text-lg);
     font-weight: var(--font-bold);
-  }
-
-  .button-save {
-    background: rgba(var(--color-positive) / 0.8);
-  }
-
-  .button-delete {
-    background: rgba(var(--color-negative) / 0.8);
   }
 </style>

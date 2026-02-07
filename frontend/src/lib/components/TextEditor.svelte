@@ -174,7 +174,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: rgb(var(--color-accent));
+    background: oklch(var(--color-accent));
     flex-shrink: 0;
   }
 
