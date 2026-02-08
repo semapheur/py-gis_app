@@ -88,7 +88,7 @@
   }
 </script>
 
-<form class="form">
+<form class="equipment-annotation">
   <Autocomplete
     value={selectedEquipment}
     placeholder="Equipment"
@@ -116,9 +116,9 @@
 </form>
 
 <style>
-  .form {
+  .equipment-annotation {
     display: flex;
     flex-direction: column;
-    gap: var(--size-xs);
+    gap: var(--size-lg);
   }
 </style>

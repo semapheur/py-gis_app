@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import type { HTMLButtonAttributes } from "svelte/elements";
+  import type { HTMLAnchorAttributes } from "svelte/elements";
 
-  interface Props extends HTMLButtonAttributes {
+  interface Props extends HTMLAnchorAttributes {
     children: Snippet;
     background?: string;
   }
@@ -10,13 +10,15 @@
   let { children, background, ...rest }: Props = $props();
 </script>
 
-<button style:background-color={background ?? undefined} {...rest}>
+<a style:background-color={background ?? undefined} {...rest}>
   {@render children()}
-</button>
+</a>
 
 <style>
-  button {
-    appearance: none;
+  a {
+    color: inherit;
+    text-decoration: none;
+    font: inherit;
     padding: var(--size-md);
     background-color: oklch(var(--color-secondary));
     border: none;

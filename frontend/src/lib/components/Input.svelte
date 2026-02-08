@@ -31,7 +31,7 @@
   const uid = $props.id();
 </script>
 
-<div class="container">
+<div class="input">
   <input
     id={uid}
     class:invalid
@@ -49,13 +49,8 @@
 </div>
 
 <style>
-  :root {
-    --top-float: 0rem;
-  }
-
-  .container {
+  .input {
     position: relative;
-    margin-top: var(--text-2xs);
     min-width: 0;
   }
 
@@ -63,16 +58,19 @@
     position: absolute;
     left: var(--size-md);
     font-size: var(--text-2xs);
-    top: var(--top-float);
+    top: 0;
     transform: translateY(-50%);
     transition: all 0.15s ease;
-    background-color: white;
     pointer-events: none;
+    text-shadow: var(--text-shadow);
   }
 
   input {
-    padding: var(--size-sm);
+    padding: var(--size-md);
     max-width: 100%;
+    font-size: inherit;
+    border: 1px solid oklch(var(--color-accent));
+    border-radius: var(--size-sm);
 
     &.invalid {
       border-color: red;
@@ -86,13 +84,14 @@
       font-size: inherit;
       background-color: transparent;
       transform: translateY(0);
+      top: var(--size-sm);
     }
 
     &:focus + label {
       font-size: var(--text-2xs);
-      top: var(--top-float);
+      top: 0;
       transform: translateY(-50%);
-      background-color: white;
+      text-shadow: var(--text-shadow);
     }
   }
 </style>

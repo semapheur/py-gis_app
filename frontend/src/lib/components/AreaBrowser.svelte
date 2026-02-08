@@ -56,8 +56,18 @@
 </div>
 
 <style>
+  .area-browser {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    padding: var(--size-md);
+    gap: var(--size-md);
+  }
+
   .area-search {
     display: flex;
+    gap: var(--size-md);
+    padding-bottom: var(--size-md);
+    border-bottom: 1px solid oklch(var(--color-accent));
   }
 
   .area-row {

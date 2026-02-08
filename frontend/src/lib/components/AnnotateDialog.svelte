@@ -62,7 +62,9 @@
       {/key}
       <Button
         class="button-annotate"
-        class:draw={annotate.active}
+        background={annotate.active
+          ? "oklch(var(--color-negative))"
+          : "oklch(var(--color-positive))"}
         disabled={!annotate.validData}
         onclick={() => annotate.toggleActive()}
       >

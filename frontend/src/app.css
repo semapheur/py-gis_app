@@ -41,6 +41,14 @@
   --font-bold: 700;
 
   --duration-normal: 250ms;
+
+  --text-shadow:
+    -1px -1px 0 oklch(var(--color-primary)),
+    1px -1px 0 oklch(var(--color-primary)),
+    -1px 1px 0 oklch(var(--color-primary)),
+    1px 1px 0 oklch(var(--color-primary)), -1px 0 0 oklch(var(--color-primary)),
+    1px 0 0 oklch(var(--color-primary)), 0 -1px 0 oklch(var(--color-primary)),
+    0 1px 0 oklch(var(--color-primary));
 }
 
 *,

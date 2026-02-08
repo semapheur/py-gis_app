@@ -29,7 +29,7 @@
   );
 </script>
 
-<div class="container">
+<div class="select">
   <select
     id={uid}
     bind:value
@@ -58,9 +58,8 @@
     --top-float: 0;
   }
 
-  .container {
+  .select {
     position: relative;
-    margin-top: var(--text-2xs);
   }
 
   label {
@@ -70,13 +69,14 @@
     top: var(--top-float);
     transform: translateY(-50%);
     transition: all 0.15s ease;
-    background-color: white;
+    text-shadow: var(--text-shadow);
     pointer-events: none;
   }
 
   select {
     width: 100%;
     padding: var(--size-sm);
+    border-radius: var(--size-sm);
 
     /* hide placeholder text */
     &:has(option[value=""]:checked) + label {
@@ -89,7 +89,7 @@
       font-size: var(--text-2xs);
       top: var(--top-float);
       transform: translateY(-50%);
-      background-color: white;
+      text-shadow: var(--text-shadow);
     }
   }
 </style>

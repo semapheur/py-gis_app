@@ -40,7 +40,7 @@
   const uid = $props.id();
 </script>
 
-<div class="container">
+<div class="text-area">
   <textarea
     id={uid}
     {placeholder}
@@ -75,11 +75,10 @@
     --top-float: 0rem;
   }
 
-  .container {
+  .text-area {
     position: relative;
     display: flex;
     flex-direction: column;
-    margin-top: var(--text-2xs);
   }
 
   .editor-button {
@@ -96,7 +95,7 @@
     top: var(--top-float);
     transform: translateY(-50%);
     transition: all 0.15s ease;
-    background-color: white;
+    text-shadow: var(--text-shadow);
     pointer-events: none;
   }
 
@@ -118,7 +117,7 @@
       font-size: var(--text-2xs);
       top: var(--top-float);
       transform: translateY(-50%);
-      background-color: white;
+      text-shadow: var(--text-shadow);
     }
   }
 </style>
