@@ -15,7 +15,13 @@ from src.models.annotation import (
   get_annotations,
   update_annotations,
 )
-from src.models.areas import AreaUpdate, get_areas, update_area
+from src.models.areas import (
+  AreaDelete,
+  AreaUpdate,
+  delete_areas,
+  get_areas,
+  update_area,
+)
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
   AttributeUpdate,
@@ -159,6 +165,10 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_update_area()
       return
 
+    if self.path == "/api/delete-areas":
+      self._post_delete_area()
+      return
+
     self.send_error(404, "Unknown POST endpoint")
 
   def do_OPTIONS(self):
@@ -286,6 +296,12 @@ class Handler(SimpleHTTPRequestHandler):
       name = update_area(payload)
       if name is not None:
         self.send_error(409, f"Area with '{name}' already exist!")
+
+    self._handle_post(logic)
+
+  def _post_delete_areas(self):
+    def logic(payload: AreaDelete):
+      delete_areas(payload)
 
     self._handle_post(logic)
 

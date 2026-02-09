@@ -2,6 +2,7 @@
   import "maplibre-gl/dist/maplibre-gl.css";
   import { type ImagePreviewInfo } from "$lib/utils/types";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import Button from "$lib/components/Button.svelte";
 
   interface Props {
     extent?: GeoJSON.Polygon | null;
@@ -37,9 +38,9 @@
 
 <div class="map" {@attach (el) => mapLibre.attach(el)}>
   {#if showSearchButton}
-    <button class="search-extent" onclick={searchCurrentExtent}>
+    <Button class="search-extent" onclick={searchCurrentExtent}>
       Search extent
-    </button>
+    </Button>
   {/if}
 </div>
 
@@ -49,6 +50,7 @@
     width: 100%;
     height: 100%;
   }
+
   .search-extent {
     position: absolute;
     bottom: 1rem;

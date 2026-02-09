@@ -8,7 +8,7 @@
 </script>
 
 <aside class="area-editor">
-  <form>
+  <form class="area-form">
     <Input
       placeholder="Name"
       value={editor.data.name}
@@ -34,7 +34,13 @@
     display: flex;
     flex-direction: column;
     gap: var(--size-md);
-    padding: 0 var(--size-md);
+    padding: var(--size-md);
+  }
+
+  .area-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-lg);
   }
 
   .button-group {

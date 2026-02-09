@@ -76,3 +76,14 @@ def get_areas():
       to_json=True,
     )
     return areas
+
+
+class AreaDelete(TypedDict):
+  delete: list[str]
+
+
+def delete_areas(payload: AreaDelete):
+  delete_ids = [uuid.UUID(u) for u in payload["delete"]]
+
+  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+    db.delete_by_ids(AreasTable, delete_ids)

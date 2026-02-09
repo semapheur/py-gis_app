@@ -1,7 +1,7 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
-  import Button from "$lib/components/Button.svelte";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import LinkButton from "$lib/components/LinkButton.svelte";
 
   interface AreaInfo {
     id: string;
@@ -34,15 +34,30 @@
   $effect(() => {
     mapLibre.setPolygonLinks(polygonLinks);
   });
+
+  async function deleteArea(id: string) {
+    const response = await fetch("/api/delete-areas", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify({ delete: [id] }),
+    });
+
+    if (!response.ok) {
+      console.error(`Failed to delete area: ${id}`);
+      return;
+    }
+
+    areas = areas.filter((area) => area.id !== id);
+  }
 </script>
 
 <div class="area-browser">
   <form class="area-search">
+    <LinkButton href="/area">Add</LinkButton>
     <Input placeholder="Name" />
-    <Button>Search</Button>
   </form>
   <nav>
-    {#each areas as area}
+    {#each areas as area (area.id)}
       <div class="area-row">
         <button
           onclick={() => mapLibre.fitToPolygon(area.geometry.coordinates[0])}
@@ -50,6 +65,7 @@
         >
         <span>{area.name}</span>
         <a href={`/area/${area.id}`}>E</a>
+        <button onclick={() => deleteArea(area.id)}>D</button>
       </div>
     {/each}
   </nav>
@@ -72,5 +88,8 @@
 
   .area-row {
     display: flex;
+    gap: var(--size-md);
+    padding: var(--size-md);
+    border-bottom: 1px solid oklch(var(--color-accent));
   }
 </style>
