@@ -38,7 +38,10 @@
 
 <div class="map" {@attach (el) => mapLibre.attach(el)}>
   {#if showSearchButton}
-    <Button class="search-extent" onclick={searchCurrentExtent}>
+    <Button
+      onclick={searchCurrentExtent}
+      style="position:absolute;bottom:1rem;left:1rem;z-index:1;"
+    >
       Search extent
     </Button>
   {/if}
@@ -49,12 +52,5 @@
     position: relative;
     width: 100%;
     height: 100%;
-  }
-
-  .search-extent {
-    position: absolute;
-    bottom: 1rem;
-    left: 1rem;
-    z-index: 1;
   }
 </style>

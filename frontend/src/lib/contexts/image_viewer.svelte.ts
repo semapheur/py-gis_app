@@ -7,11 +7,16 @@ import GeoTIFF from "ol/source/GeoTIFF";
 import { Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature, { type FeatureLike } from "ol/Feature";
-import Geometry from "ol/geom/Geometry";
-import Point from "ol/geom/Point";
-import MultiPoint from "ol/geom/MultiPoint";
-import Polygon from "ol/geom/Polygon";
-import MultiPolygon from "ol/geom/MultiPolygon";
+import Overlay from "ol/Overlay";
+import {
+  Geometry,
+  Point,
+  LineString,
+  Polygon,
+  MultiPoint,
+  MultiPolygon,
+} from "ol/geom";
+import { getArea, getLength } from "ol/sphere";
 import {
   pointerMove,
   platformModifierKeyOnly,
@@ -31,8 +36,10 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
+import { unByKey } from "ol/Observable";
 
 type ViewerMode = "draw" | "edit";
+type MeasurementType = "length" | "area";
 
 export interface Enhancement {
   brightness: number;
@@ -48,6 +55,7 @@ interface ViewerInteractions {
   modify: Modify;
   translate: Translate;
   draw: Draw;
+  measureDraw?: Draw;
 }
 
 interface Options {
@@ -158,28 +166,56 @@ const MODE_INTERACTIONS = {
 } as const satisfies Record<ViewerMode, readonly (keyof ViewerInteractions)[]>;
 
 export class ImageViewerState {
+  #image: string | null = null;
   #map: Map | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #interactions!: ViewerInteractions;
-  #sources: Record<AnnotateForm, VectorSource>;
-  #image: string | null = null;
+  #annotationSources: Record<AnnotateForm, VectorSource>;
+  #measurementSource = new VectorSource();
+  #measurementOverlay: Overlay | null = null;
+  #measurementListener: ReturnType<typeof on> | null = null;
 
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
 
   constructor() {
-    this.#sources = {
+    this.#annotationSources = {
       equipment: new VectorSource(),
       activity: new VectorSource(),
     };
 
-    this.#sources.equipment.on("addfeature", () => {
-      this.#equipmentFeatures = this.#sources.equipment.getFeatures().slice();
+    this.#annotationSources.equipment.on("addfeature", () => {
+      this.#equipmentFeatures = this.#annotationSources.equipment
+        .getFeatures()
+        .slice();
     });
 
-    this.#sources.equipment.on("removefeature", () => {
-      this.#equipmentFeatures = this.#sources.equipment.getFeatures().slice();
+    this.#annotationSources.equipment.on("removefeature", () => {
+      this.#equipmentFeatures = this.#annotationSources.equipment
+        .getFeatures()
+        .slice();
     });
+
+    if (typeof document !== "undefined") {
+      const overlayElement = document.createElement("div");
+      overlayElement.className = "measurement-tooltip";
+      overlayElement.style.cssText = `
+            position: absolute;
+            background: rgba(0, 0, 0, 0.7);
+            color: white;
+            padding: 4px 8px;
+            border-radius: 4px;
+            font-size: 12px;
+            pointer-events: none;
+            white-space: nowrap;
+          `;
+
+      this.#measurementOverlay = new Overlay({
+        element: overlayElement,
+        offset: [0, -15],
+        positioning: "bottom-center",
+      });
+    }
   }
 
   get projection() {
@@ -200,7 +236,17 @@ export class ImageViewerState {
     this.#map?.dispose();
   }
 
-  private initMap(target: HTMLElement, options: Options) {
+  public attach(target: HTMLElement, options: Options) {
+    if (this.#map) return;
+
+    this.setupMap(target, options);
+
+    return () => {
+      this.destroy();
+    };
+  }
+
+  private setupMap(target: HTMLElement, options: Options) {
     this.#image = options.imageInfo.id!;
 
     const rasterSource = new GeoTIFF({
@@ -225,21 +271,51 @@ export class ImageViewerState {
     });
 
     const equipmentLayer = new VectorLayer({
-      source: this.#sources.equipment,
+      source: this.#annotationSources.equipment,
       style: (feature) => featureStyle(feature, equipmentColor, 0.7),
     });
     const activityLayer = new VectorLayer({
-      source: this.#sources.activity,
+      source: this.#annotationSources.activity,
       style: (feature) => {
         return featureStyle(feature, activityColor, 0.7, 0.0);
       },
     });
 
+    const measurementLayer = new VectorLayer({
+      source: this.#measurementSource,
+      style: new Style({
+        stroke: new Stroke({
+          color: "rgba(255, 0, 0, 0.8)",
+          width: 2,
+          lineDash: [10, 10],
+        }),
+        fill: new Fill({
+          color: "rgba(255, 0, 0, 0.1)",
+        }),
+        image: new Circle({
+          radius: 5,
+          fill: new Fill({
+            color: "rgba(255, 0, 0, 0.8)",
+          }),
+        }),
+      }),
+    });
+
     this.#map = new Map({
       target: target,
-      layers: [this.#rasterLayer, equipmentLayer, activityLayer],
+      layers: [
+        this.#rasterLayer,
+        equipmentLayer,
+        activityLayer,
+        measurementLayer,
+      ],
       view: rasterSource.getView(),
     });
+
+    if (this.#measurementOverlay) {
+      this.#map.addOverlay(this.#measurementOverlay);
+    }
+
     this.setupInteractions(options.annotateState);
 
     if (options.annotations?.length) {
@@ -317,7 +393,7 @@ export class ImageViewerState {
 
   private createDrawInteraction(annotateState: AnnotateState) {
     const draw = new Draw({
-      source: this.#sources[annotateState.layer],
+      source: this.#annotationSources[annotateState.layer],
       type: annotateState.geometry,
     });
 
@@ -375,7 +451,7 @@ export class ImageViewerState {
         data: record.data,
       });
 
-      this.#sources.equipment.addFeature(feature);
+      this.#annotationSources.equipment.addFeature(feature);
     }
   }
 
@@ -415,16 +491,6 @@ export class ImageViewerState {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
-  }
-
-  public attach(target: HTMLElement, options: Options) {
-    if (this.#map) return;
-
-    this.initMap(target, options);
-
-    return () => {
-      this.destroy();
-    };
   }
 
   public updateEnhancement(enhancement: Enhancement) {
@@ -483,7 +549,7 @@ export class ImageViewerState {
       const annotationType = feature.get("type") as AnnotateForm | null;
       if (!annotationType) continue;
 
-      const source = this.#sources[annotationType];
+      const source = this.#annotationSources[annotationType];
       if (!source) continue;
 
       selected.remove(feature);
@@ -507,6 +573,141 @@ export class ImageViewerState {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+  }
+
+  private formatLength(line: LineString): string {
+    const length = getLength(line, {
+      projection: this.projection || undefined,
+    });
+
+    const output =
+      length > 1000
+        ? `${(length / 1000).toFixed(2)} km`
+        : `${length.toFixed(2)} m`;
+
+    return output;
+  }
+
+  private formatArea(polygon: Polygon): string {
+    const area = getArea(polygon, { projection: this.projection || undefined });
+
+    const output =
+      area > 10000
+        ? `${(area / 1000000).toFixed(2)} km²`
+        : `${area.toFixed(2)} m²`;
+
+    return output;
+  }
+
+  public startMeasurement(type: MeasurementType) {
+    if (!this.#map) return;
+
+    this.#measurementSource.clear();
+
+    if (this.#interactions.measureDraw) {
+      this.#map.removeInteraction(this.#interactions.measureDraw);
+    }
+
+    this.setMode("edit");
+    Object.values(this.#interactions).forEach((i) => i.setActive(false));
+
+    const drawType = type === "length" ? "LineString" : "Polygon";
+    const measureDraw = new Draw({
+      source: this.#measurementSource,
+      type: drawType,
+      style: new Style({
+        stroke: new Stroke({
+          color: "rgba(255, 0, 0, 0.8)",
+          width: 2,
+          lineDash: [10, 10],
+        }),
+        fill: new Fill({
+          color: "rgba(255, 0, 0, 0.1)",
+        }),
+        image: new Circle({
+          radius: 5,
+          fill: new Fill({
+            color: "rgba(255, 0, 0, 0.8)",
+          }),
+        }),
+      }),
+    });
+
+    let sketch: Feature | null = null;
+    const tooltipElement = this.#measurementOverlay?.getElement();
+
+    measureDraw.on("drawstart", (e) => {
+      sketch = e.feature;
+
+      this.#measurementListener = sketch.getGeometry()!.on("change", (e) => {
+        const geom = e.target;
+        let tooltipText = "";
+
+        if (geom instanceof Polygon) {
+          tooltipText = this.formatArea(geom);
+          this.#measurementOverlay?.setPosition(
+            geom.getInteriorPoint().getCoordinates(),
+          );
+        } else if (geom instanceof LineString) {
+          tooltipText = this.formatLength(geom);
+          this.#measurementOverlay?.setPosition(geom.getLastCoordinate());
+        }
+
+        if (tooltipElement) {
+          tooltipElement.innerHTML = tooltipText;
+        }
+      });
+    });
+
+    measureDraw.on("drawend", (e) => {
+      if (tooltipElement) {
+        tooltipElement.className = "measurement-tooltip measurement-static";
+      }
+
+      if (this.#measurementListener) {
+        unByKey(this.#measurementListener);
+      }
+
+      sketch = null;
+
+      const feature = e.feature;
+      const geom = feature.getGeometry();
+      let tooltipText = "";
+      let position: number[] = [];
+
+      if (geom instanceof Polygon) {
+        tooltipText = this.formatArea(geom);
+        position = geom.getInteriorPoint().getCoordinates();
+      } else if (geom instanceof LineString) {
+        tooltipText = this.formatLength(geom);
+        position = geom.getLastCoordinate();
+      }
+
+      feature.set("measurement", tooltipText);
+    });
+
+    this.#interactions.measureDraw = measureDraw;
+    this.#map.addInteraction(measureDraw);
+  }
+
+  public stopMeasurement() {
+    if (!this.#map) return;
+
+    if (this.#interactions.measureDraw) {
+      this.#map.removeInteraction(this.#interactions.measureDraw);
+      delete this.#interactions.measureDraw;
+    }
+
+    if (this.#measurementListener) {
+      unByKey(this.#measurementListener);
+      this.#measurementListener = null;
+    }
+
+    if (this.#measurementOverlay) {
+      this.#measurementOverlay.setPosition(undefined);
+    }
+
+    this.setMode("edit");
   }
 }
 

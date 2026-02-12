@@ -6,12 +6,26 @@
   interface AreaInfo {
     id: string;
     name: string;
+    description: string;
     geometry: GeoJSON.Polygon;
   }
 
   let areas = $state<AreaInfo[]>([]);
+  let searchQuery = $state<string>("");
+
+  let filteredAreas = $derived.by(() => {
+    const q = searchQuery.trim().toLowerCase();
+    if (!q) return areas;
+
+    return areas.filter(
+      (area) =>
+        area.name.toLowerCase().includes(q) ||
+        area.description?.toLowerCase().includes(q),
+    );
+  });
+
   let polygonLinks = $derived(
-    areas.map(({ id, name, geometry }) => ({
+    filteredAreas.map(({ id, name, geometry }) => ({
       label: name,
       geometry,
       href: `/search?area=${id}`,
@@ -54,16 +68,23 @@
 <div class="area-browser">
   <form class="area-search">
     <LinkButton href="/area">Add</LinkButton>
-    <Input placeholder="Name" />
+    <Input
+      placeholder="Search"
+      value={searchQuery}
+      oninput={(v) => (searchQuery = v)}
+    />
   </form>
   <nav>
-    {#each areas as area (area.id)}
+    {#each filteredAreas as area (area.id)}
       <div class="area-row">
         <button
           onclick={() => mapLibre.fitToPolygon(area.geometry.coordinates[0])}
           >Z</button
         >
-        <span>{area.name}</span>
+        <span class="area-text">
+          <span class="area-name">{area.name}</span>
+          <span class="area-description">{area.description}</span>
+        </span>
         <a href={`/area/${area.id}`}>E</a>
         <button onclick={() => deleteArea(area.id)}>D</button>
       </div>
@@ -91,5 +112,15 @@
     gap: var(--size-md);
     padding: var(--size-md);
     border-bottom: 1px solid oklch(var(--color-accent));
+  }
+
+  .area-text {
+    display: flex;
+    flex-direction: column;
+  }
+
+  .area-description {
+    font-size: var(--text-sm);
+    opacity: oklch(var(--color-text) / 0.7);
   }
 </style>

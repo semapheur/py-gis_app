@@ -71,7 +71,7 @@ def get_areas():
   with SqliteDatabase(LOCATION_DB, spatial=True) as db:
     areas = db.select_records(
       AreasTable,
-      columns=("id", "name", "geometry"),
+      columns=("id", "name", "description", "geometry"),
       geo_format="AsGeoJSON",
       to_json=True,
     )
