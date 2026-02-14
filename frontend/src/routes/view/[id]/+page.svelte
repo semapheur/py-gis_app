@@ -5,10 +5,12 @@
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
   import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
   import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
-  import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
+  import MeasureDialog from "$lib/components/MeasureDialog.svelte";
+  import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
+  import Button from "$lib/components/Button.svelte";
   import { setAnnotateState } from "$lib/contexts/annotate.svelte";
   import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
-  import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
+  import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 
   let { data } = $props<{ data: PageData }>();
   const imageInfo: ImageInfo = $derived(data.imageInfo);
@@ -18,6 +20,7 @@
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
   let enhancementOpen = $state<boolean>(false);
+  let measurementOpen = $state<boolean>(false);
 
   setContext("equipment-options", {
     confidenceOptions: data.confidenceOptions.options,
@@ -30,19 +33,25 @@
 
 <div class="container">
   {#if !annotateOpen}
-    <button class="toggle-form" onclick={() => (annotateOpen = !annotateOpen)}>
-      Add
-    </button>
+    <div class="toggle-form">
+      <Button onclick={() => (annotateOpen = !annotateOpen)}>Add</Button>
+    </div>
   {/if}
   {#if !summaryOpen}
-    <button class="toggle-summary" onclick={() => (summaryOpen = !summaryOpen)}>
-      Summary
-    </button>
+    <div class="toggle-summary">
+      <Button onclick={() => (summaryOpen = !summaryOpen)}>Summary</Button>
+    </div>
   {/if}
-  <button
-    class="toggle-enhancement"
-    onclick={() => (enhancementOpen = !enhancementOpen)}>Enhancement</button
-  >
+  <div class="toggle-measurement">
+    <Button onclick={() => (measurementOpen = !measurementOpen)}>
+      Measure
+    </Button>
+  </div>
+  <div class="toggle-enhancement">
+    <Button onclick={() => (enhancementOpen = !enhancementOpen)}
+      >Enhancement</Button
+    >
+  </div>
   <AnnotateDialog bind:open={annotateOpen} />
   <ImageViewer {imageInfo} {radiometricParams} {annotations} />
   <AnnotationEdit />
@@ -51,6 +60,9 @@
     <div class="enhancement">
       <ImageEnhacement />
     </div>
+  {/if}
+  {#if measurementOpen}
+    <MeasureDialog />
   {/if}
 </div>
 
@@ -78,6 +90,14 @@
     position: absolute;
     right: var(--size-lg);
     bottom: var(--size-lg);
+    z-index: 1;
+  }
+
+  .toggle-measurement {
+    position: absolute;
+    left: 50%;
+    bottom: var(--size-lg);
+    transform: translateX(-50%);
     z-index: 1;
   }
 

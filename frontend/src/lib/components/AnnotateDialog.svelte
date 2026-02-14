@@ -27,7 +27,7 @@
 </script>
 
 {#if open}
-  <div class="container">
+  <div class="annotate-dialog">
     <header class="header">
       <Tabs
         tabs={annotateTabs}
@@ -61,7 +61,6 @@
         />
       {/key}
       <Button
-        class="button-annotate"
         background={annotate.active
           ? "oklch(var(--color-negative))"
           : "oklch(var(--color-positive))"}
@@ -75,7 +74,7 @@
 {/if}
 
 <style>
-  .container {
+  .annotate-dialog {
     position: absolute;
     display: flex;
     flex-direction: column;
@@ -100,13 +99,5 @@
     gap: var(--size-sm);
     padding-top: var(--size-sm);
     border-top: 1px solid oklch(var(--color-text) / 0.5);
-  }
-
-  .button-annotate {
-    background: oklch(var(--color-positive) / 0.8);
-
-    &.draw {
-      background: oklch(var(--color-negative));
-    }
   }
 </style>

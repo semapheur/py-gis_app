@@ -7,7 +7,7 @@ import GeoTIFF from "ol/source/GeoTIFF";
 import { Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature, { type FeatureLike } from "ol/Feature";
-import Overlay from "ol/Overlay";
+import { Projection } from "ol/proj";
 import {
   Geometry,
   Point,
@@ -22,7 +22,7 @@ import {
   platformModifierKeyOnly,
   shiftKeyOnly,
 } from "ol/events/condition";
-import { Circle, Fill, Stroke, Style, Text } from "ol/style";
+import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
 import WKT from "ol/format/WKT";
 import GeoJSON from "ol/format/GeoJSON";
 
@@ -36,7 +36,6 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
-import { unByKey } from "ol/Observable";
 
 type ViewerMode = "draw" | "edit";
 type MeasurementType = "length" | "area";
@@ -83,7 +82,95 @@ const activityColor = {
   stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
 };
 
-function textStyle(
+const measurementStyle = new Style({
+  fill: new Fill({
+    color: "rgba(255, 255, 255, 0.2)",
+  }),
+  stroke: new Stroke({
+    color: "rgba(0, 0, 0, 0.5)",
+    lineDash: [10, 10],
+    width: 2,
+  }),
+  image: new Circle({
+    radius: 5,
+    stroke: new Stroke({
+      color: "rgba(0, 0, 0, 0.7)",
+    }),
+    fill: new Fill({
+      color: "rgba(255, 255, 255, 0.2)",
+    }),
+  }),
+});
+
+const measurementLabelStyle = new Style({
+  text: new Text({
+    fill: new Fill({
+      color: "rgba(255, 255, 255, 1)",
+    }),
+    backgroundFill: new Fill({
+      color: "rgba(0, 0, 0, 0.7)",
+    }),
+    padding: [3, 3, 3, 3],
+    textBaseline: "bottom",
+    offsetY: -15,
+  }),
+  image: new RegularShape({
+    radius: 8,
+    points: 3,
+    angle: Math.PI,
+    displacement: [0, 10],
+    fill: new Fill({
+      color: "rgba(0, 0, 0, 0.7)",
+    }),
+  }),
+});
+
+const measurementSegmentStyle = new Style({
+  text: new Text({
+    fill: new Fill({
+      color: "rgba(255, 255, 255, 1)",
+    }),
+    backgroundFill: new Fill({
+      color: "rgba(0, 0, 0, 0.4)",
+    }),
+    padding: [2, 2, 2, 2],
+    textBaseline: "bottom",
+    offsetY: -12,
+  }),
+  image: new RegularShape({
+    radius: 6,
+    points: 3,
+    angle: Math.PI,
+    displacement: [0, 8],
+    fill: new Fill({
+      color: "rgba(0, 0, 0, 0.4)",
+    }),
+  }),
+});
+
+function formatLength(line: LineString, projection: Projection): string {
+  const length = getLength(line, { projection });
+
+  const output =
+    length > 1000
+      ? `${(length / 1000).toFixed(2)} km`
+      : `${length.toFixed(2)} m`;
+
+  return output;
+}
+
+function formatArea(polygon: Polygon, projection: Projection): string {
+  const area = getArea(polygon, { projection });
+
+  const output =
+    area > 10000
+      ? `${(area / 1000000).toFixed(2)} km²`
+      : `${area.toFixed(2)} m²`;
+
+  return output;
+}
+
+function styleAnnotationText(
   label: string,
   colorScheme: ColorScheme,
   alpha: number = 1.0,
@@ -97,7 +184,7 @@ function textStyle(
   });
 }
 
-function featureStyle(
+function styleAnnotation(
   feature: FeatureLike,
   colorScheme: ColorScheme,
   alpha: number = 1.0,
@@ -119,7 +206,7 @@ function featureStyle(
           width: strokeWidth,
         }),
       }),
-      text: label ? textStyle(label, textColor, 1.0, 25) : undefined,
+      text: label ? styleAnnotationText(label, textColor, 1.0, 25) : undefined,
     });
   }
 
@@ -135,11 +222,66 @@ function featureStyle(
           : new Fill({
               color: colorScheme.fill(polygonAlpha),
             }),
-      text: label ? textStyle(label, textColor, 1.0, 10) : undefined,
+      text: label ? styleAnnotationText(label, textColor, 1.0, 10) : undefined,
     });
   }
 
   return null;
+}
+
+function styleMeasurement(
+  projection: Projection,
+  feature: FeatureLike,
+  segments: boolean,
+  drawType?: "LineString" | "Polygon",
+) {
+  const styles = [measurementStyle];
+  const geometry = feature.getGeometry();
+  if (!geometry) return styles;
+
+  const type = geometry.getType();
+
+  let point: Point | undefined;
+  let label: string | undefined;
+  let line: LineString | undefined;
+
+  if (drawType && drawType !== type) return;
+
+  if (type === "Polygon") {
+    const polygon = geometry as Polygon;
+    point = polygon.getInteriorPoint();
+    label = formatArea(polygon, projection);
+    line = new LineString(polygon.getCoordinates()[0]);
+  } else if (type === "LineString") {
+    const lineString = geometry as LineString;
+    point = new Point(lineString.getLastCoordinate());
+    label = formatLength(lineString, projection);
+    line = lineString;
+  }
+
+  if (segments && line) {
+    let count = 0;
+
+    line.forEachSegment((a, b) => {
+      const segment = new LineString([a, b]);
+      const segmentLabel = formatLength(segment, projection);
+      const segmentPoint = new Point(segment.getCoordinateAt(0.5));
+
+      const segmentStyle = measurementSegmentStyle.clone();
+      segmentStyle.setGeometry(segmentPoint);
+      segmentStyle.getText()?.setText(segmentLabel);
+      styles.push(segmentStyle);
+    });
+  }
+
+  if (label && point) {
+    const labelStyle = measurementLabelStyle.clone();
+    labelStyle.setGeometry(point);
+    labelStyle.getText().setText(label);
+    styles.push(labelStyle);
+  }
+
+  return styles;
 }
 
 const vertexStyle = new Style({
@@ -172,8 +314,6 @@ export class ImageViewerState {
   #interactions!: ViewerInteractions;
   #annotationSources: Record<AnnotateForm, VectorSource>;
   #measurementSource = new VectorSource();
-  #measurementOverlay: Overlay | null = null;
-  #measurementListener: ReturnType<typeof on> | null = null;
 
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
@@ -195,27 +335,6 @@ export class ImageViewerState {
         .getFeatures()
         .slice();
     });
-
-    if (typeof document !== "undefined") {
-      const overlayElement = document.createElement("div");
-      overlayElement.className = "measurement-tooltip";
-      overlayElement.style.cssText = `
-            position: absolute;
-            background: rgba(0, 0, 0, 0.7);
-            color: white;
-            padding: 4px 8px;
-            border-radius: 4px;
-            font-size: 12px;
-            pointer-events: none;
-            white-space: nowrap;
-          `;
-
-      this.#measurementOverlay = new Overlay({
-        element: overlayElement,
-        offset: [0, -15],
-        positioning: "bottom-center",
-      });
-    }
   }
 
   get projection() {
@@ -272,33 +391,16 @@ export class ImageViewerState {
 
     const equipmentLayer = new VectorLayer({
       source: this.#annotationSources.equipment,
-      style: (feature) => featureStyle(feature, equipmentColor, 0.7),
+      style: (feature) => styleAnnotation(feature, equipmentColor, 0.7),
     });
     const activityLayer = new VectorLayer({
       source: this.#annotationSources.activity,
-      style: (feature) => {
-        return featureStyle(feature, activityColor, 0.7, 0.0);
-      },
+      style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
     });
 
     const measurementLayer = new VectorLayer({
       source: this.#measurementSource,
-      style: new Style({
-        stroke: new Stroke({
-          color: "rgba(255, 0, 0, 0.8)",
-          width: 2,
-          lineDash: [10, 10],
-        }),
-        fill: new Fill({
-          color: "rgba(255, 0, 0, 0.1)",
-        }),
-        image: new Circle({
-          radius: 5,
-          fill: new Fill({
-            color: "rgba(255, 0, 0, 0.8)",
-          }),
-        }),
-      }),
+      style: (feature) => styleMeasurement(this.projection, feature, true),
     });
 
     this.#map = new Map({
@@ -312,10 +414,6 @@ export class ImageViewerState {
       view: rasterSource.getView(),
     });
 
-    if (this.#measurementOverlay) {
-      this.#map.addOverlay(this.#measurementOverlay);
-    }
-
     this.setupInteractions(options.annotateState);
 
     if (options.annotations?.length) {
@@ -326,13 +424,31 @@ export class ImageViewerState {
   private setupInteractions(annotateState: AnnotateState) {
     if (!this.#map) return;
 
+    const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
+      const originalGeometries = features.map((feature) => ({
+        feature,
+        geometry: feature.getGeometry()?.clone(),
+      }));
+
+      try {
+        await this.persistFeatures(features, "edit");
+      } catch (error) {
+        originalGeometries.forEach(({ feature, geometry }) => {
+          if (geometry) {
+            feature.setGeometry(geometry);
+          }
+        });
+        console.error("Failed to persist feature edits:", error);
+      }
+    };
+
     const modifiable = new Collection<Feature>();
 
     const hover = new Select({
       condition: pointerMove,
       hitTolerance: 5,
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
-      style: (feature) => featureStyle(feature, equipmentColor, 1.0, 0.0, 2),
+      style: (feature) => styleAnnotation(feature, equipmentColor, 1.0, 0.0, 2),
     });
 
     const select: Select = new Select({
@@ -341,13 +457,13 @@ export class ImageViewerState {
       style: (feature) => {
         const features = select.getFeatures();
         const index = features.getArray().indexOf(feature);
-        const base = featureStyle(feature, equipmentColor, 1.0, 0.2, 2);
+        const base = styleAnnotation(feature, equipmentColor, 1.0, 0.2, 2);
 
         return index >= 0 && base
           ? [
               base,
               new Style({
-                text: textStyle(`${index + 1}`, textColor, 1.0, -15),
+                text: styleAnnotationText(`${index + 1}`, textColor, 1.0, -15),
               }),
               vertexStyle,
             ]
@@ -369,7 +485,7 @@ export class ImageViewerState {
 
     const modify = new Modify({ features: modifiable });
     modify.on("modifyend", (e) => {
-      this.persistFeatures(e.features.getArray(), "edit");
+      handleFeatureEdit(e.features.getArray());
     });
 
     const translate = new Translate({
@@ -397,11 +513,13 @@ export class ImageViewerState {
       type: annotateState.geometry,
     });
 
-    draw.on("drawend", (e) => {
+    draw.on("drawend", async (e) => {
+      const source = this.#annotationSources[annotateState.layer];
+
       e.feature.setProperties({
         id: crypto.randomUUID(),
         type: annotateState.layer,
-        label: annotateState.label,
+        label: "Saving...",
         data: {
           ...$state.snapshot(annotateState.data),
           createdByUserId: "",
@@ -411,7 +529,13 @@ export class ImageViewerState {
         },
       });
 
-      this.persistFeatures([e.feature], "draw");
+      try {
+        await this.persistFeatures([e.feature], "draw");
+        e.feature.set("label", annotateState.label);
+      } catch (error) {
+        source.removeFeature(e.feature);
+        console.error("Failed to save annotation:", error);
+      }
     });
     return draw;
   }
@@ -455,7 +579,7 @@ export class ImageViewerState {
     }
   }
 
-  private persistFeatures(features: Feature[], mode: "draw" | "edit") {
+  private async persistFeatures(features: Feature[], mode: "draw" | "edit") {
     const format = new WKT();
 
     const payload = features
@@ -486,11 +610,15 @@ export class ImageViewerState {
 
     if (!payload.length) return;
 
-    fetch("/api/update-annotations", {
+    const response = await fetch("/api/update-annotations", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+
+    if (!response.ok) {
+      throw new Error(`Failed to persist features: ${response.statusText}`);
+    }
   }
 
   public updateEnhancement(enhancement: Enhancement) {
@@ -575,32 +703,8 @@ export class ImageViewerState {
     });
   }
 
-  private formatLength(line: LineString): string {
-    const length = getLength(line, {
-      projection: this.projection || undefined,
-    });
-
-    const output =
-      length > 1000
-        ? `${(length / 1000).toFixed(2)} km`
-        : `${length.toFixed(2)} m`;
-
-    return output;
-  }
-
-  private formatArea(polygon: Polygon): string {
-    const area = getArea(polygon, { projection: this.projection || undefined });
-
-    const output =
-      area > 10000
-        ? `${(area / 1000000).toFixed(2)} km²`
-        : `${area.toFixed(2)} m²`;
-
-    return output;
-  }
-
   public startMeasurement(type: MeasurementType) {
-    if (!this.#map) return;
+    if (!this.#map || !this.projection) return;
 
     this.#measurementSource.clear();
 
@@ -615,76 +719,15 @@ export class ImageViewerState {
     const measureDraw = new Draw({
       source: this.#measurementSource,
       type: drawType,
-      style: new Style({
-        stroke: new Stroke({
-          color: "rgba(255, 0, 0, 0.8)",
-          width: 2,
-          lineDash: [10, 10],
-        }),
-        fill: new Fill({
-          color: "rgba(255, 0, 0, 0.1)",
-        }),
-        image: new Circle({
-          radius: 5,
-          fill: new Fill({
-            color: "rgba(255, 0, 0, 0.8)",
-          }),
-        }),
-      }),
+      style: (feature) =>
+        styleMeasurement(this.projection!, feature, true, drawType),
     });
-
-    let sketch: Feature | null = null;
-    const tooltipElement = this.#measurementOverlay?.getElement();
 
     measureDraw.on("drawstart", (e) => {
-      sketch = e.feature;
-
-      this.#measurementListener = sketch.getGeometry()!.on("change", (e) => {
-        const geom = e.target;
-        let tooltipText = "";
-
-        if (geom instanceof Polygon) {
-          tooltipText = this.formatArea(geom);
-          this.#measurementOverlay?.setPosition(
-            geom.getInteriorPoint().getCoordinates(),
-          );
-        } else if (geom instanceof LineString) {
-          tooltipText = this.formatLength(geom);
-          this.#measurementOverlay?.setPosition(geom.getLastCoordinate());
-        }
-
-        if (tooltipElement) {
-          tooltipElement.innerHTML = tooltipText;
-        }
-      });
+      this.#measurementSource.clear();
     });
 
-    measureDraw.on("drawend", (e) => {
-      if (tooltipElement) {
-        tooltipElement.className = "measurement-tooltip measurement-static";
-      }
-
-      if (this.#measurementListener) {
-        unByKey(this.#measurementListener);
-      }
-
-      sketch = null;
-
-      const feature = e.feature;
-      const geom = feature.getGeometry();
-      let tooltipText = "";
-      let position: number[] = [];
-
-      if (geom instanceof Polygon) {
-        tooltipText = this.formatArea(geom);
-        position = geom.getInteriorPoint().getCoordinates();
-      } else if (geom instanceof LineString) {
-        tooltipText = this.formatLength(geom);
-        position = geom.getLastCoordinate();
-      }
-
-      feature.set("measurement", tooltipText);
-    });
+    measureDraw.on("drawend", (e) => {});
 
     this.#interactions.measureDraw = measureDraw;
     this.#map.addInteraction(measureDraw);
@@ -696,15 +739,6 @@ export class ImageViewerState {
     if (this.#interactions.measureDraw) {
       this.#map.removeInteraction(this.#interactions.measureDraw);
       delete this.#interactions.measureDraw;
-    }
-
-    if (this.#measurementListener) {
-      unByKey(this.#measurementListener);
-      this.#measurementListener = null;
-    }
-
-    if (this.#measurementOverlay) {
-      this.#measurementOverlay.setPosition(undefined);
     }
 
     this.setMode("edit");
