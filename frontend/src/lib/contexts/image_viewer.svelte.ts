@@ -38,7 +38,9 @@ import type {
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
 type ViewerMode = "draw" | "edit";
-type MeasurementType = "length" | "area";
+
+export const measureOptions = ["Area", "Length"] as const;
+export type MeasurementType = Lowercase<(typeof measureOptions)[number]>;
 
 export interface Enhancement {
   brightness: number;
@@ -54,7 +56,6 @@ interface ViewerInteractions {
   modify: Modify;
   translate: Translate;
   draw: Draw;
-  measureDraw?: Draw;
 }
 
 interface Options {
@@ -260,8 +261,6 @@ function styleMeasurement(
   }
 
   if (segments && line) {
-    let count = 0;
-
     line.forEachSegment((a, b) => {
       const segment = new LineString([a, b]);
       const segmentLabel = formatLength(segment, projection);
@@ -311,8 +310,12 @@ export class ImageViewerState {
   #image: string | null = null;
   #map: Map | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
-  #interactions!: ViewerInteractions;
+  #equipmentLayer: VectorLayer | null = null;
+  #activityLayer: VectorLayer | null = null;
+  #measurementLayer: VectorLayer | null = null;
+  #annotationInteractions: ViewerInteractions | null = null;
   #annotationSources: Record<AnnotateForm, VectorSource>;
+  #measurementInteractions: ViewerInteractions | null = null;
   #measurementSource = new VectorSource();
 
   #equipmentFeatures = $state<Feature[]>([]);
@@ -388,17 +391,15 @@ export class ImageViewerState {
     this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
     });
-
-    const equipmentLayer = new VectorLayer({
+    this.#equipmentLayer = new VectorLayer({
       source: this.#annotationSources.equipment,
       style: (feature) => styleAnnotation(feature, equipmentColor, 0.7),
     });
-    const activityLayer = new VectorLayer({
+    this.#activityLayer = new VectorLayer({
       source: this.#annotationSources.activity,
       style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
     });
-
-    const measurementLayer = new VectorLayer({
+    this.#measurementLayer = new VectorLayer({
       source: this.#measurementSource,
       style: (feature) => styleMeasurement(this.projection, feature, true),
     });
@@ -407,22 +408,22 @@ export class ImageViewerState {
       target: target,
       layers: [
         this.#rasterLayer,
-        equipmentLayer,
-        activityLayer,
-        measurementLayer,
+        this.#equipmentLayer,
+        this.#activityLayer,
+        this.#measurementLayer,
       ],
       view: rasterSource.getView(),
     });
 
-    this.setupInteractions(options.annotateState);
+    this.setupAnnotationInteractions(options.annotateState);
 
     if (options.annotations?.length) {
       this.loadAnnotations(options.annotations);
     }
   }
 
-  private setupInteractions(annotateState: AnnotateState) {
-    if (!this.#map) return;
+  private setupAnnotationInteractions(annotateState: AnnotateState) {
+    if (!this.#map || !this.#activityLayer || !this.#equipmentLayer) return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
       const originalGeometries = features.map((feature) => ({
@@ -447,6 +448,7 @@ export class ImageViewerState {
     const hover = new Select({
       condition: pointerMove,
       hitTolerance: 5,
+      layers: [this.#activityLayer, this.#equipmentLayer],
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
       style: (feature) => styleAnnotation(feature, equipmentColor, 1.0, 0.0, 2),
     });
@@ -454,6 +456,7 @@ export class ImageViewerState {
     const select: Select = new Select({
       addCondition: shiftKeyOnly,
       hitTolerance: 5,
+      layers: [this.#activityLayer, this.#equipmentLayer],
       style: (feature) => {
         const features = select.getFeatures();
         const index = features.getArray().indexOf(feature);
@@ -493,21 +496,27 @@ export class ImageViewerState {
       features: select.getFeatures(),
     });
     translate.on("translateend", (e) => {
-      this.persistFeatures(e.features.getArray(), "edit");
+      handleFeatureEdit(e.features.getArray());
     });
 
-    const draw = this.createDrawInteraction(annotateState);
+    const draw = this.createDrawAnnotationInteraction(annotateState);
 
-    this.#interactions = { hover, select, modify, translate, draw };
+    this.#annotationInteractions = {
+      hover,
+      select,
+      modify,
+      translate,
+      draw,
+    };
 
-    Object.values(this.#interactions).forEach((i) =>
+    Object.values(this.#annotationInteractions).forEach((i) =>
       this.#map!.addInteraction(i),
     );
 
     this.setMode(annotateState.active ? "draw" : "edit");
   }
 
-  private createDrawInteraction(annotateState: AnnotateState) {
+  private createDrawAnnotationInteraction(annotateState: AnnotateState) {
     const draw = new Draw({
       source: this.#annotationSources[annotateState.layer],
       type: annotateState.geometry,
@@ -541,18 +550,20 @@ export class ImageViewerState {
   }
 
   private setMode(mode: ViewerMode) {
-    Object.values(this.#interactions).forEach((i) => i.setActive(false));
+    Object.values(this.#annotationInteractions).forEach((i) =>
+      i.setActive(false),
+    );
 
     for (const key of MODE_INTERACTIONS[mode]) {
-      this.#interactions[key].setActive(true);
+      this.#annotationInteractions[key].setActive(true);
     }
   }
 
   private syncSelectedFeatures() {
-    if (!this.#interactions.select) return;
+    if (!this.#annotationInteractions.select) return;
 
     this.#selectedFeatures = [
-      ...this.#interactions.select.getFeatures().getArray(),
+      ...this.#annotationInteractions.select.getFeatures().getArray(),
     ];
   }
 
@@ -635,15 +646,15 @@ export class ImageViewerState {
   }
 
   public updateDrawInteraction(annotateState: AnnotateState) {
-    if (!this.#map) return;
+    if (!this.#map || !this.#annotationInteractions) return;
 
-    if (this.#interactions.draw) {
-      this.#map.removeInteraction(this.#interactions.draw);
+    if (this.#annotationInteractions.draw) {
+      this.#map.removeInteraction(this.#annotationInteractions.draw);
     }
 
-    const draw = this.createDrawInteraction(annotateState);
+    const draw = this.createDrawAnnotationInteraction(annotateState);
 
-    this.#interactions.draw = draw;
+    this.#annotationInteractions.draw = draw;
     this.#map.addInteraction(draw);
 
     this.setMode(annotateState.active ? "draw" : "edit");
@@ -670,7 +681,7 @@ export class ImageViewerState {
   }
 
   public removeFeatures(features: Feature[]) {
-    const selected = this.#interactions.select.getFeatures();
+    const selected = this.#annotationInteractions.select.getFeatures();
     const payload: Record<string, string[]> = {};
 
     for (const feature of features) {
@@ -704,16 +715,17 @@ export class ImageViewerState {
   }
 
   public startMeasurement(type: MeasurementType) {
-    if (!this.#map || !this.projection) return;
+    if (!this.#map || !this.projection || !this.#measurementInteractions)
+      return;
 
-    this.#measurementSource.clear();
-
-    if (this.#interactions.measureDraw) {
-      this.#map.removeInteraction(this.#interactions.measureDraw);
+    if (this.#measurementInteractions.draw) {
+      this.#map.removeInteraction(this.#measurementInteractions.draw);
     }
 
     this.setMode("edit");
-    Object.values(this.#interactions).forEach((i) => i.setActive(false));
+    Object.values(this.#measurementInteractions).forEach((i) =>
+      i.setActive(false),
+    );
 
     const drawType = type === "length" ? "LineString" : "Polygon";
     const measureDraw = new Draw({
@@ -723,25 +735,20 @@ export class ImageViewerState {
         styleMeasurement(this.projection!, feature, true, drawType),
     });
 
-    measureDraw.on("drawstart", (e) => {
-      this.#measurementSource.clear();
-    });
-
-    measureDraw.on("drawend", (e) => {});
-
-    this.#interactions.measureDraw = measureDraw;
+    this.#measurementInteractions.draw = measureDraw;
     this.#map.addInteraction(measureDraw);
   }
 
   public stopMeasurement() {
-    if (!this.#map) return;
+    if (!this.#map || !this.#measurementInteractions) return;
 
-    if (this.#interactions.measureDraw) {
-      this.#map.removeInteraction(this.#interactions.measureDraw);
-      delete this.#interactions.measureDraw;
+    if (this.#measurementInteractions.draw) {
+      this.#map.removeInteraction(this.#measurementInteractions.draw);
     }
+  }
 
-    this.setMode("edit");
+  public clearMeasurements() {
+    this.#measurementSource.clear();
   }
 }
 

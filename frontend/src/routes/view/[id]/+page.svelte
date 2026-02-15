@@ -42,11 +42,13 @@
       <Button onclick={() => (summaryOpen = !summaryOpen)}>Summary</Button>
     </div>
   {/if}
-  <div class="toggle-measurement">
-    <Button onclick={() => (measurementOpen = !measurementOpen)}>
-      Measure
-    </Button>
-  </div>
+  {#if !measurementOpen}
+    <div class="toggle-measurement">
+      <Button onclick={() => (measurementOpen = !measurementOpen)}>
+        Measure
+      </Button>
+    </div>
+  {/if}
   <div class="toggle-enhancement">
     <Button onclick={() => (enhancementOpen = !enhancementOpen)}
       >Enhancement</Button
@@ -62,7 +64,7 @@
     </div>
   {/if}
   {#if measurementOpen}
-    <MeasureDialog />
+    <MeasureDialog bind:open={measurementOpen} />
   {/if}
 </div>
 
