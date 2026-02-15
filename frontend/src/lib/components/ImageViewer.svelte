@@ -21,7 +21,7 @@
   const viewer = getImageViewerState();
 
   $effect(() => {
-    viewer.updateDrawInteraction(annotateState);
+    viewer.updateDrawAnnotationInteraction(annotateState);
   });
 </script>
 

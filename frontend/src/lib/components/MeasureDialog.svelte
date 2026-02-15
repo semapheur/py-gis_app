@@ -14,21 +14,25 @@
 
   const imageViewer = getImageViewerState();
 
-  let { open = $bindable() } = $props();
+  let { open = $bindable() }: Props = $props();
   let measureType = $state<MeasurementType>("area");
   let isMeasuring = $state<boolean>(false);
 
   $effect(() => {
     if (isMeasuring) {
-      imageViewer.startMeasurement(measureType);
+      imageViewer.startDrawInteraction("measurement");
     } else {
-      imageViewer.stopMeasurement();
+      imageViewer.stopDrawInteraction("measurement");
     }
+  });
+
+  $effect(() => {
+    imageViewer.updateDrawMeasurementInteraction(measureType, isMeasuring);
   });
 
   function handleClose() {
     open = false;
-    imageViewer.stopMeasurement();
+    imageViewer.stopDrawInteraction("annotation");
   }
 </script>
 
@@ -43,7 +47,10 @@
   <Button onclick={() => (isMeasuring = !isMeasuring)}
     >{isMeasuring ? "Stop" : "Start"}</Button
   >
-  <Button onclick={() => imageViewer.clearMeasurements()}>Clear</Button>
+  <Button
+    background="oklch(var(--color-negative))"
+    onclick={() => imageViewer.clearMeasurements()}>Clear</Button
+  >
 </div>
 
 <style>

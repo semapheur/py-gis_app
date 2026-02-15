@@ -52,7 +52,6 @@ export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 const defaultLayer = "equipment";
 
 export class AnnotateState {
-  active = $state<boolean>(false);
   layer = $state<AnnotateForm>(defaultLayer);
   geometry = $state<AnnotateGeometry<AnnotateForm>>(
     annotateGeometryByForm[defaultLayer][0].value,
@@ -85,7 +84,7 @@ export class AnnotateState {
     return "";
   });
 
-  validData = $derived.by(() => {
+  isValid = $derived.by(() => {
     if (this.layer === "equipment") {
       const d = this.data as EquipmentData;
       return d.equipment && d.confidence && d.status;
@@ -117,15 +116,6 @@ export class AnnotateState {
 
   setData(data: EquipmentData | ActivityData) {
     this.data = data;
-  }
-
-  toggleActive() {
-    if (!this.validData) return;
-    this.active = !this.active;
-  }
-
-  stop() {
-    this.active = false;
   }
 
   private createDefaultData(layer: AnnotateForm) {

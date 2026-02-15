@@ -12,66 +12,76 @@
     type ActivityData,
     type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
+  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
 
   interface Props {
     open: boolean;
   }
 
-  let { open = $bindable() }: Props = $props();
-
   const annotate = getAnnotateState();
+  const imageViewer = getImageViewerState();
+
+  let { open = $bindable() }: Props = $props();
+  let isAnnotating = $state<boolean>(false);
 
   $effect(() => {
-    if (!open) annotate.stop();
+    if (isAnnotating) {
+      imageViewer.startDrawInteraction("annotation");
+    } else {
+      imageViewer.stopDrawInteraction("annotation");
+    }
   });
+
+  function handleClose() {
+    open = false;
+    imageViewer.stopDrawInteraction("annotation");
+  }
 </script>
 
-{#if open}
-  <div class="annotate-dialog">
-    <header class="header">
-      <Tabs
-        tabs={annotateTabs}
-        selected={annotate.layer}
-        onselect={(layer: typeof annotate.layer) => annotate.setLayer(layer)}
-      />
-      <CloseButton onclick={() => (open = false)} />
-    </header>
-    <main>
-      {#key annotate.layer}
-        {#if annotate.layer === "equipment"}
-          <EquipmentForm
-            value={annotate.data as EquipmentData}
-            onchange={(d) => annotate.setData(d)}
-          />
-        {:else if annotate.layer === "activity"}
-          <ActivityForm
-            value={annotate.data as ActivityData}
-            onchange={(d) => annotate.setData(d)}
-          />
-        {/if}
-      {/key}
-    </main>
-    <footer class="footer">
-      {#key annotate.layer}
-        <Select
-          placeholder="Geometry"
-          options={annotate.geometryOptions}
-          value={annotate.geometry}
-          onchange={(v) => annotate.setGeometry(v)}
+<div class="annotate-dialog">
+  <header class="header">
+    <Tabs
+      tabs={annotateTabs}
+      selected={annotate.layer}
+      onselect={(layer: typeof annotate.layer) => annotate.setLayer(layer)}
+    />
+    <CloseButton onclick={() => handleClose()} />
+  </header>
+  <main>
+    {#key annotate.layer}
+      {#if annotate.layer === "equipment"}
+        <EquipmentForm
+          value={annotate.data as EquipmentData}
+          onchange={(d) => annotate.setData(d)}
         />
-      {/key}
-      <Button
-        background={annotate.active
-          ? "oklch(var(--color-negative))"
-          : "oklch(var(--color-positive))"}
-        disabled={!annotate.validData}
-        onclick={() => annotate.toggleActive()}
-      >
-        {annotate.active ? "Stop" : "Annotate"}
-      </Button>
-    </footer>
-  </div>
-{/if}
+      {:else if annotate.layer === "activity"}
+        <ActivityForm
+          value={annotate.data as ActivityData}
+          onchange={(d) => annotate.setData(d)}
+        />
+      {/if}
+    {/key}
+  </main>
+  <footer class="footer">
+    {#key annotate.layer}
+      <Select
+        placeholder="Geometry"
+        options={annotate.geometryOptions}
+        value={annotate.geometry}
+        onchange={(v) => annotate.setGeometry(v)}
+      />
+    {/key}
+    <Button
+      background={isAnnotating
+        ? "oklch(var(--color-negative))"
+        : "oklch(var(--color-positive))"}
+      disabled={!annotate.isValid}
+      onclick={() => (isAnnotating = !isAnnotating)}
+    >
+      {isAnnotating ? "Stop" : "Annotate"}
+    </Button>
+  </footer>
+</div>
 
 <style>
   .annotate-dialog {

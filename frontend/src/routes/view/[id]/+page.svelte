@@ -54,7 +54,9 @@
       >Enhancement</Button
     >
   </div>
-  <AnnotateDialog bind:open={annotateOpen} />
+  {#if annotateOpen}
+    <AnnotateDialog bind:open={annotateOpen} />
+  {/if}
   <ImageViewer {imageInfo} {radiometricParams} {annotations} />
   <AnnotationEdit />
   <AnnotationSummary bind:open={summaryOpen} />
