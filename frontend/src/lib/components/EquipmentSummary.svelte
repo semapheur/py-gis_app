@@ -112,12 +112,6 @@
     --arrow-gap: 0.5rem;
   }
 
-  ul {
-    list-style: none;
-    margin: 0;
-    padding: 0;
-  }
-
   .header {
     display: flex;
     gap: var(--size-md);
@@ -129,7 +123,9 @@
   }
 
   .summary-list {
-    padding-left: var(--size-md);
+    list-style: none;
+    margin: 0;
+    padding: 0 0 0 var(--size-md);
   }
 
   .inner-item {

@@ -22,7 +22,9 @@
 
   const { confidenceOptions, statusOptions } = getContext("equipment-options");
 
-  let selectedEquipment = $state<SelectOption | null>(null);
+  let selectedEquipment = $state<SelectOption | null>(
+    toSelectOption(value?.equipment ?? null),
+  );
   let confidenceId = $derived<string | null>(value.confidence?.id ?? null);
   let statusId = $derived<string | null>(value.status?.id ?? null);
 
@@ -56,6 +58,9 @@
 
   function toAnnotateValue(option: SelectOption | null): AnnotateValue | null {
     return option ? { id: option.value, label: option.label } : null;
+  }
+  function toSelectOption(value: AnnotateValue | null): SelectOption | null {
+    return value ? { value: value.id, label: value.label } : null;
   }
 
   function handleConfidenceChange(id: string | null) {

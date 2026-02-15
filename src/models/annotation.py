@@ -167,6 +167,8 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
           "id": uuid_bytes_to_str(r["status_id"]),
           "label": r["status_label"],
         },
+      },
+      "metaData": {
         "createdByUserId": r["createdByUserId"],
         "modifiedByUserId": r["modifiedByUserId"],
         "createdAtTimestamp": r["createdAtTimestamp"],
@@ -212,3 +214,45 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
 
     finally:
       cursor.execute(detach_sql)
+
+
+class ConvertAnnotation(TypedDict):
+  id: str
+  geometry: str
+
+
+def convert_annotation(payload: ConvertAnnotation):
+  sql = """
+    INSERT INTO equipment_polygon(
+      id,
+      image,
+      equipment,
+      status,
+      createdByUserId,
+      modifiedByUserId,
+      createdAtTimestamp,
+      modifiedAtTimestamp,
+      geometry
+    )
+    SELECT
+      id,
+      image,
+      equipment,
+      status,
+      createdByUserId,
+      modifiedByUserId,
+      createdAtTimestamp,
+      modifiedAtTimestamp,
+      ST_GeomFromText(:geometry, 4326)
+    FROM equipment_point
+    WHERE id = :id;
+
+    DELETE FROM equipment_point
+    WHERE id = :id;
+  """
+
+  params = {"id": payload["id"], "geometry": payload["geometry"]}
+
+  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+    cursor = db.conn.cursor()
+    cursor.execute(sql, params)

@@ -5,7 +5,10 @@
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import Button from "$lib/components/Button.svelte";
   import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
-  import { type EquipmentData } from "$lib/contexts/annotate.svelte";
+  import type {
+    EquipmentData,
+    CompleteEquipmentData,
+  } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
@@ -26,6 +29,9 @@
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
   const selectedTypes = $derived(
     Array.from(new Set(selectedFeatures.map((f) => f.get("type")))),
+  );
+  const selectedGeometry = $derived(
+    selectedFeature?.getGeometry()?.getType() ?? null,
   );
   const canBulkEdit = $derived(
     selectedFeatures.length > 1 && selectedTypes.length === 1,
@@ -84,8 +90,35 @@
     exportFile(blob, fileName);
   }
 
+  function findCommonValues() {
+    const commonValues: BulkEquipmentPatch = {};
+    const firstFeatureData = selectedFeatures[0].get(
+      "data",
+    ) as CompleteEquipmentData;
+    if (!firstFeatureData) return;
+
+    for (const key in firstFeatureData) {
+      const firstValue = firstFeatureData[key as keyof CompleteEquipmentData];
+      const isCommon = selectedFeatures.every((feature) => {
+        const data = feature.get("data") as CompleteEquipmentData;
+
+        if (!data) return false;
+
+        return data[key as keyof CompleteEquipmentData].id === firstValue.id;
+      });
+
+      if (isCommon) {
+        commonValues[key as keyof EquipmentData] = firstValue;
+      }
+    }
+
+    bulkPatch = commonValues;
+  }
+
   function startBulkEdit() {
     if (!canBulkEdit) return;
+
+    findCommonValues();
 
     bulkEdit = true;
     selectedIndex = null;
@@ -142,7 +175,7 @@
       </KebabMenu>
       <span class="edit-heading">Selected annotations</span>
     </header>
-    <ol>
+    <ol class="selected-list">
       {#each selectedFeatures as _, i}
         <li>
           <label>
@@ -172,6 +205,9 @@
         >
           Save
         </Button>
+        {#if selectedGeometry === "Point"}
+          <Button>Polygonize</Button>
+        {/if}
         <Button
           background="oklch(var(--color-negative))"
           onclick={deleteFeature}>Delete</Button
@@ -194,7 +230,12 @@
           Apply to {selectedFeatures.length}
         </Button>
 
-        <button onclick={() => (bulkEdit = false)}> Cancel </button>
+        <Button
+          background="oklch(var(--color-negative))"
+          onclick={() => (bulkEdit = false)}
+        >
+          Cancel
+        </Button>
       </footer>
     {/if}
   </aside>
@@ -202,11 +243,15 @@
 
 <style>
   .edit-sidebar {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-md);
     height: 100%;
     width: clamp(200px, 25%, 600px);
     position: absolute;
     top: 0;
     right: 0;
+    padding: var(--size-md);
     background: oklch(var(--color-primary));
     z-index: 1;
   }
@@ -221,5 +266,9 @@
     margin: 0;
     font-size: var(--text-lg);
     font-weight: var(--font-bold);
+  }
+
+  .selected-list {
+    margin: 0;
   }
 </style>

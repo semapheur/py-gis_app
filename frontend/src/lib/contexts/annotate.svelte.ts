@@ -38,6 +38,9 @@ export interface EquipmentData {
   confidence: AnnotateValue | null;
   status: AnnotateValue | null;
 }
+export type CompleteEquipmentData = {
+  [K in keyof EquipmentData]-?: NonNullable<EquipmentData[K]>;
+};
 
 export interface AnnotationInfo {
   id: string;

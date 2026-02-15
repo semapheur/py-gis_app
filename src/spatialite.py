@@ -243,6 +243,20 @@ class Model(metaclass=ModelMeta):
     return sql
 
   @classmethod
+  def column_names(cls, exclude_geometry_fields: bool = False) -> list[str]:
+    return [
+      name
+      for name, field in cls._fields.items()
+      if exclude_geometry_fields and field.geometry_type is None
+    ]
+
+  @classmethod
+  def geometry_names(cls) -> list[str]:
+    return [
+      name for name, field in cls._fields.items() if field.geometry_type is not None
+    ]
+
+  @classmethod
   def geometry_fields(cls) -> dict[str, Field]:
     return {
       name: field
@@ -334,6 +348,18 @@ class SqliteDatabase:
     if not exists:
       cursor.execute("SELECT InitSpatialMetaData(1)")
       self.conn.commit()
+
+  @contextmanager
+  def transaction(self):
+    self._check_connection()
+    cursor = self.conn.cursor()
+    try:
+      cursor.execute("BEGIN TRANSACTION")
+      yield cursor
+      cursor.execute("COMMIT")
+    except Exception:
+      cursor.execute("ROLLBACK")
+      raise
 
   def create_table(self, table: type[Model]):
     if self.conn is None:
@@ -668,6 +694,91 @@ class SqliteDatabase:
     cursor.execute("DROP TABLE temp_delete_ids")
     self.conn.commit()
     return rows_deleted
+
+  def convert_geometry(
+    self,
+    source_table: type[Model],
+    target_table: type[Model],
+    id: Any,
+    geometry_wkt: str,
+    srid: int = 4326,
+  ):
+
+    self._check_connection()
+    cursor = self.conn.cursor()
+
+    geometry_columns = source_table.geometry_names()
+    if len(geometry_columns) != 1:
+      raise ValueError(
+        f"Source table {source_table.__name__} must have a single geometry column. Found ${len(geometry_column)}"
+      )
+
+    geometry_column = geometry_columns[0]
+
+    source_columns = source_table.column_names(True)
+    target_columns = target_table.column_names(True)
+
+    common_columns = set(source_columns).intersection(target_columns)
+    if not common_columns:
+      raise ValueError(
+        f"No common columns between {source_table} and {target_table} "
+        f"(excluding geometry). "
+        f"Source columns: {sorted(source_columns)}, "
+        f"Target columns: {sorted(target_columns)}"
+      )
+
+    self._validate_field_compatibility(source_table, target_table, common_columns)
+
+    column_list = ", ".join(sorted(common_columns))
+
+    params = {"id": id, "geometry": geometry_wkt, "srid": srid}
+    cursor.execute(
+      f"""
+      INSERT INTO '{target_table._table_name}'({column_list}, '{geometry_column}')
+      SELECT {column_list}, ST_GeomFromText(:geometry, :srid)
+      FROM '{source_table._table_name}'
+      WHERE id = :id
+    """,
+      params,
+    )
+
+    if cursor.rowcount == 0:
+      raise ValueError(f"Failed to insert into {target_table}")
+
+    cursor.execute(
+      f"DELETE FROM '{source_table._table_name}' WHERE id = :id", {"id": id}
+    )
+
+  def _validate_field_compatibility(
+    self, source_model: type[Model], target_model: type[Model], common_columns: set[str]
+  ):
+
+    issues: list[str] = []
+    for col in common_columns:
+      source_field = source_model._fields[col]
+      target_field = target_model._fields[col]
+
+      if source_field.sql_type != target_field.sql_type:
+        issues.append(
+          f"Column '{col}': SQL type mismatch "
+          f"({source_field.sql_type} -> {target_field.sql_type})"
+        )
+
+      if source_field.nullable and not target_field.nullable:
+        issues.append(f"Column '{col}': Source is nullable but target is NOT NULL")
+
+      if source_field.primary_key != target_field.primary_key:
+        issues.append(
+          f"Column '{col}': Primary key mismatch "
+          f"(source: {source_field.primary_key}, target: {target_field.primary_key})"
+        )
+
+    if issues:
+      raise ValueError(
+        f"Field compatibility issues between {source_model.__name__} "
+        f"and {target_model.__name__}:\n"
+        + "\n".join(f"  - {issue}" for issue in issues)
+      )
 
 
 def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:

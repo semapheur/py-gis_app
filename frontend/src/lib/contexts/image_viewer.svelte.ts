@@ -617,8 +617,8 @@ export class ImageViewerState {
         id: crypto.randomUUID(),
         type: annotateState.layer,
         label: "Saving...",
-        data: {
-          ...$state.snapshot(annotateState.data),
+        data: $state.snapshot(annotateState.data),
+        metaData: {
           createdByUserId: "",
           modifiedByUserId: null,
           createdAtTimestamp: Date.now(),
@@ -747,6 +747,7 @@ export class ImageViewerState {
         if (geometry === undefined) return null;
 
         const data = feature.get("data");
+        const metaData = feature.get("metaData");
 
         return {
           type: feature.get("type"),
@@ -757,11 +758,11 @@ export class ImageViewerState {
             confidence: data.confidence.id,
             status: data.status.id,
             geometry: format.writeGeometry(geometry),
-            createdByUserId: data.createdByUserId,
-            modifiedByUserId: mode === "edit" ? "" : data.modifiedByUserId,
-            createdAtTimestamp: data.createdAtTimestamp,
+            createdByUserId: metaData.createdByUserId,
+            modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
+            createdAtTimestamp: metaData.createdAtTimestamp,
             modifiedAtTimestamp:
-              mode === "edit" ? Date.now() : data.modifiedByUserId,
+              mode === "edit" ? Date.now() : metaData.modifiedByUserId,
           },
         };
       })

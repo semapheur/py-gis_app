@@ -11,6 +11,8 @@ from src.index.images import get_image_info, get_images_by_intersection
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
   AnnotationUpdate,
+  ConvertAnnotation,
+  convert_annotation,
   delete_annotations,
   get_annotations,
   update_annotations,
@@ -161,12 +163,16 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_delete_annotations()
       return
 
+    if self.path == "/api/convert-annotation":
+      self._post_convert_annotation()
+      return
+
     if self.path == "/api/update-area":
       self._post_update_area()
       return
 
     if self.path == "/api/delete-areas":
-      self._post_delete_area()
+      self._post_delete_areas()
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -288,6 +294,13 @@ class Handler(SimpleHTTPRequestHandler):
     def logic(payload: dict[str, list[str]]):
       delete_annotations(payload)
       return {"message": "Successfully deleted annotations"}
+
+    self._handle_post(logic)
+
+  def _post_convert_annotation(self):
+    def logic(payload: ConvertAnnotation):
+      convert_annotation(payload)
+      return {"message": "Successfully converted annotation"}
 
     self._handle_post(logic)
 
