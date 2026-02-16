@@ -253,6 +253,11 @@ def convert_annotation(payload: ConvertAnnotation):
 
   params = {"id": payload["id"], "geometry": payload["geometry"]}
 
+  # point_table = equipment_annotation_model("POINT")
+  # polygon_table = equipment_annotation_model("POLYGON")
+
   with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
     cursor = db.conn.cursor()
     cursor.execute(sql, params)
+
+    # db.convert_geometry(point_table, polygon_table, payload["id"], payload["geometry"])

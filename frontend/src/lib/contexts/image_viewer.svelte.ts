@@ -814,6 +814,29 @@ export class ImageViewerState {
     this.persistFeatures([feature], "edit");
   }
 
+  public async updateFeatureGeometry(feature: Feature, polygon: Polygon) {
+    feature.setGeometry(polygon);
+    feature.changed();
+
+    this.syncSelectedFeatures();
+
+    const format = new WKT();
+    const payload = {
+      id: feature.get("id"),
+      geometry: format.writeGeometry(polygon),
+    };
+
+    const response = await fetch("/api/convert-annotation", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      throw new Error(`Failed to persist features: ${response.statusText}`);
+    }
+  }
+
   public removeFeatures(features: Feature[]) {
     if (!this.#interactions.annotation) return;
 
