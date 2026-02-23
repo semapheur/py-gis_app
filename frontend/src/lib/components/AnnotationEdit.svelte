@@ -155,6 +155,12 @@
     selectedIndex = null;
     editData = null;
   }
+
+  function polygonize() {
+    if (!selectedFeature) return;
+
+    viewer.convertPointFeatureToPolygon(selectedFeature, 2000);
+  }
 </script>
 
 {#if selectedFeatures.length > 0}
@@ -206,7 +212,7 @@
           Save
         </Button>
         {#if selectedGeometry === "Point"}
-          <Button>Polygonize</Button>
+          <Button onclick={() => polygonize()}>Polygonize</Button>
         {/if}
         <Button
           background="oklch(var(--color-negative))"

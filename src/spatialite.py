@@ -305,13 +305,6 @@ class SqliteDatabase:
     self.conn = None
 
   def __enter__(self):
-    self._open()
-    return self
-
-  def __exit__(self, exc_type, exc_val, exc_tb):
-    self._close()
-
-  def _open(self):
     if not self.db_path.parent.exists():
       raise FileNotFoundError(f"Directory does not exist: {self.db_path.parent}")
 
@@ -325,11 +318,20 @@ class SqliteDatabase:
       self.conn.load_extension(os.environ["SPATIALITE"])
       self._ensure_spatial_metadata()
 
-  def _close(self):
-    if self.conn:
-      self.conn.commit()
+    return self
+
+  def __exit__(self, exc_type, exc_val, exc_tb):
+    if not self.conn:
+      return False
+
+    try:
+      if exc_type is None:
+        self.conn.commit()
+      else:
+        self.conn.rollback()
+    finally:
       self.conn.close()
-    self.conn = None
+      self.conn = None
 
   def _check_connection(self):
     if self.conn is None:

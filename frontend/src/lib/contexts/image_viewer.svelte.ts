@@ -732,6 +732,7 @@ export class ImageViewerState {
         type: "equipment",
         label: record.label,
         data: record.data,
+        metaData: record.metaData,
       });
       features.push(feature);
     }
@@ -806,16 +807,48 @@ export class ImageViewerState {
         ? `${data.equipment?.label}\n${data.confidence.label}\n${data.status.label}`
         : "";
 
-    feature.set("data", data);
-    feature.set("label", label);
+    feature.setProperties({
+      data,
+      label,
+    });
     feature.changed();
 
     this.syncSelectedFeatures();
     this.persistFeatures([feature], "edit");
   }
 
-  public async updateFeatureGeometry(feature: Feature, polygon: Polygon) {
+  public async convertPointFeatureToPolygon(
+    feature: Feature,
+    sizeMeters: number = 3,
+  ) {
+    const point = feature.getGeometry();
+
+    if (!point || !(point instanceof Point)) {
+      throw new Error("Feature must have a Point geometry");
+    }
+
+    const [x, y] = point.getCoordinates();
+    const half = sizeMeters / 2;
+    const squareCoords = [
+      [
+        [x - half, y - half],
+        [x + half, y - half],
+        [x + half, y + half],
+        [x - half, y + half],
+        [x - half, y - half], // close the ring
+      ],
+    ];
+    const polygon = new Polygon(squareCoords);
+
     feature.setGeometry(polygon);
+    const metaData = feature.get("metaData");
+    const oldMetaData = structuredClone(metaData);
+    metaData.modifiedByUserId = "";
+    metaData.modifiedAtTimestamp = Date.now();
+    feature.setProperties({
+      metaData,
+    });
+    console.log(feature.getProperties());
     feature.changed();
 
     this.syncSelectedFeatures();
@@ -824,16 +857,26 @@ export class ImageViewerState {
     const payload = {
       id: feature.get("id"),
       geometry: format.writeGeometry(polygon),
+      modifiedByUserId: metaData.modifiedByUserId,
+      modifiedAtTimestamp: metaData.modifiedAtTimestamp,
     };
 
-    const response = await fetch("/api/convert-annotation", {
-      method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
-    });
+    try {
+      const response = await fetch("/api/convert-annotation", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify(payload),
+      });
 
-    if (!response.ok) {
-      throw new Error(`Failed to persist features: ${response.statusText}`);
+      if (!response.ok) {
+        throw new Error(`Failed to persist features: ${response.statusText}`);
+      }
+    } catch (error) {
+      feature.setGeometry(point);
+      feature.setProperties(oldMetaData);
+      feature.changed();
+      this.syncSelectedFeatures();
+      throw error;
     }
   }
 

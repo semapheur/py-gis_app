@@ -42,11 +42,19 @@ export type CompleteEquipmentData = {
   [K in keyof EquipmentData]-?: NonNullable<EquipmentData[K]>;
 };
 
+interface AttributeMetaData {
+  createdByUserId: string;
+  createdAtTimestamp: number;
+  modifiedByUserId: string;
+  modifiedAtTimestamp: number;
+}
+
 export interface AnnotationInfo {
   id: string;
   geometry: GeoJSON.Point | GeoJSON.Polygon;
   label: string;
   data: EquipmentData;
+  metaData: AttributeMetaData;
 }
 
 export const activityTypes = ["Maneuver"] as const;
