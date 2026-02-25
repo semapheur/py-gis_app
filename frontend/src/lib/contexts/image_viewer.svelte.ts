@@ -38,10 +38,17 @@ import type {
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
 type InteractionMode = "draw" | "edit";
-type InteractionLayer = "annotation" | "measurement";
+type InteractionSet = "annotation" | "measurement";
 
 export const measureOptions = ["Area", "Length"] as const;
 export type MeasurementType = Lowercase<(typeof measureOptions)[number]>;
+
+interface ViewerState {
+  activeSet: InteractionSet;
+  activeMode: InteractionMode;
+  setActiveSet: (set: InteractionSet) => void;
+  setActiveMode: (mode: InteractionMode) => void;
+}
 
 export interface Enhancement {
   brightness: number;
@@ -307,14 +314,14 @@ const MODE_INTERACTIONS = {
   readonly (keyof ViewerInteractions)[]
 >;
 
-export class ImageViewerState {
+export class ImageViewerController {
   #image: string | null = null;
   #map: Map | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: VectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
   #measurementLayer: VectorLayer | null = null;
-  #interactions: Record<InteractionLayer, ViewerInteractions | null>;
+  #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm, VectorSource>;
   #measurementSource = new VectorSource();
 
@@ -681,7 +688,37 @@ export class ImageViewerState {
     this.#measurementSource.clear();
   }
 
-  private setInteractionMode(layer: InteractionLayer, mode: InteractionMode) {
+  private applyInteractionMode(set: InteractionSet, mode: InteractionMode) {
+    if (!this.#map || !this.#interactions) return;
+
+    const interactions = this.#interactions[set];
+    const otherSet = set === "annotation" ? "measurement" : "annotation";
+    const otherInteractions = this.#interactions[otherSet];
+
+    if (otherInteractions) {
+      Object.values(otherInteractions).forEach((i) => {
+        if (i) this.#map?.removeInteraction(i);
+      });
+    }
+
+    if (!interactions) return;
+
+    const { draw, ...editInteractions } = interactions;
+
+    if (mode == "draw") {
+      Object.values(editInteractions).forEach((i) => {
+        if (i) this.#map?.removeInteraction(i);
+      });
+      if (draw) this.#map.addInteraction(draw);
+    } else {
+      if (draw) this.#map.removeInteraction(draw);
+      Object.values(editInteractions).forEach((i) => {
+        if (i) this.#map?.addInteraction(i);
+      });
+    }
+  }
+
+  private setInteractionMode(layer: InteractionSet, mode: InteractionMode) {
     if (!this.#interactions.annotation || !this.#interactions.measurement)
       return;
 
@@ -698,11 +735,11 @@ export class ImageViewerState {
     }
   }
 
-  public startDrawInteraction(layer: InteractionLayer) {
+  public startDrawInteraction(layer: InteractionSet) {
     this.setInteractionMode(layer, "draw");
   }
 
-  public stopDrawInteraction(layer: InteractionLayer) {
+  public stopDrawInteraction(layer: InteractionSet) {
     this.setInteractionMode(layer, "edit");
   }
 
@@ -848,7 +885,6 @@ export class ImageViewerState {
     feature.setProperties({
       metaData,
     });
-    console.log(feature.getProperties());
     feature.changed();
 
     this.syncSelectedFeatures();
@@ -917,18 +953,47 @@ export class ImageViewerState {
   }
 }
 
-const IMAGEVIEWER_KEY = Symbol("IMAGEVIEWER");
+const VIEWER_CONTROLLER_KEY = Symbol("VIEWER_CONTROLLER");
 
-export function setImageViewerState() {
-  const state = new ImageViewerState();
-  return setContext(IMAGEVIEWER_KEY, state);
+export function setImageViewerController() {
+  const state = new ImageViewerController();
+  return setContext(VIEWER_CONTROLLER_KEY, state);
 }
 
 export function getImageViewerState() {
-  const context =
-    getContext<ReturnType<typeof setImageViewerState>>(IMAGEVIEWER_KEY);
+  const context = getContext<ReturnType<typeof setImageViewerController>>(
+    VIEWER_CONTROLLER_KEY,
+  );
   if (!context) {
-    throw new Error("getImageViewerState must be used within a provider");
+    throw new Error("getImageViewerController must be used within a provider");
   }
   return context;
+}
+
+const VIEWER_STATE_KEY = Symbol("VIEWER_STATE");
+export function createViewerContext() {
+  let activeSet = $state<InteractionSet>("annotation");
+  let activeMode = $state<InteractionMode>("edit");
+
+  const context: ViewerState = {
+    get activeSet() {
+      return activeSet;
+    },
+    get activeMode() {
+      return activeMode;
+    },
+    setActiveSet(set) {
+      activeSet = set;
+    },
+    setActiveMode(mode) {
+      activeMode = mode;
+    },
+  };
+
+  setContext(VIEWER_STATE_KEY, context);
+  return context;
+}
+
+export function getViewerContext() {
+  return getContext<ViewerState>(VIEWER_STATE_KEY);
 }
