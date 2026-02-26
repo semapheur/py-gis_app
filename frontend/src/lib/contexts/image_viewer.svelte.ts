@@ -404,10 +404,14 @@ export class ImageViewerController {
     this.#image = null;
   }
 
-  public attach(target: HTMLElement, options: Options) {
+  public attach(target: HTMLElement, options: Options, ctx: ViewerState) {
     if (this.#map) return;
 
     this.setupMap(target, options);
+
+    $effect(() => {
+      this.applyInteractionMode(ctx.activeSet, ctx.activeMode);
+    });
 
     return () => {
       this.destroy();
