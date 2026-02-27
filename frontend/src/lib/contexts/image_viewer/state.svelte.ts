@@ -1,9 +1,12 @@
 import { getContext, setContext } from "svelte";
 
+export const measureOptions = ["Area", "Length"] as const;
+export type MeasurementType = Lowercase<(typeof measureOptions)[number]>;
+
 export type InteractionMode = "draw" | "edit";
 export type InteractionSet = "annotation" | "measurement";
 
-export class ViewerState {
+export class ImageViewerState {
   activeSet = $state<InteractionSet>("annotation");
   activeMode = $state<InteractionMode>("edit");
 
@@ -17,13 +20,13 @@ export class ViewerState {
 }
 
 const VIEWER_STATE_KEY = Symbol("VIEWER_STATE");
-export function createViewerContext() {
-  const context = new ViewerState();
+export function setImageViewerState() {
+  const context = new ImageViewerState();
 
   setContext(VIEWER_STATE_KEY, context);
   return context;
 }
 
-export function getViewerContext() {
-  return getContext<ViewerState>(VIEWER_STATE_KEY);
+export function getImageViewerState() {
+  return getContext<ImageViewerState>(VIEWER_STATE_KEY);
 }

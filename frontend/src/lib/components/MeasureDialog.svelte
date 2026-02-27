@@ -4,26 +4,25 @@
     getImageViewerState,
     measureOptions,
     type MeasurementType,
-  } from "$lib/contexts/image_viewer.svelte";
+  } from "$lib/contexts/image_viewer/state.svelte";
   import Select from "$lib/components/Select.svelte";
   import CloseButton from "./CloseButton.svelte";
+  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
 
   interface Props {
     open: boolean;
   }
 
-  const imageViewer = getImageViewerState();
+  const viewerController = getImageViewerController();
+  const viewerState = getImageViewerState();
 
   let { open = $bindable() }: Props = $props();
   let measureType = $state<MeasurementType>("area");
   let isMeasuring = $state<boolean>(false);
 
   $effect(() => {
-    if (isMeasuring) {
-      imageViewer.startDrawInteraction("measurement");
-    } else {
-      imageViewer.stopDrawInteraction("measurement");
-    }
+    const mode = isMeasuring ? "draw" : "edit";
+    viewerState.setActiveMode(mode);
   });
 
   $effect(() => {
@@ -32,7 +31,8 @@
 
   function handleClose() {
     open = false;
-    imageViewer.stopDrawInteraction("annotation");
+    viewerState.setActiveSet("annotation");
+    viewerState.setActiveMode("edit");
   }
 </script>
 
@@ -49,7 +49,7 @@
   >
   <Button
     background="oklch(var(--color-negative))"
-    onclick={() => imageViewer.clearMeasurements()}>Clear</Button
+    onclick={() => viewerController.clearMeasurements()}>Clear</Button
   >
 </div>
 

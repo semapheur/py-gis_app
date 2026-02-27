@@ -18,9 +18,10 @@ import WKT from "ol/format/WKT";
 import GeoJSON from "ol/format/GeoJSON";
 
 import {
-  ViewerState,
+  ImageViewerState,
   type InteractionMode,
   type InteractionSet,
+  type MeasurementType,
 } from "$lib/contexts/image_viewer/state.svelte";
 import {
   styleAnnotation,
@@ -39,9 +40,6 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
-
-export const measureOptions = ["Area", "Length"] as const;
-export type MeasurementType = Lowercase<(typeof measureOptions)[number]>;
 
 export interface Enhancement {
   brightness: number;
@@ -62,7 +60,6 @@ interface ViewerInteractions {
 interface Options {
   imageInfo: Partial<ImageInfo>;
   radiometricParams: RadiometricParams | null;
-  annotateState: AnnotateState;
   annotations?: AnnotationInfo[];
 }
 
@@ -164,7 +161,7 @@ export class ImageViewerController {
     this.#image = null;
   }
 
-  public attach(target: HTMLElement, options: Options, ctx: ViewerState) {
+  public attach(target: HTMLElement, ctx: ImageViewerState, options: Options) {
     if (this.#map) return;
 
     this.setupMap(target, options);
@@ -225,7 +222,7 @@ export class ImageViewerController {
       view: rasterSource.getView(),
     });
 
-    this.setupAnnotationInteractions(options.annotateState);
+    this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();
     this.setInteractionMode("annotation", "edit");
 
@@ -234,7 +231,7 @@ export class ImageViewerController {
     }
   }
 
-  private setupAnnotationInteractions(annotateState: AnnotateState) {
+  private setupAnnotationInteractions() {
     if (!this.#map || !this.#activityLayer || !this.#equipmentLayer) return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
@@ -320,9 +317,9 @@ export class ImageViewerController {
       translate,
     };
 
-    Object.values(this.#interactions.annotation).forEach((i) =>
-      this.#map!.addInteraction(i),
-    );
+    //Object.values(this.#interactions.annotation).forEach((i) =>
+    //  this.#map!.addInteraction(i),
+    //);
   }
 
   private setupMeasurementInteractions() {
@@ -370,9 +367,9 @@ export class ImageViewerController {
       translate,
     };
 
-    Object.values(this.#interactions.measurement).forEach((i) =>
-      this.#map!.addInteraction(i),
-    );
+    //Object.values(this.#interactions.measurement).forEach((i) =>
+    //  this.#map!.addInteraction(i),
+    //);
   }
 
   private createDrawAnnotationInteraction(annotateState: AnnotateState) {
@@ -724,7 +721,7 @@ export function setImageViewerController() {
   return setContext(VIEWER_CONTROLLER_KEY, state);
 }
 
-export function getImageViewerState() {
+export function getImageViewerController() {
   const context = getContext<ReturnType<typeof setImageViewerController>>(
     VIEWER_CONTROLLER_KEY,
   );

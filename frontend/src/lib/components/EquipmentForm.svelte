@@ -1,8 +1,8 @@
 <script lang="ts">
-  import { getContext } from "svelte";
   import { error } from "@sveltejs/kit";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
+  import { getEquipmentOptions } from "$lib/contexts/context.svelte";
   import { type SelectOption } from "$lib/utils/types";
   import type {
     AnnotateValue,
@@ -20,7 +20,7 @@
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
-  const { confidenceOptions, statusOptions } = getContext("equipment-options");
+  const { confidenceOptions, statusOptions } = getEquipmentOptions();
 
   let selectedEquipment = $state<SelectOption | null>(
     toSelectOption(value?.equipment ?? null),

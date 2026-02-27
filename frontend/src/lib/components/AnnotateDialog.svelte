@@ -12,29 +12,26 @@
     type ActivityData,
     type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
-  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
+  import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
 
   interface Props {
     open: boolean;
   }
 
   const annotate = getAnnotateState();
-  const imageViewer = getImageViewerState();
+  const viewerState = getImageViewerState();
 
   let { open = $bindable() }: Props = $props();
   let isAnnotating = $state<boolean>(false);
 
   $effect(() => {
-    if (isAnnotating) {
-      imageViewer.startDrawInteraction("annotation");
-    } else {
-      imageViewer.stopDrawInteraction("annotation");
-    }
+    const mode = isAnnotating ? "draw" : "edit";
+    viewerState.setActiveMode(mode);
   });
 
   function handleClose() {
     open = false;
-    imageViewer.stopDrawInteraction("annotation");
+    viewerState.setActiveMode("edit");
   }
 </script>
 

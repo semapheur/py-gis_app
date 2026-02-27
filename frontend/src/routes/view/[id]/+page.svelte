@@ -1,114 +1,36 @@
 <script lang="ts">
-  import { setContext } from "svelte";
   import type { PageData } from "./$types";
-  import ImageViewer from "$lib/components/ImageViewer.svelte";
-  import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
-  import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
-  import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
-  import MeasureDialog from "$lib/components/MeasureDialog.svelte";
-  import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
-  import Button from "$lib/components/Button.svelte";
+
   import { setAnnotateState } from "$lib/contexts/annotate.svelte";
-  import { setImageViewerState } from "$lib/contexts/image_viewer.svelte";
-  import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
+  import { setImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
+  import { setImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
+  import {
+    setEquipmentOptions,
+    setImageViewerOptions,
+    type ImageViewerOptions,
+  } from "$lib/contexts/context.svelte";
+
+  import ImageViewer from "$lib/components/ImageViewer.svelte";
 
   let { data } = $props<{ data: PageData }>();
-  const imageInfo: ImageInfo = $derived(data.imageInfo);
-  const radiometricParams: RadiometricParams = $derived(data.radiometricParams);
-  const annotations = $derived(data.annotations);
 
-  let annotateOpen = $state<boolean>(false);
-  let summaryOpen = $state<boolean>(false);
-  let enhancementOpen = $state<boolean>(false);
-  let measurementOpen = $state<boolean>(false);
+  let viewerOptions = $derived<ImageViewerOptions>({
+    imageInfo: data.imageInfo,
+    radiometricParams: data.radiometricParams,
+    annotations: data.annotations,
+  });
 
-  setContext("equipment-options", {
+  $effect(() => {
+    setImageViewerOptions(viewerOptions);
+  });
+
+  setEquipmentOptions({
     confidenceOptions: data.confidenceOptions.options,
     statusOptions: data.statusOptions.options,
   });
-
   setAnnotateState();
+  setImageViewerController();
   setImageViewerState();
 </script>
 
-<div class="container">
-  {#if !annotateOpen}
-    <div class="toggle-form">
-      <Button onclick={() => (annotateOpen = !annotateOpen)}>Add</Button>
-    </div>
-  {/if}
-  {#if !summaryOpen}
-    <div class="toggle-summary">
-      <Button onclick={() => (summaryOpen = !summaryOpen)}>Summary</Button>
-    </div>
-  {/if}
-  {#if !measurementOpen}
-    <div class="toggle-measurement">
-      <Button onclick={() => (measurementOpen = !measurementOpen)}>
-        Measure
-      </Button>
-    </div>
-  {/if}
-  <div class="toggle-enhancement">
-    <Button onclick={() => (enhancementOpen = !enhancementOpen)}
-      >Enhancement</Button
-    >
-  </div>
-  {#if annotateOpen}
-    <AnnotateDialog bind:open={annotateOpen} />
-  {/if}
-  <ImageViewer {imageInfo} {radiometricParams} {annotations} />
-  <AnnotationEdit />
-  <AnnotationSummary bind:open={summaryOpen} />
-  {#if enhancementOpen}
-    <div class="enhancement">
-      <ImageEnhacement />
-    </div>
-  {/if}
-  {#if measurementOpen}
-    <MeasureDialog bind:open={measurementOpen} />
-  {/if}
-</div>
-
-<style>
-  .container {
-    position: relative;
-    width: 100%;
-    height: 100%;
-  }
-
-  .enhancement {
-    position: absolute;
-    top: var(--size-lg);
-    right: var(--size-lg);
-  }
-
-  .toggle-form {
-    position: absolute;
-    left: var(--size-lg);
-    bottom: var(--size-lg);
-    z-index: 1;
-  }
-
-  .toggle-summary {
-    position: absolute;
-    right: var(--size-lg);
-    bottom: var(--size-lg);
-    z-index: 1;
-  }
-
-  .toggle-measurement {
-    position: absolute;
-    left: 50%;
-    bottom: var(--size-lg);
-    transform: translateX(-50%);
-    z-index: 1;
-  }
-
-  .toggle-enhancement {
-    position: absolute;
-    top: var(--size-lg);
-    right: var(--size-lg);
-    z-index: 1;
-  }
-</style>
+<ImageViewer />
