@@ -10,7 +10,7 @@
   const viewerState = getImageViewerState();
 
   $effect(() => {
-    viewerController.updateInteractionMode(
+    viewerController.updateInteraction(
       viewerState.activeSet,
       viewerState.activeMode,
     );

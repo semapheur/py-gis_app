@@ -11,23 +11,110 @@ import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
 
-interface ColorScheme {
-  fill: (alpha?: number) => string;
-  stroke: (alpha?: number) => string;
+const equipmentPointStyle = {
+  base: {
+    "circle-radius": 5,
+    "circle-fill-color": "oklch(57.7% 0.245 27.325 / 0.5)",
+    "circle-stroke-color": "rgba(255 255 255 / 0.5)",
+    "circle-stroke-width": 1,
+  },
+  selected: {
+    "circle-radius": 5,
+    "circle-fill-color": "oklch(57.7% 0.245 27.325)",
+    "circle-stroke-color": "rgba(255 255 255)",
+    "circle-stroke-width": 2,
+  },
+};
+
+const equipmentPolygonStyle = {
+  base: {
+    "stroke-color": "oklch(57.7% 0.245 27.325 / 0.5)",
+    "stroke-Width": 2,
+  },
+  selected: {
+    "stroke-color": "oklch(57.7% 0.245 27.325)",
+    "stroke-width": 3,
+    "fill-color": "oklch(57.7% 0.245 27.325 / 0.1)",
+  },
+};
+
+const selectFilter = [
+  "any",
+  ["==", ["var", "hoverId"], ["get", "id"]],
+  ["==", ["get", "selected"], 1],
+];
+
+export const equipmentStyle = [
+  {
+    filter: ["all", ["==", ["geometry-type"], "Polygon"], selectFilter],
+    style: equipmentPolygonStyle.selected,
+  },
+  {
+    filter: ["all", ["==", ["geometry-type"], "Point"], selectFilter],
+    style: equipmentPointStyle.selected,
+  },
+  {
+    filter: ["==", ["geometry-type"], "Polygon"],
+    style: equipmentPolygonStyle.base,
+  },
+  {
+    filter: ["==", ["geometry-type"], "Point"],
+    style: equipmentPointStyle.base,
+  },
+];
+
+export const vertexStyle = new Style({
+  image: new Circle({
+    radius: 3,
+    fill: new Fill({ color: "white" }),
+    stroke: new Stroke({ color: "black", width: 1 }),
+  }),
+  geometry: (feature: FeatureLike) => {
+    const geometry = feature.getGeometry();
+
+    if (geometry instanceof Polygon) {
+      return new MultiPoint(geometry.getCoordinates()[0]);
+    }
+
+    if (geometry instanceof MultiPolygon) {
+      return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
+    }
+  },
+});
+
+export function styleText(
+  label: string,
+  font: string,
+  strokeWidth: number = 2,
+  offsetY?: number | undefined,
+) {
+  return new Text({
+    text: label,
+    font,
+    fill: new Fill({ color: "white" }),
+    stroke: new Stroke({ color: "black", width: strokeWidth }),
+    offsetY: offsetY,
+  });
 }
 
-export const textColor = {
-  fill: (alpha: number = 1.0) => `rgba(250,250,249,${alpha})`,
-  stroke: (alpha: number = 1.0) => `rgba(28,25,23,${alpha})`,
-};
-export const equipmentColor = {
-  fill: (alpha: number = 1.0) => `rgba(255,0,0,${alpha})`,
-  stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
-};
-export const activityColor = {
-  fill: (alpha: number = 1.0) => `rgba(0,255,0,${alpha})`,
-  stroke: (alpha: number = 1.0) => `rgba(255,255,255,${alpha})`,
-};
+export function styleAnnotationLabel(
+  feature: FeatureLike,
+  select: boolean = false,
+) {
+  const geometry = feature.getGeometry()?.getType();
+  if (!geometry) return null;
+
+  const label = feature.get("label");
+  if (!label) return null;
+
+  const font = select ? "bold 10px sans-serif" : "10px sans-serif";
+  const strokeWidth = select ? 3 : 2;
+  const offsetY = geometry === "Point" ? 25 : 10;
+
+  return new Style({
+    text: styleText(label, font, strokeWidth, offsetY),
+  });
+}
 
 const measurementStyle = new Style({
   fill: new Fill({
@@ -117,65 +204,6 @@ function formatArea(polygon: Polygon, projection: Projection): string {
   return output;
 }
 
-export function styleAnnotationText(
-  label: string,
-  colorScheme: ColorScheme,
-  alpha: number = 1.0,
-  offsetY?: number | undefined,
-) {
-  return new Text({
-    text: label,
-    fill: new Fill({ color: colorScheme.fill(alpha) }),
-    stroke: new Stroke({ color: colorScheme.stroke(alpha), width: 2 }),
-    offsetY: offsetY,
-  });
-}
-
-export function styleAnnotation(
-  feature: FeatureLike,
-  colorScheme: ColorScheme,
-  alpha: number = 1.0,
-  polygonAlpha: number | undefined = 0.0,
-  strokeWidth: number = 1.0,
-) {
-  const geometry = feature.getGeometry();
-  if (!(geometry instanceof Geometry)) return null;
-
-  const label = feature.get("label");
-
-  if (geometry instanceof Point) {
-    return new Style({
-      image: new Circle({
-        radius: 5,
-        fill: new Fill({ color: colorScheme.fill(alpha) }),
-        stroke: new Stroke({
-          color: equipmentColor.stroke(alpha),
-          width: strokeWidth,
-        }),
-      }),
-      text: label ? styleAnnotationText(label, textColor, 1.0, 25) : undefined,
-    });
-  }
-
-  if (geometry instanceof Polygon || geometry instanceof MultiPolygon) {
-    return new Style({
-      stroke: new Stroke({
-        color: colorScheme.fill(alpha),
-        width: strokeWidth,
-      }),
-      fill:
-        polygonAlpha === null
-          ? undefined
-          : new Fill({
-              color: colorScheme.fill(polygonAlpha),
-            }),
-      text: label ? styleAnnotationText(label, textColor, 1.0, 10) : undefined,
-    });
-  }
-
-  return null;
-}
-
 export function styleMeasurement(
   projection: Projection,
   feature: FeatureLike,
@@ -225,21 +253,3 @@ export function styleMeasurement(
 
   return styles;
 }
-
-export const vertexStyle = new Style({
-  image: new Circle({
-    radius: 3,
-    fill: new Fill({ color: "#fff" }),
-    stroke: new Stroke({ color: "#000", width: 1 }),
-  }),
-  geometry: (feature: FeatureLike) => {
-    const geometry = feature.getGeometry();
-    if (geometry instanceof Polygon) {
-      return new MultiPoint(geometry.getCoordinates()[0]);
-    }
-
-    if (geometry instanceof MultiPolygon) {
-      return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
-    }
-  },
-});

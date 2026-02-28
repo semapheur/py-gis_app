@@ -1,8 +1,9 @@
 import { getContext, setContext } from "svelte";
 import Map from "ol/Map";
-import WebGLTileLayer, { type Style as RasterStyle } from "ol/layer/WebGLTile";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
+import WebGLTileLayer, { type Style as RasterStyle } from "ol/layer/WebGLTile";
+import WebGLVectorLayer from "ol/layer/WebGLVector";
 import GeoTIFF from "ol/source/GeoTIFF";
 import { Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
@@ -23,12 +24,11 @@ import {
   type MeasurementType,
 } from "$lib/contexts/image_viewer/state.svelte";
 import {
-  styleAnnotation,
-  styleAnnotationText,
+  styleText,
   styleMeasurement,
+  styleAnnotationLabel,
   vertexStyle,
-  equipmentColor,
-  textColor,
+  equipmentStyle,
 } from "$lib/contexts/image_viewer/styling";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
@@ -63,20 +63,13 @@ interface Options {
   annotations?: AnnotationInfo[];
 }
 
-const MODE_INTERACTIONS = {
-  edit: ["hover", "select", "modify", "translate"],
-  draw: ["draw"],
-} as const satisfies Record<
-  InteractionMode,
-  readonly (keyof ViewerInteractions)[]
->;
-
 export class ImageViewerController {
   #image: string | null = null;
   #map: Map | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
-  #equipmentLayer: VectorLayer | null = null;
+  #equipmentLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
+  #labelLayer: VectorLayer | null = null;
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm, VectorSource>;
@@ -194,32 +187,41 @@ export class ImageViewerController {
     this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
     });
-    this.#equipmentLayer = new VectorLayer({
+    this.#equipmentLayer = new WebGLVectorLayer({
       source: this.#annotationSources.equipment,
-      style: (feature) => styleAnnotation(feature, equipmentColor, 0.7),
+      style: equipmentStyle,
+      variables: {
+        hoverId: "",
+      },
     });
-    this.#activityLayer = new VectorLayer({
-      source: this.#annotationSources.activity,
-      style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
+    //this.#activityLayer = new VectorLayer({
+    //  source: this.#annotationSources.activity,
+    //  style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
+    //});
+    this.#labelLayer = new VectorLayer({
+      source: this.#annotationSources.equipment,
+      style: (feature) => styleAnnotationLabel(feature),
     });
-    this.#measurementLayer = new VectorLayer({
-      source: this.#measurementSource,
-      style: (feature) => styleMeasurement(this.projection, feature, true),
-    });
+
+    //this.#measurementLayer = new VectorLayer({
+    //  source: this.#measurementSource,
+    //  style: (feature) => styleMeasurement(this.projection, feature, true),
+    //});
 
     this.#map = new Map({
       target: target,
       layers: [
         this.#rasterLayer,
         this.#equipmentLayer,
-        this.#activityLayer,
-        this.#measurementLayer,
+        //this.#activityLayer,
+        this.#labelLayer,
+        //this.#measurementLayer,
       ],
       view: rasterSource.getView(),
     });
 
     this.setupAnnotationInteractions();
-    this.setupMeasurementInteractions();
+    //this.setupMeasurementInteractions();
 
     if (options.annotations?.length) {
       this.loadAnnotations(options.annotations);
@@ -227,7 +229,7 @@ export class ImageViewerController {
   }
 
   private setupAnnotationInteractions() {
-    if (!this.#map || !this.#activityLayer || !this.#equipmentLayer) return;
+    if (!this.#map || !this.#equipmentLayer || !this.#labelLayer) return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
       const originalGeometries = features.map((feature) => ({
@@ -247,45 +249,59 @@ export class ImageViewerController {
       }
     };
 
+    const handleHover = (features: Feature[]) => {
+      const feature = features.length > 0 ? features[0] : null;
+      const hoverId = feature ? feature.get("id") : "";
+
+      this.#equipmentLayer?.updateStyleVariables({ hoverId });
+    };
+
     const modifiable = new Collection<Feature>();
 
     const hover = new Select({
       condition: pointerMove,
       hitTolerance: 5,
-      layers: [this.#activityLayer, this.#equipmentLayer],
+      layers: [this.#labelLayer],
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
-      style: (feature) => styleAnnotation(feature, equipmentColor, 1.0, 0.0, 2),
+      style: (feature) => styleAnnotationLabel(feature, true),
+    });
+    hover.on("select", (e) => {
+      handleHover(e.selected);
     });
 
     const select: Select = new Select({
       addCondition: shiftKeyOnly,
       hitTolerance: 5,
-      layers: [this.#activityLayer, this.#equipmentLayer],
+      layers: [this.#labelLayer],
       style: (feature) => {
         const features = select.getFeatures();
         const index = features.getArray().indexOf(feature);
-        const base = styleAnnotation(feature, equipmentColor, 1.0, 0.2, 2);
+        const baseLabel = styleAnnotationLabel(feature, true);
 
-        return index >= 0 && base
+        return index >= 0 && baseLabel
           ? [
-              base,
+              baseLabel,
               new Style({
-                text: styleAnnotationText(`${index + 1}`, textColor, 1.0, -15),
+                text: styleText(`${index + 1}`, "bold 10px sans-serif", 3, -15),
               }),
               vertexStyle,
             ]
-          : base;
+          : baseLabel;
       },
     });
 
     select.getFeatures().on("add", (e) => {
+      e.element.set("selected", 1);
+
       const g = e.element.getGeometry();
       if (g instanceof Polygon || g instanceof MultiPolygon) {
         modifiable.push(e.element);
       }
+
       this.syncSelectedFeatures();
     });
     select.getFeatures().on("remove", (e) => {
+      e.element.set("selected", 0);
       modifiable.remove(e.element);
       this.syncSelectedFeatures();
     });
@@ -436,7 +452,7 @@ export class ImageViewerController {
     this.#measurementSource.clear();
   }
 
-  public updateInteractionMode(set: InteractionSet, mode: InteractionMode) {
+  public updateInteraction(set: InteractionSet, mode: InteractionMode) {
     if (!this.#map || !this.#interactions) return;
 
     const interactions = this.#interactions[set];
