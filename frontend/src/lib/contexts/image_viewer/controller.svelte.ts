@@ -18,7 +18,6 @@ import WKT from "ol/format/WKT";
 import GeoJSON from "ol/format/GeoJSON";
 
 import {
-  ImageViewerState,
   type InteractionMode,
   type InteractionSet,
   type MeasurementType,
@@ -29,6 +28,7 @@ import {
   styleMeasurement,
   vertexStyle,
   equipmentColor,
+  textColor,
 } from "$lib/contexts/image_viewer/styling";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
@@ -54,7 +54,7 @@ interface ViewerInteractions {
   select: Select;
   modify: Modify;
   translate: Translate;
-  draw?: Draw;
+  draw: Draw | null;
 }
 
 interface Options {
@@ -161,14 +161,10 @@ export class ImageViewerController {
     this.#image = null;
   }
 
-  public attach(target: HTMLElement, ctx: ImageViewerState, options: Options) {
+  public attach(target: HTMLElement, options: Options) {
     if (this.#map) return;
 
     this.setupMap(target, options);
-
-    $effect(() => {
-      this.applyInteractionMode(ctx.activeSet, ctx.activeMode);
-    });
 
     return () => {
       this.destroy();
@@ -224,7 +220,6 @@ export class ImageViewerController {
 
     this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();
-    this.setInteractionMode("annotation", "edit");
 
     if (options.annotations?.length) {
       this.loadAnnotations(options.annotations);
@@ -308,18 +303,13 @@ export class ImageViewerController {
       handleFeatureEdit(e.features.getArray());
     });
 
-    //const draw = this.createDrawAnnotationInteraction(annotateState);
-
     this.#interactions.annotation = {
       hover,
       select,
       modify,
       translate,
+      draw: null,
     };
-
-    //Object.values(this.#interactions.annotation).forEach((i) =>
-    //  this.#map!.addInteraction(i),
-    //);
   }
 
   private setupMeasurementInteractions() {
@@ -365,11 +355,8 @@ export class ImageViewerController {
       select,
       modify,
       translate,
+      draw: null,
     };
-
-    //Object.values(this.#interactions.measurement).forEach((i) =>
-    //  this.#map!.addInteraction(i),
-    //);
   }
 
   private createDrawAnnotationInteraction(annotateState: AnnotateState) {
@@ -449,7 +436,7 @@ export class ImageViewerController {
     this.#measurementSource.clear();
   }
 
-  private applyInteractionMode(set: InteractionSet, mode: InteractionMode) {
+  public updateInteractionMode(set: InteractionSet, mode: InteractionMode) {
     if (!this.#map || !this.#interactions) return;
 
     const interactions = this.#interactions[set];
@@ -477,31 +464,6 @@ export class ImageViewerController {
         if (i) this.#map?.addInteraction(i);
       });
     }
-  }
-
-  private setInteractionMode(layer: InteractionSet, mode: InteractionMode) {
-    if (!this.#interactions.annotation || !this.#interactions.measurement)
-      return;
-
-    Object.values(this.#interactions.annotation).forEach((i) =>
-      i.setActive(false),
-    );
-
-    Object.values(this.#interactions.measurement).forEach((i) =>
-      i.setActive(false),
-    );
-
-    for (const key of MODE_INTERACTIONS[mode]) {
-      this.#interactions[layer][key]?.setActive(true);
-    }
-  }
-
-  public startDrawInteraction(layer: InteractionSet) {
-    this.setInteractionMode(layer, "draw");
-  }
-
-  public stopDrawInteraction(layer: InteractionSet) {
-    this.setInteractionMode(layer, "edit");
   }
 
   private syncSelectedFeatures() {

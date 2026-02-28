@@ -26,7 +26,7 @@
   });
 
   $effect(() => {
-    imageViewer.updateDrawMeasurementInteraction(measureType, isMeasuring);
+    viewerController.updateDrawMeasurementInteraction(measureType, isMeasuring);
   });
 
   function handleClose() {

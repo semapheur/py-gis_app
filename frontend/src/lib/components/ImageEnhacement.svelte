@@ -1,9 +1,9 @@
 <script lang="ts">
   import RangeSlider from "$lib/components/RangeSlider.svelte";
   import {
-    getImageViewerState,
+    getImageViewerController,
     type Enhancement,
-  } from "$lib/contexts/image_viewer.svelte";
+  } from "$lib/contexts/image_viewer/controller.svelte";
 
   interface SliderConfig {
     key: keyof Enhancement;
@@ -29,7 +29,7 @@
     gamma: 1,
   });
 
-  const viewer = getImageViewerState();
+  const viewer = getImageViewerController();
   $effect(() => {
     viewer.updateEnhancement(enhancement);
   });

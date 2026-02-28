@@ -6,12 +6,14 @@
 
   const viewerOptions = getImageViewerOptions();
 
-  const annotateState = getAnnotateState();
   const viewerController = getImageViewerController();
   const viewerState = getImageViewerState();
 
   $effect(() => {
-    viewerController.updateDrawAnnotationInteraction(annotateState);
+    viewerController.updateInteractionMode(
+      viewerState.activeSet,
+      viewerState.activeMode,
+    );
   });
 </script>
 
@@ -19,7 +21,7 @@
   <div
     class="map"
     {@attach (el) => {
-      viewerController.attach(el, viewerState, viewerOptions);
+      viewerController.attach(el, viewerOptions);
     }}
   ></div>
 {/if}

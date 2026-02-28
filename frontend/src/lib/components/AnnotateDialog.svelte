@@ -13,12 +13,14 @@
     type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
   import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
+  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
 
   interface Props {
     open: boolean;
   }
 
-  const annotate = getAnnotateState();
+  const annotateState = getAnnotateState();
+  const viewerController = getImageViewerController();
   const viewerState = getImageViewerState();
 
   let { open = $bindable() }: Props = $props();
@@ -27,6 +29,14 @@
   $effect(() => {
     const mode = isAnnotating ? "draw" : "edit";
     viewerState.setActiveMode(mode);
+  });
+
+  $effect(() => {
+    if (viewerState.activeSet !== "annotation" || !annotateState.isValid)
+      return;
+
+    const isActive = viewerState.activeMode === "draw";
+    viewerController.updateDrawAnnotationInteraction(annotateState, isActive);
   });
 
   function handleClose() {
@@ -39,40 +49,41 @@
   <header class="header">
     <Tabs
       tabs={annotateTabs}
-      selected={annotate.layer}
-      onselect={(layer: typeof annotate.layer) => annotate.setLayer(layer)}
+      selected={annotateState.layer}
+      onselect={(layer) =>
+        annotateState.setLayer(layer as typeof annotateState.layer)}
     />
     <CloseButton onclick={() => handleClose()} />
   </header>
   <main>
-    {#key annotate.layer}
-      {#if annotate.layer === "equipment"}
+    {#key annotateState.layer}
+      {#if annotateState.layer === "equipment"}
         <EquipmentForm
-          value={annotate.data as EquipmentData}
-          onchange={(d) => annotate.setData(d)}
+          value={annotateState.data as EquipmentData}
+          onchange={(d) => annotateState.setData(d)}
         />
-      {:else if annotate.layer === "activity"}
+      {:else if annotateState.layer === "activity"}
         <ActivityForm
-          value={annotate.data as ActivityData}
-          onchange={(d) => annotate.setData(d)}
+          value={annotateState.data as ActivityData}
+          onchange={(d) => annotateState.setData(d)}
         />
       {/if}
     {/key}
   </main>
   <footer class="footer">
-    {#key annotate.layer}
+    {#key annotateState.layer}
       <Select
         placeholder="Geometry"
-        options={annotate.geometryOptions}
-        value={annotate.geometry}
-        onchange={(v) => annotate.setGeometry(v)}
+        options={annotateState.geometryOptions}
+        value={annotateState.geometry}
+        onchange={(v) => annotateState.setGeometry(v)}
       />
     {/key}
     <Button
       background={isAnnotating
         ? "oklch(var(--color-negative))"
         : "oklch(var(--color-positive))"}
-      disabled={!annotate.isValid}
+      disabled={!annotateState.isValid}
       onclick={() => (isAnnotating = !isAnnotating)}
     >
       {isAnnotating ? "Stop" : "Annotate"}

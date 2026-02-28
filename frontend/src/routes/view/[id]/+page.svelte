@@ -14,16 +14,19 @@
 
   let { data } = $props<{ data: PageData }>();
 
-  let viewerOptions = $derived<ImageViewerOptions>({
+  let viewerOptions = $state<ImageViewerOptions>({
     imageInfo: data.imageInfo,
     radiometricParams: data.radiometricParams,
     annotations: data.annotations,
   });
 
   $effect(() => {
-    setImageViewerOptions(viewerOptions);
+    viewerOptions.imageInfo = data.imageInfo;
+    viewerOptions.radiometricParams = data.radiometricParams;
+    viewerOptions.annotations = data.annotations;
   });
 
+  setImageViewerOptions(viewerOptions);
   setEquipmentOptions({
     confidenceOptions: data.confidenceOptions.options,
     statusOptions: data.statusOptions.options,

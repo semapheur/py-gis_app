@@ -4,7 +4,7 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import Button from "$lib/components/Button.svelte";
-  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
+  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
   import type {
     EquipmentData,
     CompleteEquipmentData,
@@ -13,7 +13,7 @@
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
-  const viewer = getImageViewerState();
+  const viewerController = getImageViewerController();
 
   let selectedIndex = $state<number | null>(null);
   let validForm = $state<boolean>(true);
@@ -22,7 +22,7 @@
   let bulkPatch = $state<BulkEquipmentPatch>({});
   let validBulkForm = $state(true);
 
-  const selectedFeatures = $derived(viewer.selectedFeatures);
+  const selectedFeatures = $derived(viewerController.selectedFeatures);
   const selectedFeature = $derived(
     selectedIndex !== null ? (selectedFeatures[selectedIndex] ?? null) : null,
   );
@@ -59,7 +59,7 @@
   function saveEdits() {
     if (!editData || !validForm || !selectedFeature) return;
 
-    viewer.updateFeatureData(
+    viewerController.updateFeatureData(
       selectedFeature,
       structuredClone($state.snapshot(editData)),
     );
@@ -68,7 +68,7 @@
   function deleteFeature() {
     if (!selectedFeature) return;
 
-    viewer.removeFeatures([selectedFeature]);
+    viewerController.removeFeatures([selectedFeature]);
     selectedIndex = null;
     editData = null;
   }
@@ -76,7 +76,7 @@
   function exportFeaturesToGeoJson() {
     if (!selectedFeatures.length) return;
 
-    const projection = viewer.projection;
+    const projection = viewerController.projection;
     if (!projection) return;
 
     const format = new GeoJSON();
@@ -132,7 +132,7 @@
       const data = feature.get("data") as EquipmentData;
       if (!data) continue;
 
-      viewer.updateFeatureData(feature, {
+      viewerController.updateFeatureData(feature, {
         ...structuredClone(data),
         ...bulkPatch,
       });
@@ -151,7 +151,7 @@
     );
     if (!ok) return;
 
-    viewer.removeFeatures(selectedFeatures);
+    viewerController.removeFeatures(selectedFeatures);
     selectedIndex = null;
     editData = null;
   }
@@ -159,7 +159,7 @@
   function polygonize() {
     if (!selectedFeature) return;
 
-    viewer.convertPointFeatureToPolygon(selectedFeature, 2000);
+    viewerController.convertPointFeatureToPolygon(selectedFeature, 2000);
   }
 </script>
 

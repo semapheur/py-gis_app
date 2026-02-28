@@ -1,6 +1,5 @@
 <script lang="ts">
   import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
-  import { getImageViewerOptions } from "$lib/contexts/context.svelte";
 
   import ImageRenderer from "$lib/components/ImageRenderer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
@@ -21,11 +20,13 @@
 
   function openAnnotation() {
     annotateOpen = true;
+    measurementOpen = false;
     viewerState.setActiveSet("annotation");
   }
 
   function openMeasurement() {
     measurementOpen = true;
+    annotateOpen = false;
     viewerState.setActiveSet("measurement");
   }
 </script>

@@ -1,12 +1,12 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import { getImageViewerState } from "$lib/contexts/image_viewer.svelte";
+  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import CollapsibleList from "$lib/components/CollapsibleList.svelte";
   import type { EquipmentData } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
 
-  const viewer = getImageViewerState();
+  const viewer = getImageViewerController();
 
   interface StatusCount {
     total: number;
