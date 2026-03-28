@@ -4,7 +4,7 @@ import type {
   SelectOption,
 } from "$lib/utils/types";
 import { createContext } from "svelte";
-import type { AnnotationInfo } from "./annotate.svelte";
+import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 
 interface EquipmentOptions {
   confidenceOptions: SelectOption[];

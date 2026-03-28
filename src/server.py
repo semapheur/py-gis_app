@@ -5,7 +5,7 @@ from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable, TypedDict, TypeVar
 
-from src.const import STATIC_DIR
+from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
 from src.index.images import get_image_info, get_images_by_intersection
 from src.index.radiometric import get_radiometric_parameters
@@ -37,6 +37,8 @@ from src.models.attributes import (
 P = TypeVar("P")
 R = TypeVar("R")
 
+app_settings = get_settings()
+
 
 class Handler(SimpleHTTPRequestHandler):
   def translate_path(self, path: str) -> str:
@@ -44,10 +46,10 @@ class Handler(SimpleHTTPRequestHandler):
       return path
 
     rel = path.lstrip("/")
-    full = STATIC_DIR / rel
+    full = app_settings.STATIC_DIR / rel
 
     if full.is_dir():
-      return str(STATIC_DIR / "index.html")
+      return str(app_settings.STATIC_DIR / "index.html")
 
     if full.exists():
       return str(full)

@@ -2,7 +2,7 @@ import json
 import uuid
 from typing import TypedDict
 
-from src.const import ATTRIBUTE_DB
+from src.bootstrap import get_settings
 from src.spatialite import (
   Field,
   JoinClause,
@@ -13,6 +13,8 @@ from src.spatialite import (
   datetime_field,
   uuid_field,
 )
+
+app_settings = get_settings()
 
 BASE_ATTRIBUTE_TABLES = (
   "activity_categories",
@@ -136,7 +138,7 @@ def create_attribute_tables():
   )
   schema_data.append(equipment_schema)
 
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.create_table(DataGridSchemaTable)
     db.create_table(EquipmentListTable)
     db.create_fts_table(EquipmentListTable, FTS_COLUMNS)
@@ -156,7 +158,7 @@ def create_attribute_tables():
 
 
 def get_attribute_tables():
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     records = db.select_records(DataGridSchemaTable, columns=("table_name", "label"))
     return records
 
@@ -178,7 +180,7 @@ def get_attribute_data(table: str, options: bool = False):
   else:
     raise ValueError(f"Invalid table name: {table}")
 
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     if options:
       derived_columns = {"label": "text", "value": "id"}
       result = db.select_records(model, derived=derived_columns, to_json=True)
@@ -193,7 +195,7 @@ def get_attribute_data(table: str, options: bool = False):
 def get_attribute_schema(table: str):
   validate_attribute_table(table)
 
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     where = "table_name = :table"
     params = {"table": table}
     records = db.select_records(
@@ -245,7 +247,7 @@ def update_attributes(table: str, payload: AttributeUpdate):
   upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     if upsert_models:
       on_conflict = OnConflict(index="id", action=update_sql)
       db.insert_models(upsert_models, on_conflict)
@@ -263,7 +265,7 @@ def search_equipment(query: str):
     expression="equipment ON equipment.rowid = equipment_fts.rowid",
   )
 
-  with SqliteDatabase(ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_records(
       EquipmentSearch,
       derived=columns,

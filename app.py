@@ -1,12 +1,11 @@
-import os
 from http.server import ThreadingHTTPServer
 
+from src.bootstrap import get_settings
 from src.server import Handler
 
 if __name__ == "__main__":
-  host = os.getenv("HOST", "0.0.0.0")
-  port = int(os.getenv("PORT", "8080"))
+  settings = get_settings()
 
-  print(f"Serving {host}:{port}")
-  server = ThreadingHTTPServer((host, port), Handler)
+  print(f"Serving {settings.HOST}:{settings.PORT}")
+  server = ThreadingHTTPServer((settings.HOST, settings.PORT), Handler)
   server.serve_forever()

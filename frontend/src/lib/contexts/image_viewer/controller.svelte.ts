@@ -170,7 +170,7 @@ export class ImageViewerController {
     const rasterSource = new GeoTIFF({
       sources: [
         {
-          url: "https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //`http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`,
+          url: `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`, //"https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //
         },
       ],
     });

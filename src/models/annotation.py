@@ -4,7 +4,7 @@ import uuid
 from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
-from src.const import ANNOTATION_DB, ATTRIBUTE_DB
+from bootstrap import get_settings
 from src.hashing import uuid_bytes_to_str
 from src.spatialite import (
   Field,
@@ -17,6 +17,8 @@ from src.spatialite import (
 )
 
 EquipmentGeometry = Literal["POINT", "POLYGON"]
+
+app_settings = get_settings()
 
 
 def equipment_annotation_model(geometry_type: EquipmentGeometry):
@@ -41,7 +43,7 @@ def equipment_annotation_model(geometry_type: EquipmentGeometry):
 
 def create_annotation_tables():
   geometries = ("POINT", "POLYGON")
-  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for g in geometries:
       model = equipment_annotation_model(g)
       db.create_table(model)
@@ -87,7 +89,7 @@ def update_annotations(payloads: list[AnnotationUpdate]):
     model_cls = equipment_annotation_model(geometry)
     upsert_models[annotation_type].append(model_cls.from_dict(data, True))
 
-  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for models in upsert_models.values():
       if not models:
         continue
@@ -122,7 +124,7 @@ def delete_annotations(payload: dict[str, list[str]]):
 
     raise RuntimeError(f"Invalid annotation type: {annotation_type}")
 
-  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for key, ids in payload.items():
       annotation_type, geometry = parse_key(key)
       model = resolve_model(annotation_type, geometry)
@@ -176,7 +178,7 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
       },
     }
 
-  attach_sql = f"ATTACH DATABASE '{ATTRIBUTE_DB}' AS a"
+  attach_sql = f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a"
   detach_sql = "DETACH DATABASE a"
   select_sql = f"""
     SELECT
@@ -203,7 +205,7 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
   """
   params = {"image": image_id}
 
-  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     db.conn.row_factory = Row
     cursor = db.conn.cursor()
 
@@ -258,7 +260,7 @@ def convert_annotation(payload: ConvertAnnotation):
   # point_table = equipment_annotation_model("POINT")
   # polygon_table = equipment_annotation_model("POLYGON")
 
-  with SqliteDatabase(ANNOTATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     cursor = db.conn.cursor()
     cursor.execute(insert_sql, payload)
     cursor.execute(delete_sql, payload)

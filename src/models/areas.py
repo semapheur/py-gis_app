@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional, TypedDict
 
-from src.const import LOCATION_DB
+from bootstrap import get_settings
 from src.spatialite import (
   Field,
   Model,
@@ -10,6 +10,8 @@ from src.spatialite import (
   datetime_field,
   uuid_field,
 )
+
+app_settings = get_settings()
 
 
 class AreasTable(Model):
@@ -25,7 +27,7 @@ class AreasTable(Model):
 
 
 def create_areas_tables():
-  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     db.create_table(AreasTable)
 
 
@@ -50,7 +52,7 @@ def update_area(payload: AreaUpdate):
 
   on_conflict = OnConflict(index="id", action=update_sql)
 
-  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     where = "areas.name = :name AND areas.id != :id"
     params = {"name": payload["name"], "id": uuid.UUID(payload["id"]).bytes}
     found_name = db.select_records(
@@ -68,7 +70,7 @@ def update_area(payload: AreaUpdate):
 
 
 def get_areas():
-  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     areas = db.select_records(
       AreasTable,
       columns=("id", "name", "description", "geometry"),
@@ -85,5 +87,5 @@ class AreaDelete(TypedDict):
 def delete_areas(payload: AreaDelete):
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 
-  with SqliteDatabase(LOCATION_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     db.delete_by_ids(AreasTable, delete_ids)
