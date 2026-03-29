@@ -4,7 +4,7 @@ import uuid
 from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
-from bootstrap import get_settings
+from src.bootstrap import get_settings
 from src.hashing import uuid_bytes_to_str
 from src.spatialite import (
   Field,

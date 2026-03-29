@@ -2,7 +2,7 @@
   import { error } from "@sveltejs/kit";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
-  import { getEquipmentOptions } from "$lib/contexts/context.svelte";
+  import { getEquipmentOptions } from "$lib/contexts/common.svelte";
   import { type SelectOption } from "$lib/utils/types";
   import type {
     AnnotateValue,

@@ -16,9 +16,11 @@
 
 <style>
   a {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
     color: inherit;
     text-decoration: none;
-    font: inherit;
     padding: var(--size-md);
     background-color: oklch(var(--color-secondary));
     border: none;
@@ -26,5 +28,6 @@
     cursor: pointer;
     font-size: var(--text-sm);
     font-weight: var(--font-bold);
+    line-height: var(--button-line-height);
   }
 </style>

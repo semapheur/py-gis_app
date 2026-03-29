@@ -1,9 +1,5 @@
 type Coordinate = number[];
 type Ring = Coordinate[];
-type Polygon = {
-  type: "Polygon";
-  coordinates: Ring[];
-};
 
 export function polygonToWkt(
   polygon: GeoJSON.Polygon,

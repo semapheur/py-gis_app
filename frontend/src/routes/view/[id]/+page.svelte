@@ -8,7 +8,7 @@
     setEquipmentOptions,
     setImageViewerOptions,
     type ImageViewerOptions,
-  } from "$lib/contexts/context.svelte";
+  } from "$lib/contexts/common.svelte";
 
   import ImageViewer from "$lib/components/ImageViewer.svelte";
 

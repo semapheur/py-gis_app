@@ -7,7 +7,7 @@ from enum import Enum
 from pathlib import Path
 from typing import Literal, TypeAlias, Union, cast
 
-from src.const import INDEX_DB, STATIC_DIR
+from src.bootstrap import get_settings
 from src.gdal_utils import (
   CogOptions,
   GdalTranslateOptions,
@@ -33,6 +33,8 @@ from src.spatialite import (
   hash_field,
   path_field,
 )
+
+app_settings = get_settings()
 
 Vec3: TypeAlias = tuple[float, float, float]
 
@@ -335,7 +337,7 @@ class IndexAction(Enum):
 
 
 def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, None]]:
-  with SqliteDatabase(INDEX_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     derived_columns = {
       "path": "concat(catalog.path, '/', images.relative_path, '/', images.filename, images.filetype)",
     }
@@ -372,13 +374,13 @@ def index_images(
 ):
   extensions = {".tif", ".tiff"}
 
-  cog_dir = STATIC_DIR / "cog"
+  cog_dir = app_settings.STATIC_DIR / "cog"
   cog_dir.mkdir(exist_ok=True)
 
-  thumbnail_dir = STATIC_DIR / "thumbnails"
+  thumbnail_dir = app_settings.STATIC_DIR / "thumbnails"
   thumbnail_dir.mkdir(exist_ok=True)
 
-  with SqliteDatabase(INDEX_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     db.create_table(ImageIndexTable)
     db.create_table(RadiometricParamsTable)
 
@@ -477,7 +479,7 @@ def index_images(
 
 
 def get_images_by_intersection(polygon_wkt: str):
-  with SqliteDatabase(INDEX_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     where = "ST_Intersects(footprint, poly.geom)"
     derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
     with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"
@@ -498,7 +500,7 @@ def get_images_by_intersection(polygon_wkt: str):
 
 
 def get_image_info(id: bytes) -> dict:
-  with SqliteDatabase(INDEX_DB, spatial=True) as db:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     where = "id = :id"
     params = {"id": id}
 

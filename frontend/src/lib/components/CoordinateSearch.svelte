@@ -1,14 +1,15 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
-  import InputGroup from "$lib/components/InputGroup.svelte";
   import Button from "$lib/components/Button.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
-  import { parseCoordinates } from "$lib/utils/geo/coord";
+  import { parseCoordinates, type Coordinate } from "$lib/utils/geo/coord";
   import { LatLon } from "$lib/utils/geo/latlon";
+  import { MGRS } from "$lib/utils/geo/mgrs";
+  import { UTM } from "$lib/utils/geo/utm";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
 
   let coordinates = $state<string>("");
-  let history = $state<Record<string, LatLon>>({});
+  let history = $state<Record<string, Coordinate>>({});
 
   const mapLibre = getMapLibreState();
 
@@ -24,8 +25,51 @@
     history = rest;
   }
 
-  function zoomTo(latlon: LatLon) {
+  function zoomToPoint(coord: Coordinate) {
+    let latlon: LatLon | null = null;
+
+    if (coord instanceof MGRS) {
+      latlon = coord.toLatLon();
+    } else if (coord instanceof UTM) {
+      latlon = coord.toLatLon();
+    } else {
+      latlon = coord;
+    }
+
     mapLibre?.zoomToLatLon(latlon.latitude, latlon.longitude);
+  }
+
+  function zoomToGrid(coord: MGRS) {
+    const gridCoordinates = coord.getGridPolygon().coordinates[0];
+    mapLibre?.zoomToPolygon(gridCoordinates, { duration: 1000 });
+  }
+
+  function coordinateToWktPoint(coord: Coordinate) {
+    let latlon: LatLon | null = null;
+
+    if (coord instanceof MGRS) {
+      latlon = coord.toLatLon();
+    } else if (coord instanceof UTM) {
+      latlon = coord.toLatLon();
+    } else {
+      latlon = coord;
+    }
+
+    return latlon.toWkt();
+  }
+
+  function printCoordinate(coord: Coordinate) {
+    let latlon: LatLon | null = null;
+
+    if (coord instanceof MGRS) {
+      latlon = coord.toLatLon();
+    } else if (coord instanceof UTM) {
+      latlon = coord.toLatLon();
+    } else {
+      latlon = coord;
+    }
+
+    return latlon.print("dms", 0);
   }
 </script>
 
@@ -51,23 +95,47 @@
         </tr>
       </thead>
       <tbody>
-        {#each Object.entries(history) as [input, latlon]}
+        {#each Object.entries(history) as [input, coord]}
           <tr>
             <td>
-              <button type="button" onclick={() => zoomTo(latlon)}>Z</button>
+              <div class="cell-stack">
+                <Button type="button" onclick={() => zoomToPoint(coord)}
+                  >Zoom to Point</Button
+                >
+                {#if coord instanceof MGRS}
+                  <Button type="button" onclick={() => zoomToGrid(coord)}
+                    >Zoom to Grid</Button
+                  >
+                {/if}
+              </div>
             </td>
             <td>
-              <LinkButton
-                href="/search?wkt=${encodeURIComponent(latlon.toWkt())}"
-                >Search</LinkButton
-              >
+              <div class="cell-stack">
+                <LinkButton
+                  href={`/search?wkt=${encodeURIComponent(
+                    coordinateToWktPoint(coord),
+                  )}`}>Search Point</LinkButton
+                >
+                {#if coord instanceof MGRS}
+                  <LinkButton
+                    href={`/search?wkt=${encodeURIComponent(coord.gridToWkt())}`}
+                    >Search Grid</LinkButton
+                  >
+                {/if}
+              </div>
             </td>
-            <td>{latlon.print("dms", 0)}</td>
+            <td>{printCoordinate(coord)}</td>
             <td>{input}</td>
             <td>
-              <Button type="button" onclick={() => deleteAt(input)}
-                >Delete</Button
-              >
+              <div class="cell-centered">
+                <button
+                  class="button-delete"
+                  type="button"
+                  onclick={() => deleteAt(input)}
+                >
+                  ✕
+                </button>
+              </div>
             </td>
           </tr>
         {/each}
@@ -91,5 +159,24 @@
     gap: var(--size-sm);
     padding-bottom: var(--size-md);
     border-bottom: 1px solid oklch(var(--color-accent));
+  }
+
+  .cell-stack {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-sm);
+  }
+
+  .cell-centered {
+    text-align: center;
+  }
+
+  .button-delete {
+    all: unset;
+    cursor: pointer;
+
+    &:hover {
+      color: red;
+    }
   }
 </style>

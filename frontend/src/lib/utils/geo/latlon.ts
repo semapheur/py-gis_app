@@ -1,5 +1,3 @@
-import { splitFloat } from "$lib/utils/math";
-
 type LatLonFormat = "dms" | "ddm" | "dd";
 
 function formatFloat(float: number, decimals: number | null) {

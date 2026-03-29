@@ -30,6 +30,18 @@ export class UTM {
     this.#northing = northing;
   }
 
+  get zone() {
+    return this.#zone;
+  }
+
+  get hemisphere() {
+    return this.#hemisphere;
+  }
+
+  get easting() {
+    return this.#easting;
+  }
+
   get northing() {
     return this.#northing;
   }

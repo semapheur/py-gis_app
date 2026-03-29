@@ -2,7 +2,7 @@ from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union, cast
 
-from src.const import INDEX_DB
+from src.bootstrap import get_settings
 from src.path_utils import verify_dir
 from src.spatialite import (
   Field,
@@ -12,6 +12,8 @@ from src.spatialite import (
   path_field,
 )
 from src.timeutils import datetime_to_unix
+
+app_settings = get_settings()
 
 
 class CatalogTable(Model):
@@ -100,13 +102,13 @@ def update_catalog(
 def add_calatog(path: Path, name: str):
   verify_dir(path)
 
-  with SqliteDatabase(INDEX_DB) as db:
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
     db.create_table(CatalogTable)
     insert_catalog(db, path, name)
 
 
 def get_catalogs() -> dict[int, dict[str, str]]:
-  with SqliteDatabase(INDEX_DB) as db:
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
     catalogs = db.select_records(CatalogTable, columns="*")
 
   result: dict[int, dict[str, str]] = {}
@@ -134,7 +136,7 @@ def edit_catalog(
   if new_path is not None:
     verify_dir(new_path)
 
-  with SqliteDatabase(INDEX_DB) as db:
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
     update_catalog(db, id, new_path, new_name)
 
 

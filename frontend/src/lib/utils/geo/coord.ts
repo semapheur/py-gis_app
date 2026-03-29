@@ -3,6 +3,8 @@ import { UTM } from "$lib/utils/geo/utm";
 import { MGRS } from "$lib/utils/geo/mgrs";
 import { LatLon } from "$lib/utils/geo/latlon";
 
+export type Coordinate = LatLon | UTM | MGRS;
+
 function parseLatLon(latlonText: string): LatLon {
   const m = latlonText
     .trim()
@@ -22,16 +24,11 @@ function parseLatLon(latlonText: string): LatLon {
 }
 
 export function parseUtm(utmText: string) {
-  const utm = UTM.parse(utmText);
-  console.log(utm);
-
-  return utm.toLatLon();
+  return UTM.parse(utmText);
 }
 
 export function parseMgrs(mgrsText: string) {
-  const mgrs = MGRS.parse(mgrsText);
-
-  return mgrs.toLatLon();
+  return MGRS.parse(mgrsText);
 }
 
 function tryParsers<T>(value: string, parsers: Array<(v: string) => T>): T {
@@ -44,5 +41,9 @@ function tryParsers<T>(value: string, parsers: Array<(v: string) => T>): T {
 }
 
 export function parseCoordinates(coordinateText: string) {
-  return tryParsers(coordinateText, [parseLatLon, parseUtm, parseMgrs]);
+  return tryParsers<Coordinate>(coordinateText, [
+    parseLatLon,
+    parseUtm,
+    parseMgrs,
+  ]);
 }

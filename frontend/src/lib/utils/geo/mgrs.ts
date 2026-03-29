@@ -1,5 +1,7 @@
 import { UTM } from "$lib/utils/geo/utm";
 import { type LatLon } from "$lib/utils/geo/latlon";
+import type { GeoJSONPolygon } from "ol/format/GeoJSON";
+import { polygonToWkt } from "./wkt";
 
 const BAND_Y_BAND_TRIALS: Record<string, number[]> = {
   C: [1, 0],
@@ -52,12 +54,14 @@ export class MGRS {
   readonly #row: string;
   readonly #easting: number;
   readonly #northing: number;
+  readonly #precision: number;
 
   constructor(
     zone: number,
     band: string,
     easting: number,
     northing: number,
+    precision: number,
     column?: string,
     row?: string,
   ) {
@@ -70,6 +74,7 @@ export class MGRS {
     this.#row = row ?? MGRS.getRowLetter(zone, northing);
     this.#easting = easting;
     this.#northing = northing;
+    this.#precision = precision;
   }
 
   public static parse(mgrs: string): MGRS {
@@ -81,7 +86,6 @@ export class MGRS {
     }
 
     const zone = Number.parseInt(matches[1]);
-
     const band = matches[2].toUpperCase().charAt(0);
 
     let squareLetters = matches[3];
@@ -94,20 +98,17 @@ export class MGRS {
     const column = squareLetters.charAt(0);
     const row = squareLetters.charAt(1);
 
-    const location = matches![4];
+    const location = matches[4] || "";
     if (location.length === 0) {
       throw new Error(`Parsing for passed format not implemented: ${mgrs}`);
     }
 
-    let easting = 0;
-    let northing = 0;
-
     const precision = location.length / 2;
     const multiplier = Math.pow(10.0, 5 - precision);
-    easting = +location.substring(0, precision) * multiplier;
-    northing = +location.substring(precision) * multiplier;
+    const easting = Number(location.substring(0, precision)) * multiplier;
+    const northing = Number(+location.substring(precision)) * multiplier;
 
-    return new MGRS(zone, band, easting, northing, column, row);
+    return new MGRS(zone, band, easting, northing, precision, column, row);
   }
 
   public toUTM() {
@@ -152,6 +153,41 @@ export class MGRS {
 
   public toLatLon(): LatLon {
     return this.toUTM().toLatLon();
+  }
+
+  public getGridPolygon(): GeoJSON.Polygon {
+    const resolution = Math.pow(10, 5 - this.#precision);
+
+    const utmSw = this.toUTM();
+    const { zone, hemisphere, easting, northing } = utmSw;
+
+    const utmSe = new UTM(zone, hemisphere, easting + resolution, northing); // southeast
+    const utmNe = new UTM(
+      zone,
+      hemisphere,
+      easting + resolution,
+      northing + resolution,
+    );
+    const utmNw = new UTM(zone, hemisphere, easting, northing + resolution);
+
+    const corners = [utmSw, utmSe, utmNe, utmNw];
+
+    const coords = corners.map((c) => {
+      const latlon = c.toLatLon();
+      return [latlon.longitude, latlon.latitude];
+    });
+
+    coords.push(coords[0]);
+
+    return {
+      type: "Polygon",
+      coordinates: [coords],
+    };
+  }
+
+  public gridToWkt() {
+    const grid = this.getGridPolygon();
+    return polygonToWkt(grid);
   }
 
   public static validateBand(letter: string) {

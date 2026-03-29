@@ -3,7 +3,7 @@ from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
 
-from env import add_to_path, load_env, require_env
+from src.env import add_to_path, load_env, require_env
 
 
 @dataclass(frozen=True)

@@ -289,6 +289,17 @@ export class MapLibreState {
     });
   }
 
+  public zoomToPolygon(
+    coords: GeoJSON.Position[],
+    options?: Partial<maplibre.FlyToOptions>,
+  ) {
+    if (!this.#map) return;
+
+    this.upsertPolygon(coords);
+
+    this.fitToPolygon(coords, options);
+  }
+
   public setPolygonLinks(features: PolygonLink[]) {
     if (!this.#map) return;
 

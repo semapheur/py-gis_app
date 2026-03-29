@@ -2,7 +2,7 @@
   import { getAnnotateState } from "$lib/contexts/annotate.svelte";
   import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
   import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
-  import { getImageViewerOptions } from "$lib/contexts/context.svelte";
+  import { getImageViewerOptions } from "$lib/contexts/common.svelte";
 
   const viewerOptions = getImageViewerOptions();
 

@@ -18,11 +18,13 @@
   button {
     appearance: none;
     padding: var(--size-md);
+    color: inherit;
     background-color: oklch(var(--color-secondary));
     border: none;
     border-radius: var(--size-sm);
     cursor: pointer;
     font-size: var(--text-sm);
     font-weight: var(--font-bold);
+    line-height: var(--button-line-height);
   }
 </style>

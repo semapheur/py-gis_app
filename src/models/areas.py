@@ -1,7 +1,7 @@
 import uuid
 from typing import Optional, TypedDict
 
-from bootstrap import get_settings
+from src.bootstrap import get_settings
 from src.spatialite import (
   Field,
   Model,
