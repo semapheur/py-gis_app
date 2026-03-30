@@ -62,14 +62,15 @@
     transform: translateY(-50%);
     transition: all 0.15s ease;
     pointer-events: none;
-    text-shadow: var(--text-shadow);
   }
 
   input {
     padding: var(--size-md);
     max-width: 100%;
     font-size: inherit;
-    border: 1px solid oklch(var(--color-accent));
+    color: oklch(var(--color-text));
+    background-color: oklch(var(--color-accent));
+    border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-sm);
 
     &.invalid {

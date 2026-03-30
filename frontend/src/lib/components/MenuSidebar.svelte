@@ -1,14 +1,27 @@
 <script lang="ts">
+  import ThemeToggle from "$lib/components/ThemeToggle.svelte";
 </script>
 
 <nav class="menu">
-  <a href="/"> H </a>
-  <a href="/search"> S </a>
-  <a href="/config"> C </a>
+  <div class="links">
+    <a href="/"> H </a>
+    <a href="/search"> S </a>
+    <a href="/config"> C </a>
+  </div>
+
+  <div>
+    <ThemeToggle />
+  </div>
 </nav>
 
 <style>
   .menu {
+    display: flex;
+    flex-direction: column;
+    justify-content: space-between;
+  }
+
+  .links {
     display: flex;
     flex-direction: column;
   }

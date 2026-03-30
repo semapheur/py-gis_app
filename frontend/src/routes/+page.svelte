@@ -50,6 +50,7 @@
     display: grid;
     grid-template-rows: auto 1fr;
     padding: var(--size-md);
+    background-color: oklch(var(--color-primary));
   }
 
   .panel-content {

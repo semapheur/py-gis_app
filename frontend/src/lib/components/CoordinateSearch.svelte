@@ -100,11 +100,11 @@
             <td>
               <div class="cell-stack">
                 <Button type="button" onclick={() => zoomToPoint(coord)}
-                  >Zoom to Point</Button
+                  >Zoom to point</Button
                 >
                 {#if coord instanceof MGRS}
                   <Button type="button" onclick={() => zoomToGrid(coord)}
-                    >Zoom to Grid</Button
+                    >Zoom to grid</Button
                   >
                 {/if}
               </div>
@@ -114,12 +114,12 @@
                 <LinkButton
                   href={`/search?wkt=${encodeURIComponent(
                     coordinateToWktPoint(coord),
-                  )}`}>Search Point</LinkButton
+                  )}`}>Search point</LinkButton
                 >
                 {#if coord instanceof MGRS}
                   <LinkButton
                     href={`/search?wkt=${encodeURIComponent(coord.gridToWkt())}`}
-                    >Search Grid</LinkButton
+                    >Search grid</LinkButton
                   >
                 {/if}
               </div>

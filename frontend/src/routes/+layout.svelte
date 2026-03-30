@@ -20,5 +20,6 @@
     display: grid;
     grid-template-columns: auto 1fr;
     height: 100%;
+    background-color: oklch(var(--color-primary));
   }
 </style>
