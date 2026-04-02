@@ -1,7 +1,12 @@
 <script lang="ts">
-  import Input from "$lib/components/Input.svelte";
+  import MdiDeleteOutline from "@iconify-svelte/mdi/delete-outline";
+  import MdiEditOutline from "@iconify-svelte/mdi/edit-outline";
+  import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
   import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import Input from "$lib/components/Input.svelte";
+  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
+  import LinkIcon from "$lib/components/LinkIcon.svelte";
 
   interface AreaInfo {
     id: string;
@@ -50,6 +55,9 @@
   });
 
   async function deleteArea(id: string) {
+    const ok = confirm("Delete area?");
+    if (!ok) return;
+
     const response = await fetch("/api/delete-areas", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
@@ -77,16 +85,24 @@
   <nav>
     {#each filteredAreas as area (area.id)}
       <div class="area-row">
-        <button
+        <ButtonIcon
           onclick={() => mapLibre.fitToPolygon(area.geometry.coordinates[0])}
-          >Z</button
+          title="Zoom to area"
+          ><MdiMapMarkerOutline width="var(--text-lg)" /></ButtonIcon
         >
-        <span class="area-text">
+        <a href={`/search?area=${area.id}`} class="area-text">
           <span class="area-name">{area.name}</span>
           <span class="area-description">{area.description}</span>
-        </span>
-        <a href={`/area/${area.id}`}>E</a>
-        <button onclick={() => deleteArea(area.id)}>D</button>
+        </a>
+        <LinkIcon
+          href={`/area/${area.id}`}
+          tooltip="Edit area"
+          tooltipPlacement="left"
+          ><MdiEditOutline width="var(--text-lg)" /></LinkIcon
+        >
+        <ButtonIcon onclick={() => deleteArea(area.id)} title="Delete area"
+          ><MdiDeleteOutline width="var(--text-lg)" /></ButtonIcon
+        >
       </div>
     {/each}
   </nav>
@@ -108,13 +124,17 @@
   }
 
   .area-row {
-    display: flex;
+    display: grid;
+    grid-template-columns: auto 1fr auto auto;
     gap: var(--size-md);
     padding: var(--size-md);
+    width: 100%;
     border-bottom: 1px solid oklch(var(--color-accent));
   }
 
   .area-text {
+    color: inherit;
+    text-decoration: none;
     display: flex;
     flex-direction: column;
   }

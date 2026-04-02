@@ -18,7 +18,7 @@
   a {
     display: inline-flex;
     align-items: center;
-    justify-content: center;
+    gap: var(--size-sm);
     color: inherit;
     text-decoration: none;
     padding: var(--size-md);

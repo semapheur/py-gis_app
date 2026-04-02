@@ -1,12 +1,22 @@
 <script lang="ts">
+  import MdiMapOutline from "@iconify-svelte/mdi/map-outline";
+  import MdiImageSearchOutline from "@iconify-svelte/mdi/image-search-outline";
+  import MdiSettingsOutline from "@iconify-svelte/mdi/settings-outline";
   import ThemeToggle from "$lib/components/ThemeToggle.svelte";
+  import LinkIcon from "$lib/components/LinkIcon.svelte";
 </script>
 
 <nav class="menu">
   <div class="links">
-    <a href="/"> H </a>
-    <a href="/search"> S </a>
-    <a href="/config"> C </a>
+    <LinkIcon href="/" tooltip="Map explorer" tooltipPlacement="right"
+      ><MdiMapOutline /></LinkIcon
+    >
+    <LinkIcon href="/search" tooltip="Image search" tooltipPlacement="right"
+      ><MdiImageSearchOutline /></LinkIcon
+    >
+    <LinkIcon href="/config" tooltip="Configuration" tooltipPlacement="right"
+      ><MdiSettingsOutline /></LinkIcon
+    >
   </div>
 
   <div>
@@ -19,6 +29,7 @@
     display: flex;
     flex-direction: column;
     justify-content: space-between;
+    padding: var(--size-sm);
   }
 
   .links {

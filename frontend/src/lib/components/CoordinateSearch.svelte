@@ -1,4 +1,6 @@
 <script lang="ts">
+  import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
+  import MdiSearch from "@iconify-svelte/mdi/search";
   import Input from "$lib/components/Input.svelte";
   import Button from "$lib/components/Button.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
@@ -99,12 +101,22 @@
           <tr>
             <td>
               <div class="cell-stack">
-                <Button type="button" onclick={() => zoomToPoint(coord)}
-                  >Zoom to point</Button
+                <Button
+                  type="button"
+                  onclick={() => zoomToPoint(coord)}
+                  title="Zoom to point"
+                >
+                  <MdiMapMarkerOutline width="1rem" />
+                  <span>Point</span></Button
                 >
                 {#if coord instanceof MGRS}
-                  <Button type="button" onclick={() => zoomToGrid(coord)}
-                    >Zoom to grid</Button
+                  <Button
+                    type="button"
+                    onclick={() => zoomToGrid(coord)}
+                    title="Zoom to grid"
+                  >
+                    <MdiMapMarkerOutline width="1rem" />
+                    <span>Grid</span></Button
                   >
                 {/if}
               </div>
@@ -114,12 +126,17 @@
                 <LinkButton
                   href={`/search?wkt=${encodeURIComponent(
                     coordinateToWktPoint(coord),
-                  )}`}>Search point</LinkButton
+                  )}`}
+                >
+                  <MdiSearch width="1rem" />
+                  <span>Point</span></LinkButton
                 >
                 {#if coord instanceof MGRS}
                   <LinkButton
                     href={`/search?wkt=${encodeURIComponent(coord.gridToWkt())}`}
-                    >Search grid</LinkButton
+                  >
+                    <MdiSearch width="1rem" />
+                    <span>Grid</span></LinkButton
                   >
                 {/if}
               </div>

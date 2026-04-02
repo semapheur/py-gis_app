@@ -1,6 +1,6 @@
 <script lang="ts">
-  import type { Snippet } from "svelte";
-  import type { HTMLButtonAttributes } from "svelte/elements";
+  import { type Snippet } from "svelte";
+  import { type HTMLButtonAttributes } from "svelte/elements";
 
   interface Props extends HTMLButtonAttributes {
     children: Snippet;
@@ -16,6 +16,9 @@
 
 <style>
   button {
+    display: inline-flex;
+    align-items: center;
+    gap: var(--size-sm);
     appearance: none;
     padding: var(--size-md);
     color: inherit;
