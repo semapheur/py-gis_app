@@ -4,10 +4,14 @@ import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector";
 import View from "ol/View.js";
 import XYZ from "ol/source/XYZ";
-import { Draw, defaults } from "ol/interaction";
+import { Draw, Modify, defaults } from "ol/interaction";
 import VectorSource from "ol/source/Vector";
 import { Polygon } from "ol/geom";
+import { Fill, Stroke, Style } from "ol/style";
+
 import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
+
+import { vertexStyle } from "$lib/utils/ol_styles";
 
 export class AreaMapState {
   #map: Map | null = null;
@@ -29,6 +33,13 @@ export class AreaMapState {
 
     const polygonLayer = new VectorLayer({
       source: this.#polygonSource,
+      style: [
+        new Style({
+          stroke: new Stroke({ color: "#3399CC", width: 2 }),
+          fill: new Fill({ color: "rgba(255,255,255,0.2)" }),
+        }),
+        vertexStyle,
+      ],
     });
 
     const mapView = new View({
@@ -45,6 +56,11 @@ export class AreaMapState {
         doubleClickZoom: false,
       }),
     });
+
+    const modify = new Modify({
+      source: this.#polygonSource,
+    });
+    this.#map.addInteraction(modify);
   }
 
   private createDrawInteraction(areaEditorState: AreaEditorState) {

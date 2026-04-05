@@ -6,7 +6,7 @@
   import ImageGrid from "$lib/components/ImageGrid.svelte";
   import { WktParser } from "$lib/utils/geo/wkt";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
-  import { setMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
 
   let { data }: { data: PageData } = $props();
 

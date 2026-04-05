@@ -1,7 +1,7 @@
 <script lang="ts">
   import "maplibre-gl/dist/maplibre-gl.css";
   import { type ImagePreviewInfo } from "$lib/utils/types";
-  import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
   import Button from "$lib/components/Button.svelte";
 
   interface Props {

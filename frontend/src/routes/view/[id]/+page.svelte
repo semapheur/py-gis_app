@@ -2,8 +2,8 @@
   import type { PageData } from "./$types";
 
   import { setAnnotateState } from "$lib/contexts/annotate.svelte";
-  import { setImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
-  import { setImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
+  import { setImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import { setImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
   import {
     setEquipmentOptions,
     setImageViewerOptions,

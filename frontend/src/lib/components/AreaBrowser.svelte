@@ -2,18 +2,13 @@
   import MdiDeleteOutline from "@iconify-svelte/mdi/delete-outline";
   import MdiEditOutline from "@iconify-svelte/mdi/edit-outline";
   import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
-  import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
   import Input from "$lib/components/Input.svelte";
   import ButtonIcon from "$lib/components/ButtonIcon.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
   import LinkIcon from "$lib/components/LinkIcon.svelte";
 
-  interface AreaInfo {
-    id: string;
-    name: string;
-    description: string;
-    geometry: GeoJSON.Polygon;
-  }
+  import { type AreaInfo } from "$lib/utils/types";
 
   let areas = $state<AreaInfo[]>([]);
   let searchQuery = $state<string>("");
@@ -75,7 +70,7 @@
 
 <div class="area-browser">
   <form class="area-search">
-    <LinkButton href="/area">Add</LinkButton>
+    <LinkButton href="/areas/new">Add</LinkButton>
     <Input
       placeholder="Search"
       value={searchQuery}
@@ -95,7 +90,7 @@
           <span class="area-description">{area.description}</span>
         </a>
         <LinkIcon
-          href={`/area/${area.id}`}
+          href={`/areas/${area.id}`}
           tooltip="Edit area"
           tooltipPlacement="left"
           ><MdiEditOutline width="var(--text-lg)" /></LinkIcon

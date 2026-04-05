@@ -10,6 +10,7 @@ interface AreaData {
 
 export class AreaEditorState {
   drawMode = $state<boolean>(false);
+  areaId = $state<string | null>(null);
   data = $state<AreaData>({
     name: null,
     description: null,
@@ -45,9 +46,10 @@ export class AreaEditorState {
     if (!this.valid()) return;
 
     const format = new WKT();
+    const id = crypto.randomUUID();
 
     const payload = {
-      id: crypto.randomUUID(),
+      id,
       name: this.data.name,
       description: this.data.description,
       geometry: format.writeGeometry(this.data!.geometry),
@@ -63,7 +65,10 @@ export class AreaEditorState {
 
     if (!response.ok) {
       const error = await response.json();
+      return;
     }
+
+    this.areaId = id;
   }
 }
 

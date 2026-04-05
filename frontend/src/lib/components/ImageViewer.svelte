@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
+  import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
 
   import ImageRenderer from "$lib/components/ImageRenderer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";

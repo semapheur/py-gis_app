@@ -19,8 +19,10 @@ from src.models.annotation import (
 )
 from src.models.areas import (
   AreaDelete,
+  AreaId,
   AreaUpdate,
   delete_areas,
+  get_area,
   get_areas,
   update_area,
 )
@@ -169,6 +171,9 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_convert_annotation()
       return
 
+    if self.path == "/api/get-area":
+      self._post_get_area()
+
     if self.path == "/api/update-area":
       self._post_update_area()
       return
@@ -303,6 +308,12 @@ class Handler(SimpleHTTPRequestHandler):
     def logic(payload: ConvertAnnotation):
       convert_annotation(payload)
       return {"message": "Successfully converted annotation"}
+
+    self._handle_post(logic)
+
+  def _post_get_area(self):
+    def logic(payload: AreaId):
+      return get_area(payload)
 
     self._handle_post(logic)
 

@@ -11,9 +11,9 @@
     : "Switch to dark mode"}
 >
   {#if theme.current === "dark"}
-    <MdiWeatherSunny />
+    <MdiWeatherSunny width="var(--text-xl)" />
   {:else}
-    <MdiWeatherNight />
+    <MdiWeatherNight width="var(--text-xl)" />
   {/if}
 </button>
 
@@ -21,6 +21,5 @@
   button {
     all: unset;
     cursor: pointer;
-    width: var(--text-xl);
   }
 </style>

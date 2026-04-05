@@ -8,25 +8,31 @@
 </script>
 
 <aside class="area-editor">
-  <form class="area-form">
-    <Input
-      placeholder="Name"
-      value={editor.data.name}
-      oninput={(v) => (editor.data.name = v)}
-    />
-    <TextArea
-      placeholder="Description"
-      oninput={(v) => (editor.data.description = v)}
-    />
-  </form>
-  <div class="button-group">
-    <Button onclick={() => editor.toggleDraw()}
-      >{editor.hasPolygon ? "Redraw polygon" : "Draw polygon"}</Button
-    >
-    <Button disabled={!editor.valid()} onclick={() => editor.persist()}
-      >Save</Button
-    >
-  </div>
+  {#if editor.areaId}
+    <a href={`/areas/${editor.areaId}`}>
+      {editor.data.name}
+    </a>
+  {:else}
+    <form class="area-form">
+      <Input
+        placeholder="Name"
+        value={editor.data.name}
+        oninput={(v) => (editor.data.name = v)}
+      />
+      <TextArea
+        placeholder="Description"
+        oninput={(v) => (editor.data.description = v)}
+      />
+    </form>
+    <div class="button-group">
+      <Button onclick={() => editor.toggleDraw()}
+        >{editor.hasPolygon ? "Redraw polygon" : "Draw polygon"}</Button
+      >
+      <Button disabled={!editor.valid()} onclick={() => editor.persist()}
+        >Save</Button
+      >
+    </div>
+  {/if}
 </aside>
 
 <style>

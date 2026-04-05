@@ -9,13 +9,13 @@
 <nav class="menu">
   <div class="links">
     <LinkIcon href="/" tooltip="Map explorer" tooltipPlacement="right"
-      ><MdiMapOutline /></LinkIcon
+      ><MdiMapOutline width="var(--text-xl)" /></LinkIcon
     >
     <LinkIcon href="/search" tooltip="Image search" tooltipPlacement="right"
-      ><MdiImageSearchOutline /></LinkIcon
+      ><MdiImageSearchOutline width="var(--text-xl)" /></LinkIcon
     >
     <LinkIcon href="/config" tooltip="Configuration" tooltipPlacement="right"
-      ><MdiSettingsOutline /></LinkIcon
+      ><MdiSettingsOutline width="var(--text-xl)" /></LinkIcon
     >
   </div>
 

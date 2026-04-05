@@ -102,6 +102,9 @@
   textarea {
     width: 100%;
     padding: var(--size-sm);
+    color: oklch(var(--color-text));
+    background-color: oklch(var(--color-accent));
+    border-radius: var(--size-sm);
 
     &::placeholder {
       color: transparent;

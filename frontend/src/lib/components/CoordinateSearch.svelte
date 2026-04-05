@@ -8,7 +8,7 @@
   import { LatLon } from "$lib/utils/geo/latlon";
   import { MGRS } from "$lib/utils/geo/mgrs";
   import { UTM } from "$lib/utils/geo/utm";
-  import { getMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
 
   let coordinates = $state<string>("");
   let history = $state<Record<string, Coordinate>>({});

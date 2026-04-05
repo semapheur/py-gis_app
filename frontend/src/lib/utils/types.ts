@@ -1,3 +1,10 @@
+export interface AreaInfo {
+  id: string;
+  name: string;
+  description: string;
+  geometry: GeoJSON.Polygon;
+}
+
 export interface ImageStats {}
 
 export interface ImageInfo {

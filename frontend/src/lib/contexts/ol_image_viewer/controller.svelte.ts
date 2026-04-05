@@ -22,14 +22,14 @@ import {
   type InteractionMode,
   type InteractionSet,
   type MeasurementType,
-} from "$lib/contexts/image_viewer/state.svelte";
+} from "$lib/contexts/ol_image_viewer/state.svelte";
 import {
   styleText,
   styleMeasurement,
   styleAnnotationLabel,
-  vertexStyle,
   equipmentStyle,
-} from "$lib/contexts/image_viewer/styling";
+} from "$lib/contexts/ol_image_viewer/styling";
+import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,

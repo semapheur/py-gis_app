@@ -5,7 +5,7 @@
   import Tabs from "$lib/components/Tabs.svelte";
   import CoordinateSearch from "$lib/components/CoordinateSearch.svelte";
 
-  import { setMapLibreState } from "$lib/contexts/maplibre.svelte";
+  import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
   import AreaBrowser from "$lib/components/AreaBrowser.svelte";
 
   const tabs = [

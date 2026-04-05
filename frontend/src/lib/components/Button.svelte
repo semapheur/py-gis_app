@@ -29,5 +29,10 @@
     font-size: var(--text-sm);
     font-weight: var(--font-bold);
     line-height: var(--button-line-height);
+
+    &:disabled {
+      opacity: 0.5;
+      cursor: not-allowed;
+    }
   }
 </style>

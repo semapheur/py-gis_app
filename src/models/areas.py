@@ -69,6 +69,24 @@ def update_area(payload: AreaUpdate):
     db.insert_models((model,), on_conflict=on_conflict)
 
 
+class AreaId(TypedDict):
+  id: str
+
+
+def get_area(payload: AreaId):
+
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
+    where = "areas.id = :id"
+    params = {"id": uuid.UUID(payload["id"]).bytes}
+    area = db.select_records(
+      AreasTable,
+      columns=("id", "name", "description", "geometry"),
+      geo_format="AsGeoJSON",
+      to_json=True,
+    )
+    return area
+
+
 def get_areas():
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     areas = db.select_records(
