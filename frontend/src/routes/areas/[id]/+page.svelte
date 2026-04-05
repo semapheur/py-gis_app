@@ -5,10 +5,10 @@
   import AreaMap from "$lib/components/AreaMap.svelte";
   import AreaEditor from "$lib/components/AreaEditor.svelte";
 
-  setAreaMapState();
-  setAreaEditorState();
-
   let { data } = $props<{ data: PageData }>();
+
+  setAreaMapState([data.geometry]);
+  setAreaEditorState(data);
 </script>
 
 <div class="layout">

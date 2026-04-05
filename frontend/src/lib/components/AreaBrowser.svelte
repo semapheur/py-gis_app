@@ -8,7 +8,7 @@
   import LinkButton from "$lib/components/LinkButton.svelte";
   import LinkIcon from "$lib/components/LinkIcon.svelte";
 
-  import { type AreaInfo } from "$lib/utils/types";
+  import { type AreaInfo } from "$lib/contexts/area_editor.svelte";
 
   let areas = $state<AreaInfo[]>([]);
   let searchQuery = $state<string>("");

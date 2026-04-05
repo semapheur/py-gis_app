@@ -1,6 +1,6 @@
 import { error } from "@sveltejs/kit";
-import { type PageLoad } from "./$types";
-import { type AreaInfo } from "$lib/utils/types";
+import type { PageLoad } from "./$types";
+import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
 
 export const load: PageLoad = async ({ params, fetch }) => {
   const id = params.id;

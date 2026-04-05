@@ -8,7 +8,7 @@
 </script>
 
 <aside class="area-editor">
-  {#if editor.areaId}
+  {#if editor.mode === "create" && editor.areaId}
     <a href={`/areas/${editor.areaId}`}>
       {editor.data.name}
     </a>

@@ -81,10 +81,13 @@ def get_area(payload: AreaId):
     area = db.select_records(
       AreasTable,
       columns=("id", "name", "description", "geometry"),
+      where=where,
+      params=params,
       geo_format="AsGeoJSON",
       to_json=True,
     )
-    return area
+
+    return area[0]
 
 
 def get_areas():

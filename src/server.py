@@ -173,6 +173,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/get-area":
       self._post_get_area()
+      return
 
     if self.path == "/api/update-area":
       self._post_update_area()

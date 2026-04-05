@@ -1,6 +1,14 @@
 import { getContext, setContext } from "svelte";
 import type { Polygon } from "ol/geom";
 import WKT from "ol/format/WKT";
+import GeoJSON from "ol/format/GeoJSON";
+
+export interface AreaInfo {
+  id: string;
+  name: string;
+  description: string;
+  geometry: GeoJSON.Polygon;
+}
 
 interface AreaData {
   name: string | null;
@@ -9,6 +17,7 @@ interface AreaData {
 }
 
 export class AreaEditorState {
+  readonly mode: "create" | "edit" = "create";
   drawMode = $state<boolean>(false);
   areaId = $state<string | null>(null);
   data = $state<AreaData>({
@@ -19,6 +28,23 @@ export class AreaEditorState {
 
   get hasPolygon() {
     return this.data.geometry !== null;
+  }
+
+  constructor(areaInfo?: AreaInfo) {
+    if (areaInfo) {
+      this.mode = "edit";
+      const format = new GeoJSON();
+      const geometry = format.readGeometry(areaInfo.geometry, {
+        dataProjection: "EPSG:4326",
+      }) as Polygon;
+
+      this.areaId = areaInfo.id;
+      this.data = {
+        name: areaInfo.name,
+        description: areaInfo.name,
+        geometry,
+      };
+    }
   }
 
   public setGeometry(geometry: Polygon) {
@@ -74,8 +100,8 @@ export class AreaEditorState {
 
 const AREAEDITOR_KEY = Symbol("AREAEDITOR");
 
-export function setAreaEditorState() {
-  const state = new AreaEditorState();
+export function setAreaEditorState(areaInfo?: AreaInfo) {
+  const state = new AreaEditorState(areaInfo);
   return setContext(AREAEDITOR_KEY, state);
 }
 

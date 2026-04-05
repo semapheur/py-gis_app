@@ -1,4 +1,5 @@
 import { setContext, getContext } from "svelte";
+import Feature from "ol/feature";
 import Map from "ol/Map.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector";
@@ -8,6 +9,7 @@ import { Draw, Modify, defaults } from "ol/interaction";
 import VectorSource from "ol/source/Vector";
 import { Polygon } from "ol/geom";
 import { Fill, Stroke, Style } from "ol/style";
+import GeoJSON from "ol/format/GeoJSON";
 
 import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
 
@@ -17,6 +19,19 @@ export class AreaMapState {
   #map: Map | null = null;
   #polygonSource = new VectorSource();
   #drawInteraction: Draw | null = null;
+
+  constructor(polygons: GeoJSON.Polygon[] = []) {
+    if (!polygons.length) return;
+    const format = new GeoJSON();
+    const features = polygons.map((polygon) => {
+      return format.readFeature(polygon, {
+        dataProjection: "EPSG:4326",
+        featureProjection: "EPSG:3857",
+      }) as Feature;
+    });
+
+    this.#polygonSource.addFeatures(features);
+  }
 
   private destroy() {
     this.#map?.setTarget(undefined);
@@ -61,6 +76,12 @@ export class AreaMapState {
       source: this.#polygonSource,
     });
     this.#map.addInteraction(modify);
+
+    if (!this.#polygonSource.isEmpty()) {
+      mapView.fit(this.#polygonSource.getExtent(), {
+        padding: [40, 40, 40, 40],
+      });
+    }
   }
 
   private createDrawInteraction(areaEditorState: AreaEditorState) {
@@ -120,8 +141,8 @@ export class AreaMapState {
 
 const AREAMAP_KEY = Symbol("IMAGEVIEWER");
 
-export function setAreaMapState() {
-  const state = new AreaMapState();
+export function setAreaMapState(polygons: GeoJSON.Polygon[] = []) {
+  const state = new AreaMapState(polygons);
   return setContext(AREAMAP_KEY, state);
 }
 
