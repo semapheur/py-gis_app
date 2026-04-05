@@ -72,15 +72,14 @@ export class AreaEditorState {
     if (!this.valid()) return;
 
     const format = new WKT();
-    const id = crypto.randomUUID();
-
     const payload = {
-      id,
+      id: this.areaId ?? crypto.randomUUID(),
       name: this.data.name,
       description: this.data.description,
-      geometry: format.writeGeometry(this.data!.geometry),
-      createdByUserId: "",
-      createdAtTimestamp: Date.now(),
+      geometry: format.writeGeometry(this.data.geometry!),
+      ...(this.mode === "create"
+        ? { createdAtTimestamp: Date.now(), createdByUserId: "" }
+        : { modifiedAtTimestamp: Date.now(), modifiedByUserId: "" }),
     };
 
     const response = await fetch("/api/update-area", {
@@ -91,10 +90,10 @@ export class AreaEditorState {
 
     if (!response.ok) {
       const error = await response.json();
-      return;
+      throw new Error(error.message ?? "Failed to persist area");
     }
 
-    this.areaId = id;
+    this.areaId ??= payload.id;
   }
 }
 
