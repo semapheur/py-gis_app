@@ -27,21 +27,23 @@
   <Pane>
     <Map showSearchButton={true} onSearchExtent={handleSearchExtent} />
   </Pane>
-  <Pane class="right-panel">
-    <header class="panel-header">
-      <Tabs
-        {tabs}
-        selected={activeTab}
-        onselect={(tab) => (activeTab = tab as Tabs)}
-      />
-    </header>
-    <main class="panel-content">
-      {#if activeTab === "areas"}
-        <AreaBrowser />
-      {:else if activeTab === "coordinates"}
-        <CoordinateSearch />
-      {/if}
-    </main>
+  <Pane>
+    <section class="right-panel">
+      <header class="panel-header">
+        <Tabs
+          {tabs}
+          selected={activeTab}
+          onselect={(tab) => (activeTab = tab as Tabs)}
+        />
+      </header>
+      <main class="panel-content">
+        {#if activeTab === "areas"}
+          <AreaBrowser />
+        {:else if activeTab === "coordinates"}
+          <CoordinateSearch />
+        {/if}
+      </main>
+    </section>
   </Pane>
 </Splitpanes>
 

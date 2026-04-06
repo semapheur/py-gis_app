@@ -9,8 +9,9 @@
   import Modal from "$lib/components/Modal.svelte";
   import Input from "$lib/components/Input.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
-  import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
+  import Button from "$lib/components/Button.svelte";
   import TextArea from "$lib/components/TextArea.svelte";
+  import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
 
   type FormMode = "add" | "edit";
 
@@ -350,23 +351,23 @@
 
 <div class="grid-container">
   <div class="grid-toolbar">
-    <button onclick={() => handleUndo(api)} disabled={history && !$history.undo}
-      >Undo</button
+    <Button onclick={() => handleUndo(api)} disabled={history && !$history.undo}
+      >Undo</Button
     >
-    <button onclick={() => handleRedo(api)} disabled={history && !$history.redo}
-      >Redo</button
+    <Button onclick={() => handleRedo(api)} disabled={history && !$history.redo}
+      >Redo</Button
     >
-    <button onclick={openAdd}>Add</button>
-    <button onclick={selectAllRows}>Select all</button>
-    <button onclick={deleteRow} disabled={!selectedRows.length}>Delete</button>
+    <Button onclick={openAdd}>Add</Button>
+    <Button onclick={selectAllRows}>Select all</Button>
+    <Button onclick={deleteRow} disabled={!selectedRows.length}>Delete</Button>
     {#if saveApi}
-      <button onclick={saveChanges}>Save</button>
+      <Button onclick={saveChanges}>Save</Button>
     {/if}
     <DropdownMenu label="Export">
-      <button onclick={exportToJson}>JSON</button>
-      <button onclick={exportToCsv}>CSV</button>
+      <Button onclick={exportToJson}>JSON</Button>
+      <Button onclick={exportToCsv}>CSV</Button>
     </DropdownMenu>
-    <button onclick={openFileDialog}>Import</button>
+    <Button onclick={openFileDialog}>Import</Button>
   </div>
 
   <input

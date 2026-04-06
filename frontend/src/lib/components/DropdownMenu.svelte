@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
+  import Button from "$lib/components/Button.svelte";
 
   interface Props {
     label: string;
@@ -26,11 +27,11 @@
 <svelte:window onclick={handleClickOutside} />
 
 <div class="dropdown-container" role="group" bind:this={container}>
-  <button
+  <Button
     type="button"
     aria-haspopup="menu"
     aria-expanded={showDropdown}
-    onclick={toggle}>{label}</button
+    onclick={toggle}>{label}</Button
   >
   {#if showDropdown}
     <div class="dropdown-menu" role="menu">

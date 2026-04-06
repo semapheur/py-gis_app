@@ -36,6 +36,7 @@
 
     &.selected {
       font-weight: var(--font-bold);
+      border-bottom: 1px solid oklch(var(--color-secondary));
     }
 
     &:not(.selected):hover {
