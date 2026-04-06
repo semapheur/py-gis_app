@@ -38,7 +38,7 @@
       latlon = coord;
     }
 
-    mapLibre?.zoomToLatLon(latlon.latitude, latlon.longitude);
+    mapLibre?.zoomToPoint(latlon.latitude, latlon.longitude);
   }
 
   function zoomToGrid(coord: MGRS) {

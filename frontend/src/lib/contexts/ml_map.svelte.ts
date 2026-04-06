@@ -20,7 +20,7 @@ export class MapLibreState {
   #map: maplibre.Map | null = null;
   #isLoaded: boolean = false;
   #resizeObserver: ResizeObserver | null = null;
-  #initialExtent: GeoJSON.Polygon | null = null;
+  #initialExtent: BBox | null = null;
 
   destroy() {
     this.#resizeObserver?.disconnect();
@@ -70,8 +70,8 @@ export class MapLibreState {
   private applyInitialExtent() {
     if (!this.#map || !this.#initialExtent) return;
 
-    const coords = this.#initialExtent.coordinates[0];
-    this.fitToPolygon(coords, { animate: false });
+    const bbox = this.#initialExtent;
+    this.#map.fitBounds(bbox, { animate: false });
   }
 
   private upsertImageSource(id: string, url: string, coordinates: Coordinates) {
@@ -221,10 +221,10 @@ export class MapLibreState {
     };
   }
 
-  public setInitialExtent(extent: GeoJSON.Polygon | null) {
-    this.#initialExtent = extent;
+  public setInitialExtent(bbox: BBox | null) {
+    this.#initialExtent = bbox;
 
-    if (this.#map && this.#map.loaded() && extent) {
+    if (this.#map && this.#map.loaded() && bbox) {
       this.applyInitialExtent();
     }
   }
@@ -254,11 +254,10 @@ export class MapLibreState {
     });
   }
 
-  public getCurrentExtentWkt(): string {
-    if (!this.#map) return;
+  public getCurrentBbox(): BBox | null {
+    if (!this.#map) return null;
 
     const bounds = this.#map.getBounds();
-    const zoom = this.#map.getZoom();
 
     const bbox: BBox = [
       bounds.getWest(),
@@ -267,10 +266,21 @@ export class MapLibreState {
       bounds.getNorth(),
     ];
 
+    return bbox;
+  }
+
+  public getCurrentExtentWkt(): string | null {
+    if (!this.#map) return null;
+
+    const bbox = this.getCurrentBbox();
+    if (!bbox) return null;
+
+    const zoom = this.#map.getZoom();
+
     return bboxToWkt(bbox, this.decimalsForZoom(zoom));
   }
 
-  public zoomToLatLon(
+  public zoomToPoint(
     lat: number,
     lon: number,
     options?: Partial<maplibre.FlyToOptions>,
@@ -392,6 +402,20 @@ export class MapLibreState {
     this.#map.on("mouseleave", fillLayerId, () => {
       this.#map!.getCanvas().style.cursor = "";
     });
+  }
+
+  public onMoveEnd(callback: (bbox: string) => void): () => void {
+    if (!this.#map) return () => {};
+
+    const handler = () => {
+      const bbox = this.getCurrentBbox();
+      if (!bbox) return;
+
+      callback(bbox.join(","));
+    };
+
+    this.#map.on("moveend", handler);
+    return () => this.#map?.off("moveend", handler);
   }
 }
 

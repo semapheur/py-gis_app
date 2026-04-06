@@ -1,6 +1,6 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import CollapsibleList from "$lib/components/CollapsibleList.svelte";
   import type { EquipmentData } from "$lib/contexts/annotate.svelte";

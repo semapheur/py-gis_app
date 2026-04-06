@@ -83,7 +83,7 @@ export class WktParser {
     return rings;
   }
 
-  public parsePolygon(): { type: "Polygon"; coordinates: number[][][] } | null {
+  public parsePolygon(): GeoJSON.Polygon | null {
     if (!this.match(/polygon(\s[zm])?/iy)) return null;
     this.skipWhitespace();
 

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import Button from "$lib/components/Button.svelte";
   import {
     getImageViewerState,
     measureOptions,
     type MeasurementType,
-  } from "$lib/contexts/image_viewer/state.svelte";
+  } from "$lib/contexts/ol_image_viewer/state.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import Button from "$lib/components/Button.svelte";
   import Select from "$lib/components/Select.svelte";
   import CloseButton from "./CloseButton.svelte";
-  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
 
   interface Props {
     open: boolean;

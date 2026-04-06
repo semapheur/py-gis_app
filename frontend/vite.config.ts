@@ -10,4 +10,7 @@ export default defineConfig({
       "/thumbnails": "http://0.0.0.0:8080",
     },
   },
+  optimizeDeps: {
+    exclude: ["ol"],
+  },
 });

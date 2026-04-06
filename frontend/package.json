@@ -13,13 +13,13 @@
   },
   "devDependencies": {
     "@sveltejs/adapter-auto": "^7.0.0",
-    "@sveltejs/kit": "^2.55.0",
+    "@sveltejs/kit": "^2.56.1",
     "@sveltejs/vite-plugin-svelte": "^7.0.0",
     "@types/codemirror": "^5.60.17",
     "svelte": "^5.55.1",
     "svelte-check": "^4.4.6",
     "typescript": "^6.0.2",
-    "vite": "^8.0.3",
+    "vite": "^8.0.4",
     "vite-plugin-glsl": "^1.5.6"
   },
   "dependencies": {
@@ -27,13 +27,14 @@
     "@codemirror/search": "^6.6.0",
     "@codemirror/state": "^6.6.0",
     "@codemirror/view": "^6.41.0",
+    "@iconify-svelte/mdi": "^1.0.0",
     "@openaip/coordinate-parser": "^0.31.0",
     "@replit/codemirror-vim": "^6.3.0",
     "@svar-ui/svelte-core": "^2.5.1",
     "@svar-ui/svelte-grid": "^2.6.1",
-    "maplibre-gl": "^5.21.1",
+    "maplibre-gl": "^5.22.0",
     "ol": "^10.8.0",
-    "proj4": "^2.20.4",
+    "proj4": "^2.20.7",
     "svelte-splitpanes": "^8.0.12"
   }
 }

@@ -4,24 +4,24 @@
   import Map from "$lib/components/Map.svelte";
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
-  import { WktParser } from "$lib/utils/geo/wkt";
-  import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
   import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
+  import { wktToBbox, type BBox } from "$lib/utils/geo/bbox";
+  import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
 
   let { data }: { data: PageData } = $props();
 
-  let polygon: GeoJSON.Polygon | null = $state(null);
+  let bbox: BBox | null = $state(null);
   let imagePreview: ImagePreviewInfo | null = $state(null);
 
   setMapLibreState();
 
   $effect(() => {
     if (!data.wkt) {
-      polygon = null;
+      bbox = null;
       return;
     }
 
-    polygon = new WktParser(data.wkt).parsePolygon();
+    bbox = wktToBbox(data.wkt);
   });
 
   function onHoverImage(image: ImageMetadata | null) {
@@ -38,7 +38,7 @@
 
 <Splitpanes>
   <Pane>
-    <Map extent={polygon} {imagePreview} />
+    <Map extent={bbox} {imagePreview} />
   </Pane>
   <Pane>
     <ImageFilterForm />

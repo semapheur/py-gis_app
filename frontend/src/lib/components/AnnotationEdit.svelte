@@ -4,7 +4,7 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
   import Button from "$lib/components/Button.svelte";
-  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import type {
     EquipmentData,
     CompleteEquipmentData,

@@ -12,8 +12,8 @@
     type ActivityData,
     type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
-  import { getImageViewerState } from "$lib/contexts/image_viewer/state.svelte";
-  import { getImageViewerController } from "$lib/contexts/image_viewer/controller.svelte";
+  import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
 
   interface Props {
     open: boolean;

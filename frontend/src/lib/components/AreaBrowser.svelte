@@ -12,6 +12,7 @@
 
   let areas = $state<AreaInfo[]>([]);
   let searchQuery = $state<string>("");
+  let newAreaHref = $state("/areas/new");
 
   let filteredAreas = $derived.by(() => {
     const q = searchQuery.trim().toLowerCase();
@@ -49,6 +50,19 @@
     mapLibre.setPolygonLinks(polygonLinks);
   });
 
+  $effect(() => {
+    const bbox = mapLibre.getCurrentBbox();
+    if (bbox) {
+      `/areas/new?bbox=${encodeURIComponent(bbox.join(","))}`;
+    }
+
+    const cleanup = mapLibre.onMoveEnd((wkt) => {
+      newAreaHref = `/areas/new?bbox=${encodeURIComponent(wkt)}`;
+    });
+
+    return cleanup;
+  });
+
   async function deleteArea(id: string) {
     const ok = confirm("Delete area?");
     if (!ok) return;
@@ -70,7 +84,7 @@
 
 <div class="area-browser">
   <form class="area-search">
-    <LinkButton href="/areas/new">Add</LinkButton>
+    <LinkButton href={newAreaHref}>Add</LinkButton>
     <Input
       placeholder="Search"
       value={searchQuery}

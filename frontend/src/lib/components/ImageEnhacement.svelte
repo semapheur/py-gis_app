@@ -3,7 +3,7 @@
   import {
     getImageViewerController,
     type Enhancement,
-  } from "$lib/contexts/image_viewer/controller.svelte";
+  } from "$lib/contexts/ol_image_viewer/controller.svelte";
 
   interface SliderConfig {
     key: keyof Enhancement;

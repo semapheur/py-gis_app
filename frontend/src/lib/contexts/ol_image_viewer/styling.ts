@@ -1,12 +1,5 @@
 import { type FeatureLike } from "ol/Feature";
-import {
-  Geometry,
-  Point,
-  LineString,
-  Polygon,
-  MultiPoint,
-  MultiPolygon,
-} from "ol/geom";
+import { Point, LineString, Polygon } from "ol/geom";
 import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
@@ -62,25 +55,6 @@ export const equipmentStyle = [
     style: equipmentPointStyle.base,
   },
 ];
-
-export const vertexStyle = new Style({
-  image: new Circle({
-    radius: 3,
-    fill: new Fill({ color: "white" }),
-    stroke: new Stroke({ color: "black", width: 1 }),
-  }),
-  geometry: (feature: FeatureLike) => {
-    const geometry = feature.getGeometry();
-
-    if (geometry instanceof Polygon) {
-      return new MultiPoint(geometry.getCoordinates()[0]);
-    }
-
-    if (geometry instanceof MultiPolygon) {
-      return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
-    }
-  },
-});
 
 export function styleText(
   label: string,

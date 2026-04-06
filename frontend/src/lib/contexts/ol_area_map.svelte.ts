@@ -12,15 +12,19 @@ import { Fill, Stroke, Style } from "ol/style";
 import GeoJSON from "ol/format/GeoJSON";
 
 import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
-
 import { vertexStyle } from "$lib/utils/ol_styles";
+import type { BBox } from "$lib/utils/geo/bbox";
+import { transformExtent } from "ol/proj";
 
 export class AreaMapState {
   #map: Map | null = null;
   #polygonSource = new VectorSource();
   #drawInteraction: Draw | null = null;
+  #initialExtent: BBox | null = null;
 
-  constructor(polygons: GeoJSON.Polygon[] = []) {
+  constructor(polygons: GeoJSON.Polygon[] = [], initialBbox?: BBox | null) {
+    this.#initialExtent = initialBbox ?? null;
+
     if (!polygons.length) return;
     const format = new GeoJSON();
     const features = polygons.map((polygon) => {
@@ -81,6 +85,13 @@ export class AreaMapState {
       mapView.fit(this.#polygonSource.getExtent(), {
         padding: [40, 40, 40, 40],
       });
+    } else if (this.#initialExtent) {
+      const extent = transformExtent(
+        this.#initialExtent,
+        "EPSG:4326",
+        "EPSG:3857",
+      );
+      mapView.fit(extent, { padding: [40, 40, 40, 40] });
     }
   }
 
@@ -141,8 +152,11 @@ export class AreaMapState {
 
 const AREAMAP_KEY = Symbol("IMAGEVIEWER");
 
-export function setAreaMapState(polygons: GeoJSON.Polygon[] = []) {
-  const state = new AreaMapState(polygons);
+export function setAreaMapState(
+  polygons: GeoJSON.Polygon[] = [],
+  initialBbox?: BBox | null,
+) {
+  const state = new AreaMapState(polygons, initialBbox);
   return setContext(AREAMAP_KEY, state);
 }
 
