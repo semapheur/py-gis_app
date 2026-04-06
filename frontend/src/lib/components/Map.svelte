@@ -71,6 +71,21 @@
       <Button onclick={searchCurrentExtent}>Search extent</Button>
     </div>
   {/if}
+
+  <div class="layer-toggle">
+    {#each mapLibre.layers as layer}
+      <label>
+        <input
+          type="radio"
+          name="map-layer"
+          value={layer.id}
+          checked={layer.visible}
+          onchange={() => mapLibre.selectLayer(layer.id)}
+        />
+        {layer.label}
+      </label>
+    {/each}
+  </div>
 </div>
 
 <style>
@@ -78,6 +93,19 @@
     position: relative;
     width: 100%;
     height: 100%;
+  }
+
+  .layer-toggle {
+    position: absolute;
+    top: 1rem;
+    left: 1rem;
+    z-index: 1;
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-sm);
+    background-color: oklch(var(--color-primary));
+    padding: var(--size-sm);
+    border-radius: var(--size-sm);
   }
 
   .map-button {

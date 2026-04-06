@@ -2,6 +2,7 @@ import { getContext, setContext } from "svelte";
 import * as maplibre from "maplibre-gl";
 import { bboxToWkt, type BBox } from "$lib/utils/geo/bbox";
 import { type ImagePreviewInfo } from "$lib/utils/types";
+import { buildMapLibreStyle, type MapConfig } from "$lib/utils/map/layers";
 
 type Coordinates = [
   [number, number],
@@ -16,38 +17,64 @@ interface PolygonLink {
   href: string;
 }
 
+interface LayerInfo {
+  id: string;
+  label: string;
+  visible: boolean;
+}
+
 export class MapLibreState {
   #map: maplibre.Map | null = null;
+  #layers: LayerInfo[] = $state([]);
+  #initialExtent: BBox | null = null;
   #isLoaded: boolean = false;
   #resizeObserver: ResizeObserver | null = null;
-  #initialExtent: BBox | null = null;
 
   destroy() {
     this.#resizeObserver?.disconnect();
     this.#map?.remove();
   }
 
-  private initMap(target: HTMLElement) {
+  public get layers() {
+    return this.#layers;
+  }
+
+  private async initMap(target: HTMLElement) {
+    const response = await fetch("map_config.json");
+    const mapConfig = (await response.json()) as MapConfig;
+    const { sources, layers } = buildMapLibreStyle(mapConfig.layers);
+
+    /*
+    sources: {
+      osm: {
+        type: "raster",
+        tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
+        tileSize: 256,
+        attribution: "&copy; OpenStreetMap Contributors",
+        maxzoom: 19,
+      },
+    },
+    layers: [
+      {
+        id: "osm",
+        type: "raster",
+        source: "osm", // This must match the source key above
+      },
+    ],
+    */
+
+    this.#layers = mapConfig.layers.map((layer, i: number) => ({
+      id: layer.id,
+      label: layer.label,
+      visible: i === 0,
+    }));
+
     const map = new maplibre.Map({
       container: target,
       style: {
         version: 8,
-        sources: {
-          osm: {
-            type: "raster",
-            tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
-            tileSize: 256,
-            attribution: "&copy; OpenStreetMap Contributors",
-            maxzoom: 19,
-          },
-        },
-        layers: [
-          {
-            id: "osm",
-            type: "raster",
-            source: "osm", // This must match the source key above
-          },
-        ],
+        sources,
+        layers,
       },
     });
 
@@ -402,6 +429,20 @@ export class MapLibreState {
     this.#map.on("mouseleave", fillLayerId, () => {
       this.#map!.getCanvas().style.cursor = "";
     });
+  }
+
+  public selectLayer(id: string) {
+    if (!this.#map) return;
+
+    for (const layer of this.#layers) {
+      layer.visible = layer.id === id;
+
+      this.#map.setLayoutProperty(
+        layer.id,
+        "visibility",
+        layer.visible ? "visible" : "none",
+      );
+    }
   }
 
   public onMoveEnd(callback: (bbox: string) => void): () => void {
