@@ -30,8 +30,6 @@
   }
 
   $effect(() => {
-    if (!mapLibre) return;
-
     const cleanup = mapLibre.onMoveEnd((bbox) => {
       const params = new URLSearchParams(page.url.searchParams);
       params.set("bbox", bbox);
@@ -72,7 +70,7 @@
     </div>
   {/if}
 
-  <div class="layer-toggle">
+  <div class="layer-select">
     {#each mapLibre.layers as layer}
       <label>
         <input
@@ -95,7 +93,7 @@
     height: 100%;
   }
 
-  .layer-toggle {
+  .layer-select {
     position: absolute;
     top: 1rem;
     left: 1rem;

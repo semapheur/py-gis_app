@@ -1,4 +1,14 @@
 import type { SourceSpecification, LayerSpecification } from "maplibre-gl";
+import TileLayer from "ol/layer/Tile";
+import XYZ from "ol/source/XYZ";
+import TileWMS from "ol/source/TileWMS";
+import WMTS, { optionsFromCapabilities } from "ol/source/WMTS";
+
+export interface LayerInfo {
+  id: string;
+  label: string;
+  visible: boolean;
+}
 
 export type XYZLayerConfig = {
   type: "xyz";
@@ -100,4 +110,46 @@ export function buildMapLibreStyle(layers: MapLayerConfig[]): {
   }
 
   return { sources, layers: mlLayers };
+}
+
+export function buildOlLayers(layers: MapLayerConfig[]): TileLayer[] {
+  return layers.map((layer, i) => {
+    switch (layer.type) {
+      case "xyz":
+        return new TileLayer({
+          visible: i === 0,
+          source: new XYZ({
+            url: layer.url,
+            tileSize: layer.tileSize ?? 256,
+            attributions: layer.attribution,
+          }),
+          properties: { id: layer.id, label: layer.label },
+        });
+
+      case "wms":
+        return new TileLayer({
+          visible: i === 0,
+          source: new TileWMS({
+            url: layer.url,
+            params: {
+              LAYERS: layer.layers,
+              TILED: true,
+            },
+            attributions: layer.attribution,
+          }),
+          properties: { id: layer.id, label: layer.label },
+        });
+
+      case "wmts":
+        return new TileLayer({
+          visible: i === 0,
+          source: new XYZ({
+            url: layer.url,
+            tileSize: layer.tileSize ?? 256,
+            attributions: layer.attribution,
+          }),
+          properties: { id: layer.id, label: layer.label },
+        });
+    }
+  });
 }

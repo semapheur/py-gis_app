@@ -15,12 +15,22 @@ import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
 import { vertexStyle } from "$lib/utils/ol_styles";
 import type { BBox } from "$lib/utils/geo/bbox";
 import { transformExtent } from "ol/proj";
+import { buildOlLayers, type LayerInfo } from "$lib/utils/map/layers";
 
 export class AreaMapState {
   #map: Map | null = null;
+  #baseLayers: TileLayer[] = $state([]);
   #polygonSource = new VectorSource();
   #drawInteraction: Draw | null = null;
   #initialExtent: BBox | null = null;
+
+  public get layers(): LayerInfo[] {
+    return this.#baseLayers.map((layer) => ({
+      id: layer.get("id"),
+      label: layer.get("laber"),
+      visible: layer.getVisible(),
+    }));
+  }
 
   constructor(polygons: GeoJSON.Polygon[] = [], initialBbox?: BBox | null) {
     this.#initialExtent = initialBbox ?? null;
@@ -43,12 +53,11 @@ export class AreaMapState {
     this.#map?.dispose();
   }
 
-  private initMap(target: HTMLElement) {
-    const mapLayer = new TileLayer({
-      source: new XYZ({
-        url: "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
-      }),
-    });
+  private async initMap(target: HTMLElement) {
+    const response = await fetch("/map_config.json");
+    const mapConfig = await response.json();
+    const baseLayers = buildOlLayers(mapConfig.layers);
+    this.#baseLayers = baseLayers;
 
     const polygonLayer = new VectorLayer({
       source: this.#polygonSource,
@@ -69,7 +78,7 @@ export class AreaMapState {
 
     this.#map = new Map({
       target: target,
-      layers: [mapLayer, polygonLayer],
+      layers: [...baseLayers, polygonLayer],
       view: mapView,
       interactions: defaults({
         doubleClickZoom: false,
@@ -147,6 +156,12 @@ export class AreaMapState {
     const draw = this.createDrawInteraction(areaEditorState);
     this.#drawInteraction = draw;
     this.#map.addInteraction(draw);
+  }
+
+  public selectLayer(id: string) {
+    for (const layer of this.#baseLayers) {
+      layer.setVisible(layer.get("id") === id);
+    }
   }
 }
 

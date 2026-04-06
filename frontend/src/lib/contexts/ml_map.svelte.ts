@@ -2,7 +2,11 @@ import { getContext, setContext } from "svelte";
 import * as maplibre from "maplibre-gl";
 import { bboxToWkt, type BBox } from "$lib/utils/geo/bbox";
 import { type ImagePreviewInfo } from "$lib/utils/types";
-import { buildMapLibreStyle, type MapConfig } from "$lib/utils/map/layers";
+import {
+  buildMapLibreStyle,
+  type MapConfig,
+  type LayerInfo,
+} from "$lib/utils/map/layers";
 
 type Coordinates = [
   [number, number],
@@ -17,14 +21,8 @@ interface PolygonLink {
   href: string;
 }
 
-interface LayerInfo {
-  id: string;
-  label: string;
-  visible: boolean;
-}
-
 export class MapLibreState {
-  #map: maplibre.Map | null = null;
+  #map: maplibre.Map | null = $state(null);
   #layers: LayerInfo[] = $state([]);
   #initialExtent: BBox | null = null;
   #isLoaded: boolean = false;
@@ -43,25 +41,6 @@ export class MapLibreState {
     const response = await fetch("map_config.json");
     const mapConfig = (await response.json()) as MapConfig;
     const { sources, layers } = buildMapLibreStyle(mapConfig.layers);
-
-    /*
-    sources: {
-      osm: {
-        type: "raster",
-        tiles: ["https://a.tile.openstreetmap.org/{z}/{x}/{y}.png"],
-        tileSize: 256,
-        attribution: "&copy; OpenStreetMap Contributors",
-        maxzoom: 19,
-      },
-    },
-    layers: [
-      {
-        id: "osm",
-        type: "raster",
-        source: "osm", // This must match the source key above
-      },
-    ],
-    */
 
     this.#layers = mapConfig.layers.map((layer, i: number) => ({
       id: layer.id,
