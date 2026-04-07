@@ -13,13 +13,11 @@
 
   let imagePreview: ImagePreviewInfo | null = $state(null);
 
-  const parsedPolygon = data.wkt
-    ? new WktParser(data.wkt).parsePolygon()
-    : null;
-  const polygon = parsedPolygon ? [parsedPolygon] : [];
-  const initialBbox = data.wkt ? wktToBbox(data.wkt) : null;
+  const extentPolygon = $derived(
+    data.wkt ? new WktParser(data.wkt).parsePolygon() : null,
+  );
 
-  setMapLibreState(polygon, initialBbox);
+  setMapLibreState();
 
   function onHoverImage(image: ImageMetadata | null) {
     imagePreview = image
@@ -35,7 +33,7 @@
 
 <Splitpanes>
   <Pane>
-    <Map {imagePreview} />
+    <Map {imagePreview} {extentPolygon} />
   </Pane>
   <Pane>
     <div class="right-panel">

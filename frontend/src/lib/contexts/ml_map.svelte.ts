@@ -40,13 +40,11 @@ export class MapLibreState {
   #map: maplibre.Map | null = $state(null);
   #layers: LayerInfo[] = $state([]);
   #initialExtent: BBox | null = null;
-  #initialPolygons: GeoJSON.Polygon[] = [];
   #isLoaded: boolean = false;
   #resizeObserver: ResizeObserver | null = null;
 
-  constructor(polygons: GeoJSON.Polygon[] = [], initialBbox?: BBox | null) {
+  constructor(initialBbox?: BBox | null) {
     this.#initialExtent = initialBbox ?? null;
-    this.#initialPolygons = polygons;
   }
 
   destroy() {
@@ -82,19 +80,6 @@ export class MapLibreState {
 
     map.on("load", () => {
       this.#isLoaded = true;
-
-      if (this.#initialPolygons.length > 0) {
-        this.setPolygons("extent", this.#initialPolygons);
-
-        if (!this.#initialExtent) {
-          const allCoords = this.#initialPolygons.flatMap(
-            (p) => p.coordinates[0],
-          );
-          this.fitToPolygon(allCoords, { animate: false });
-          return;
-        }
-      }
-
       this.applyInitialExtent();
     });
 
@@ -121,10 +106,11 @@ export class MapLibreState {
 
     if (src) {
       src.updateImage({ url, coordinates });
-    } else {
-      this.#map.addSource(id, { type: "image", url, coordinates });
-      this.#map.addLayer({ id, type: "raster", source: id });
+      return;
     }
+
+    this.#map.addSource(id, { type: "image", url, coordinates });
+    this.#map.addLayer({ id, type: "raster", source: id });
   }
 
   private upsertSource(
@@ -146,7 +132,7 @@ export class MapLibreState {
     return true;
   }
 
-  public setPolygons(
+  private setPolygons(
     sourceId: string,
     polygons: GeoJSON.Polygon[],
     style: PolygonStyle = {},
@@ -324,6 +310,13 @@ export class MapLibreState {
   }
 
   public setImagePreview(preview: ImagePreviewInfo) {
+    if (!this.#map) return;
+
+    if (!this.#isLoaded) {
+      this.#map.once("load", () => this.setImagePreview(preview));
+      return;
+    }
+
     const coords = preview.polygon.coordinates[0];
     const ordered = this.reorderPolygon(coords);
     if (!ordered) return;
@@ -368,12 +361,15 @@ export class MapLibreState {
   }
 
   public zoomToPoint(
+    sourceId: string,
     point: GeoJSON.Point,
     options?: Partial<maplibre.FlyToOptions>,
   ) {
     if (!this.#map) return;
 
-    this.setPoints("zoom-point", [point]);
+    const style = {};
+
+    this.setPoints(sourceId, [point]);
 
     this.#map.flyTo({
       center: point.coordinates,
@@ -386,13 +382,23 @@ export class MapLibreState {
   }
 
   public zoomToPolygon(
+    sourceId: string,
     polygon: GeoJSON.Polygon,
     options?: Partial<maplibre.FlyToOptions>,
   ) {
     if (!this.#map) return;
 
-    this.setPolygons("zoom-polygon", [polygon]);
+    if (!this.#isLoaded) {
+      this.#map.once("load", () =>
+        this.zoomToPolygon(sourceId, polygon, options),
+      );
+      return;
+    }
 
+    const style = {};
+
+    this.setPolygons(sourceId, [polygon]);
+    console.log("yay");
     const coords = polygon.coordinates[0];
     this.fitToPolygon(coords, options);
   }
@@ -522,11 +528,8 @@ export class MapLibreState {
 
 const MAPLIBRE_KEY = Symbol("MAPLIBRE");
 
-export function setMapLibreState(
-  polygons: GeoJSON.Polygon[] = [],
-  initialBbox?: BBox | null,
-) {
-  const state = new MapLibreState(polygons, initialBbox);
+export function setMapLibreState(initialBbox?: BBox | null) {
+  const state = new MapLibreState(initialBbox);
   return setContext(MAPLIBRE_KEY, state);
 }
 

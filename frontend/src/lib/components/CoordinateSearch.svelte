@@ -38,12 +38,12 @@
       latlon = coord;
     }
 
-    mapLibre?.zoomToPoint(latlon.latitude, latlon.longitude);
+    mapLibre?.zoomToPoint("zoom-point", latlon.toGeoJson());
   }
 
   function zoomToGrid(coord: MGRS) {
-    const gridCoordinates = coord.getGridPolygon().coordinates[0];
-    mapLibre?.zoomToPolygon(gridCoordinates, { duration: 1000 });
+    const gridPolygon = coord.getGridPolygon();
+    mapLibre?.zoomToPolygon("zoom-polygon", gridPolygon, { duration: 1000 });
   }
 
   function coordinateToWktPoint(coord: Coordinate) {

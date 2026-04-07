@@ -9,6 +9,7 @@
 
   interface Props {
     imagePreview?: ImagePreviewInfo | null;
+    extentPolygon?: GeoJSON.Polygon | null;
     showSearchButton?: boolean;
     syncBbox?: boolean;
     onSearchExtent?: (polygonWkt: string) => void;
@@ -16,6 +17,7 @@
 
   let {
     imagePreview = null,
+    extentPolygon = null,
     showSearchButton = false,
     syncBbox = false,
     onSearchExtent,
@@ -26,7 +28,11 @@
 
   function searchCurrentExtent() {
     if (!mapLibre || !onSearchExtent) return;
-    onSearchExtent(mapLibre.getCurrentExtentWkt());
+
+    const extentWkt = mapLibre.getCurrentExtentWkt();
+    if (!extentWkt) return;
+
+    onSearchExtent(extentWkt);
   }
 
   $effect(() => {
@@ -48,6 +54,11 @@
   $effect(() => {
     if (!mapLibre || !imagePreview) return;
     mapLibre.setImagePreview(imagePreview);
+  });
+
+  $effect(() => {
+    if (!mapLibre || !extentPolygon) return;
+    mapLibre.zoomToPolygon("search-extent", extentPolygon, { animate: false });
   });
 
   $effect(() => {

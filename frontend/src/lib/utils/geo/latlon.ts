@@ -29,6 +29,13 @@ export class LatLon {
     return this.#longitude;
   }
 
+  public toGeoJson(): GeoJSON.Point {
+    return {
+      type: "Point",
+      coordinates: [this.#longitude, this.#latitude],
+    };
+  }
+
   public print(
     format: LatLonFormat,
     decimals: number | null = null,

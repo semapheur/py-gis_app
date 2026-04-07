@@ -2,8 +2,12 @@
   import { type ImageMetadata } from "$lib/utils/types";
   import ImageCard from "$lib/components/ImageCard.svelte";
 
-  export let images: ImageMetadata[] = [];
-  export let onHoverImage: (image: ImageMetadata | null) => void;
+  interface Props {
+    images?: ImageMetadata[];
+    onHoverImage: (image: ImageMetadata | null) => void;
+  }
+
+  const { images = [], onHoverImage }: Props = $props();
 </script>
 
 {#if images.length === 0}
