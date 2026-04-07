@@ -21,6 +21,21 @@ interface PolygonLink {
   href: string;
 }
 
+interface PolygonStyle {
+  lineColor?: string;
+  lineWidth?: number;
+  lineDasharray?: number[];
+  fillColor?: string;
+  fillOpacity?: number;
+}
+
+interface PointStyle {
+  radius?: number;
+  color?: string;
+  strokeColor?: string;
+  strokeWidth?: number;
+}
+
 export class MapLibreState {
   #map: maplibre.Map | null = $state(null);
   #layers: LayerInfo[] = $state([]);
@@ -69,9 +84,7 @@ export class MapLibreState {
       this.#isLoaded = true;
 
       if (this.#initialPolygons.length > 0) {
-        this.#initialPolygons.forEach((polygon) => {
-          this.upsertPolygon(polygon.coordinates[0]);
-        });
+        this.setPolygons("extent", this.#initialPolygons);
 
         if (!this.#initialExtent) {
           const allCoords = this.#initialPolygons.flatMap(
@@ -114,70 +127,114 @@ export class MapLibreState {
     }
   }
 
-  private upsertPolygon(coords: GeoJSON.Position[]) {
-    if (!this.#map) return;
+  private upsertSource(
+    sourceId: string,
+    data: GeoJSON.FeatureCollection | GeoJSON.Feature,
+  ): boolean {
+    if (!this.#map) return false;
 
-    const src = this.#map.getSource("footprint") as
+    const src = this.#map.getSource(sourceId) as
       | maplibre.GeoJSONSource
       | undefined;
 
-    const data = {
-      type: "Polygon",
-      coordinates: [coords],
-    };
-
     if (src) {
       src.setData(data);
-    } else {
-      this.#map.addSource("footprint", { type: "geojson", data });
+      return false;
+    }
+
+    this.#map.addSource(sourceId, { type: "geojson", data });
+    return true;
+  }
+
+  public setPolygons(
+    sourceId: string,
+    polygons: GeoJSON.Polygon[],
+    style: PolygonStyle = {},
+  ) {
+    if (!this.#map) return;
+
+    const {
+      lineColor = "#007aff",
+      lineWidth = 2,
+      lineDasharray,
+      fillColor,
+      fillOpacity = 0.1,
+    } = style;
+
+    const data: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: polygons.map((polygon) => ({
+        type: "Feature",
+        geometry: polygon,
+        properties: {},
+      })),
+    };
+
+    const isNew = this.upsertSource(sourceId, data);
+    if (!isNew) return;
+
+    const lineLayer: maplibre.LayerSpecification = {
+      id: `${sourceId}-line`,
+      type: "line",
+      source: sourceId,
+      paint: {
+        "line-color": lineColor,
+        "line-width": lineWidth,
+        ...(lineDasharray && { "line-dasharray": lineDasharray }),
+      },
+    };
+
+    this.#map.addLayer(lineLayer);
+    if (fillColor) {
       this.#map.addLayer({
-        id: "footprint",
-        type: "line",
-        source: "footprint",
+        id: `${sourceId}-fill`,
+        type: "fill",
+        source: sourceId,
         paint: {
-          "line-color": "#f4320b",
-          "line-width": 3,
+          "fill-color": fillColor,
+          "fill-opacity": fillOpacity,
         },
       });
     }
   }
 
-  private upsertZoomPoint(lat: number, lon: number) {
+  private setPoints(
+    sourceId: string,
+    points: GeoJSON.Point[],
+    style: PointStyle = {},
+  ) {
     if (!this.#map) return;
 
-    const data: GeoJSON.Feature<GeoJSON.Point> = {
-      type: "Feature",
-      geometry: {
-        type: "Point",
-        coordinates: [lon, lat],
-      },
-      properties: {},
+    const {
+      radius = 6,
+      color = "#ff3b30",
+      strokeColor = "#ffffff",
+      strokeWidth = 2,
+    } = style;
+
+    const data: GeoJSON.FeatureCollection = {
+      type: "FeatureCollection",
+      features: points.map((point) => ({
+        type: "Feature",
+        geometry: point,
+        properties: {},
+      })),
     };
 
-    const src = this.#map.getSource("zoom-point") as
-      | maplibre.GeoJSONSource
-      | undefined;
+    const isNew = this.upsertSource(sourceId, data);
+    if (!isNew) return;
 
-    if (src) {
-      src.setData(data);
-    } else {
-      this.#map.addSource("zoom-point", {
-        type: "geojson",
-        data,
-      });
-
-      this.#map.addLayer({
-        id: "zoom-point",
-        type: "circle",
-        source: "zoom-point",
-        paint: {
-          "circle-radius": 6,
-          "circle-color": "#ff3b30",
-          "circle-stroke-color": "#ffffff",
-          "circle-stroke-width": 2,
-        },
-      });
-    }
+    this.#map.addLayer({
+      id: sourceId,
+      type: "circle",
+      source: sourceId,
+      paint: {
+        "circle-radius": radius,
+        "circle-color": color,
+        "circle-stroke-color": strokeColor,
+        "circle-stroke-width": strokeWidth,
+      },
+    });
   }
 
   private decimalsForZoom(zoom: number): number {
@@ -190,23 +247,23 @@ export class MapLibreState {
 
   private getBounds(coords: GeoJSON.Position[]): maplibre.LngLatBoundsLike {
     const lats = coords.map((c) => c[1]);
-    const lngs = coords.map((c) => c[0]);
+    const lons = coords.map((c) => c[0]);
     return [
-      [Math.min(...lngs), Math.min(...lats)],
-      [Math.max(...lngs), Math.max(...lats)],
+      [Math.min(...lons), Math.min(...lats)],
+      [Math.max(...lons), Math.max(...lats)],
     ];
   }
 
-  private reorderPolygon(coords: GeoJSON.Position[]): Coordinates {
-    if (!this.#map) return;
+  private reorderPolygon(coords: GeoJSON.Position[]): Coordinates | null {
+    if (!this.#map) return null;
     // Maplibre order: top-left, top-right, bottom-right, bottom left
 
     if (coords.length === 5) coords = coords.slice(0, 4);
 
     // project into screen space
-    const points = coords.map(([lng, lat]) => {
-      const p = this.#map.project([lng, lat]);
-      return { lng, lat, x: p.x, y: p.y, angle: 0 };
+    const points = coords.map(([lon, lat]) => {
+      const p = this.#map.project([lon, lat]);
+      return { lon, lat, x: p.x, y: p.y, angle: 0 };
     });
 
     // centroid in screen space
@@ -237,7 +294,7 @@ export class MapLibreState {
       points[(topLeftIndex + 3) % 4],
     ];
 
-    return ordered.map((p) => [p.lng, p.lat]) as Coordinates;
+    return ordered.map((p) => [p.lon, p.lat]) as Coordinates;
   }
 
   public attach(element: HTMLElement) {
@@ -267,13 +324,16 @@ export class MapLibreState {
   }
 
   public setImagePreview(preview: ImagePreviewInfo) {
-    const ordered = this.reorderPolygon(preview.coordinates);
+    const coords = preview.polygon.coordinates[0];
+    const ordered = this.reorderPolygon(coords);
+    if (!ordered) return;
+
     const url = `/thumbnails/${preview.filename}.png`;
 
     this.upsertImageSource("image-preview", url, ordered);
-    this.upsertPolygon(preview.coordinates);
+    this.setPolygons("footprint", [preview.polygon]);
 
-    this.fitToPolygon(preview.coordinates, {
+    this.fitToPolygon(coords, {
       bearing: preview.azimuth_angle,
       pitch: preview.look_angle,
       animate: true,
@@ -308,16 +368,15 @@ export class MapLibreState {
   }
 
   public zoomToPoint(
-    lat: number,
-    lon: number,
+    point: GeoJSON.Point,
     options?: Partial<maplibre.FlyToOptions>,
   ) {
     if (!this.#map) return;
 
-    this.upsertZoomPoint(lat, lon);
+    this.setPoints("zoom-point", [point]);
 
     this.#map.flyTo({
-      center: [lon, lat],
+      center: point.coordinates,
       zoom: 14,
       speed: 4.0,
       curve: 1.0,
@@ -327,13 +386,14 @@ export class MapLibreState {
   }
 
   public zoomToPolygon(
-    coords: GeoJSON.Position[],
+    polygon: GeoJSON.Polygon,
     options?: Partial<maplibre.FlyToOptions>,
   ) {
     if (!this.#map) return;
 
-    this.upsertPolygon(coords);
+    this.setPolygons("zoom-polygon", [polygon]);
 
+    const coords = polygon.coordinates[0];
     this.fitToPolygon(coords, options);
   }
 

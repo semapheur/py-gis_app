@@ -1,12 +1,11 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { page } from "$app/state";
   import { Pane, Splitpanes } from "svelte-splitpanes";
   import Map from "$lib/components/Map.svelte";
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
   import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import { wktToBbox, type BBox } from "$lib/utils/geo/bbox";
+  import { wktToBbox } from "$lib/utils/geo/bbox";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
   import { WktParser } from "$lib/utils/geo/wkt";
 
@@ -26,7 +25,7 @@
     imagePreview = image
       ? {
           filename: image.filename,
-          coordinates: image.footprint!.coordinates[0],
+          polygon: image.footprint,
           azimuth_angle: image.azimuth_angle,
           look_angle: image.look_angle,
         }

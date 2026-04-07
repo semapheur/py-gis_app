@@ -14,7 +14,7 @@ export interface ImageMetadata extends ImageInfo {
   datetime_collected: number;
   sensor_name: string;
   sensor_type: "eo" | "sar";
-  footprint?: GeoJSON.Polygon; // WKT
+  footprint: GeoJSON.Polygon;
   look_angle: number;
   azimuth_angle: number;
   ground_sample_distance_row: number;
@@ -25,7 +25,7 @@ export interface ImageMetadata extends ImageInfo {
 
 export interface ImagePreviewInfo {
   filename: string;
-  coordinates: GeoJSON.Position[];
+  polygon: GeoJSON.Polygon;
   azimuth_angle: number;
   look_angle: number;
 }
