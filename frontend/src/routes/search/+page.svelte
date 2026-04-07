@@ -1,5 +1,6 @@
 <script lang="ts">
   import type { PageData } from "./$types";
+  import { page } from "$app/state";
   import { Pane, Splitpanes } from "svelte-splitpanes";
   import Map from "$lib/components/Map.svelte";
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
@@ -7,22 +8,19 @@
   import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
   import { wktToBbox, type BBox } from "$lib/utils/geo/bbox";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
+  import { WktParser } from "$lib/utils/geo/wkt";
 
   let { data }: { data: PageData } = $props();
 
-  let bbox: BBox | null = $state(null);
   let imagePreview: ImagePreviewInfo | null = $state(null);
 
-  setMapLibreState();
+  const parsedPolygon = data.wkt
+    ? new WktParser(data.wkt).parsePolygon()
+    : null;
+  const polygon = parsedPolygon ? [parsedPolygon] : [];
+  const initialBbox = data.wkt ? wktToBbox(data.wkt) : null;
 
-  $effect(() => {
-    if (!data.wkt) {
-      bbox = null;
-      return;
-    }
-
-    bbox = wktToBbox(data.wkt);
-  });
+  setMapLibreState(polygon, initialBbox);
 
   function onHoverImage(image: ImageMetadata | null) {
     imagePreview = image
@@ -38,10 +36,22 @@
 
 <Splitpanes>
   <Pane>
-    <Map extent={bbox} {imagePreview} />
+    <Map {imagePreview} />
   </Pane>
   <Pane>
-    <ImageFilterForm />
-    <ImageGrid images={data.images} {onHoverImage} />
+    <div class="right-panel">
+      <ImageFilterForm />
+      <ImageGrid images={data.images} {onHoverImage} />
+    </div>
   </Pane>
 </Splitpanes>
+
+<style>
+  .right-panel {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--size-md);
+    width: 100%;
+    padding: var(--size-md);
+  }
+</style>

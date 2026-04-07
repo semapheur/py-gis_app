@@ -90,6 +90,22 @@ def get_area(payload: AreaId):
     return area[0]
 
 
+def get_area_wkt(area_id: str):
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
+    where = "areas.id = :id"
+    params = {"id": uuid.UUID(area_id).bytes}
+    area = db.select_records(
+      AreasTable,
+      columns=("geometry",),
+      where=where,
+      params=params,
+      geo_format="AsText",
+      to_json=True,
+    )
+
+    return area[0]
+
+
 def get_areas():
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     areas = db.select_records(

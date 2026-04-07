@@ -25,8 +25,14 @@ export class MapLibreState {
   #map: maplibre.Map | null = $state(null);
   #layers: LayerInfo[] = $state([]);
   #initialExtent: BBox | null = null;
+  #initialPolygons: GeoJSON.Polygon[] = [];
   #isLoaded: boolean = false;
   #resizeObserver: ResizeObserver | null = null;
+
+  constructor(polygons: GeoJSON.Polygon[] = [], initialBbox?: BBox | null) {
+    this.#initialExtent = initialBbox ?? null;
+    this.#initialPolygons = polygons;
+  }
 
   destroy() {
     this.#resizeObserver?.disconnect();
@@ -61,6 +67,21 @@ export class MapLibreState {
 
     map.on("load", () => {
       this.#isLoaded = true;
+
+      if (this.#initialPolygons.length > 0) {
+        this.#initialPolygons.forEach((polygon) => {
+          this.upsertPolygon(polygon.coordinates[0]);
+        });
+
+        if (!this.#initialExtent) {
+          const allCoords = this.#initialPolygons.flatMap(
+            (p) => p.coordinates[0],
+          );
+          this.fitToPolygon(allCoords, { animate: false });
+          return;
+        }
+      }
+
       this.applyInitialExtent();
     });
 
@@ -441,8 +462,11 @@ export class MapLibreState {
 
 const MAPLIBRE_KEY = Symbol("MAPLIBRE");
 
-export function setMapLibreState() {
-  const state = new MapLibreState();
+export function setMapLibreState(
+  polygons: GeoJSON.Polygon[] = [],
+  initialBbox?: BBox | null,
+) {
+  const state = new MapLibreState(polygons, initialBbox);
   return setContext(MAPLIBRE_KEY, state);
 }
 

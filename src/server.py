@@ -7,7 +7,7 @@ from typing import Any, Callable, TypedDict, TypeVar
 
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
-from src.index.images import get_image_info, get_images_by_intersection
+from src.index.images import ImageQuery, get_image_info, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
   AnnotationUpdate,
@@ -241,12 +241,8 @@ class Handler(SimpleHTTPRequestHandler):
       self.send_error(500, f"Server error: {str(e)}")
 
   def _post_query_images(self):
-    class Payload(TypedDict):
-      wkt: str
-
-    def logic(payload: Payload) -> list[dict[str, Any]]:
-      wkt = payload["wkt"]
-      return get_images_by_intersection(wkt)
+    def logic(payload: ImageQuery) -> list[dict[str, Any]]:
+      return search_images(payload)
 
     self._handle_post(logic)
 

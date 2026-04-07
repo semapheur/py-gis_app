@@ -29,39 +29,31 @@
   }
 </script>
 
-<div class="container">
-  <form class="form" on:submit={submitForm}>
-    <Input placeholder="File name" name="filename" bind:value={filename} />
-    <Input placeholder="Min coverage" name="coverage" bind:value={coverage} />
-    <Input
-      placeholder="Min IIRS"
-      type="number"
-      min="0"
-      max="9"
-      name="min_iirs"
-      bind:value={iirs}
-    />
-    <Input
-      placeholder="Max GSD"
-      type="number"
-      min="0"
-      name="max_gsd"
-      bind:value={gsd}
-    />
-    <DaterangePicker bind:selectedRange={dateRange} />
-  </form>
-</div>
+<form class="form" on:submit={submitForm}>
+  <Input placeholder="File name" name="filename" bind:value={filename} />
+  <Input placeholder="Min coverage" name="coverage" bind:value={coverage} />
+  <Input
+    placeholder="Min IIRS"
+    type="number"
+    min="0"
+    max="9"
+    name="min_iirs"
+    bind:value={iirs}
+  />
+  <Input
+    placeholder="Max GSD"
+    type="number"
+    min="0"
+    name="max_gsd"
+    bind:value={gsd}
+  />
+  <DaterangePicker bind:selectedRange={dateRange} />
+</form>
 
 <style>
-  .container {
-    width: 100%;
-    display: flex;
-    flex-direction: column;
-    padding: 0.5rem;
-  }
-
   .form {
     display: flex;
     gap: 0.2rem;
+    width: 100%;
   }
 </style>

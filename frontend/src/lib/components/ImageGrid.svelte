@@ -24,7 +24,6 @@
     grid-template-columns: repeat(auto-fill, minmax(min(100%, 200px), 1fr));
     grid-auto-rows: min-content;
     gap: var(--size-lg);
-    padding: var(--size-lg);
     overflow-y: scroll;
   }
 </style>

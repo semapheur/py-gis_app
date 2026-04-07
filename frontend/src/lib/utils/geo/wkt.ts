@@ -10,8 +10,8 @@ export function polygonToWkt(
   const ring = polygon.coordinates[0];
 
   const coords = ring
-    .map(([lng, lat]) => {
-      const x = Math.round(lng * f) / f;
+    .map(([lon, lat]) => {
+      const x = Math.round(lon * f) / f;
       const y = Math.round(lat * f) / f;
       return `${x} ${y}`;
     })

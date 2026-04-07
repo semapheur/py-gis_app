@@ -25,10 +25,10 @@
 
 <Splitpanes>
   <Pane>
-    <Map showSearchButton={true} onSearchExtent={handleSearchExtent} />
+    <Map showSearchButton syncBbox onSearchExtent={handleSearchExtent} />
   </Pane>
   <Pane>
-    <section class="right-panel">
+    <div class="right-panel">
       <header class="panel-header">
         <Tabs
           {tabs}
@@ -43,7 +43,7 @@
           <CoordinateSearch />
         {/if}
       </main>
-    </section>
+    </div>
   </Pane>
 </Splitpanes>
 

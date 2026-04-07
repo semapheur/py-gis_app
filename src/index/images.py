@@ -5,7 +5,7 @@ import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Literal, TypeAlias, Union, cast
+from typing import Any, Literal, TypeAlias, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
@@ -20,6 +20,7 @@ from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalogs, update_index_time
 from src.index.radiometric import NoiseParameters, RadiometricParamsTable
 from src.math_utils import dot, norm
+from src.models.areas import get_area_wkt
 from src.sicd_model import SicdObject
 from src.spatialite import (
   ColumnType,
@@ -478,25 +479,42 @@ def index_images(
       db.insert_models(radiometric_index)
 
 
-def get_images_by_intersection(polygon_wkt: str):
-  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    where = "ST_Intersects(footprint, poly.geom)"
-    derived = {"coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"}
-    with_clause = "poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)"
-    join = JoinClause(join_type="CROSS", expression="poly")
-    params = {"polygon": polygon_wkt}
+class ImageQuery(TypedDict):
+  wkt: Union[str, None]
+  area_id: Union[str, None]
 
-    return db.select_records(
-      ImageIndexTable,
+
+def search_images(payload: ImageQuery):
+  wkt = payload["wkt"]
+  area_id = payload["area_id"]
+  if area_id is not None:
+    wkt = get_area_wkt(area_id)["geometry"]
+
+  return get_images_by_intersection(wkt)
+
+
+def get_images_by_intersection(polygon_wkt: Union[str, None]):
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
+    kwargs: dict[str, Any] = dict(
       columns="*",
-      with_clause=with_clause,
       geo_format="AsGeoJSON",
-      derived=derived,
-      join=join,
-      where=where,
-      params=params,
       to_json=True,
     )
+
+    if polygon_wkt is not None:
+      kwargs.update(
+        where="ST_Intersects(footprint, poly.geom)",
+        derived={
+          "coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"
+        },
+        with_clause="poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)",
+        join=JoinClause(join_type="CROSS", expression="poly"),
+        params={"polygon": polygon_wkt},
+      )
+
+    results = db.select_records(ImageIndexTable, **kwargs)
+
+    return {"wkt": polygon_wkt, "images": results}
 
 
 def get_image_info(id: bytes) -> dict:

@@ -4,7 +4,6 @@ import Map from "ol/Map.js";
 import TileLayer from "ol/layer/Tile.js";
 import VectorLayer from "ol/layer/Vector";
 import View from "ol/View.js";
-import XYZ from "ol/source/XYZ";
 import { Draw, Modify, defaults } from "ol/interaction";
 import VectorSource from "ol/source/Vector";
 import { Polygon } from "ol/geom";
@@ -27,7 +26,7 @@ export class AreaMapState {
   public get layers(): LayerInfo[] {
     return this.#baseLayers.map((layer) => ({
       id: layer.get("id"),
-      label: layer.get("laber"),
+      label: layer.get("label"),
       visible: layer.getVisible(),
     }));
   }

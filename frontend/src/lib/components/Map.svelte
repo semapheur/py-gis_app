@@ -8,20 +8,20 @@
   import { parseBbox, type BBox } from "$lib/utils/geo/bbox";
 
   interface Props {
-    extent?: BBox | null;
     imagePreview?: ImagePreviewInfo | null;
     showSearchButton?: boolean;
+    syncBbox?: boolean;
     onSearchExtent?: (polygonWkt: string) => void;
   }
 
   let {
-    extent = null,
     imagePreview = null,
     showSearchButton = false,
+    syncBbox = false,
     onSearchExtent,
   }: Props = $props();
 
-  const initialBbox = page.url.searchParams.get("bbox");
+  const initialBbox = syncBbox ? page.url.searchParams.get("bbox") : null;
   const mapLibre = getMapLibreState();
 
   function searchCurrentExtent() {
@@ -30,6 +30,8 @@
   }
 
   $effect(() => {
+    if (!syncBbox) return;
+
     const cleanup = mapLibre.onMoveEnd((bbox) => {
       const params = new URLSearchParams(page.url.searchParams);
       params.set("bbox", bbox);
@@ -49,13 +51,7 @@
   });
 
   $effect(() => {
-    if (!mapLibre || !extent) return;
-    mapLibre.setInitialExtent(extent);
-  });
-
-  $effect(() => {
-    if (!mapLibre || extent) return;
-    if (!initialBbox) return;
+    if (!mapLibre || !initialBbox) return;
 
     const bbox = parseBbox(initialBbox);
 
