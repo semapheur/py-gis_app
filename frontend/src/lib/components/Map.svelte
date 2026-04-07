@@ -52,8 +52,11 @@
   });
 
   $effect(() => {
-    if (!mapLibre || !imagePreview) return;
-    mapLibre.setImagePreview(imagePreview);
+    if (!mapLibre || !initialBbox) return;
+
+    const bbox = parseBbox(initialBbox);
+
+    mapLibre.setInitialExtent(bbox);
   });
 
   $effect(() => {
@@ -62,11 +65,8 @@
   });
 
   $effect(() => {
-    if (!mapLibre || !initialBbox) return;
-
-    const bbox = parseBbox(initialBbox);
-
-    mapLibre.setInitialExtent(bbox);
+    if (!mapLibre || !imagePreview) return;
+    mapLibre.setImagePreview(imagePreview);
   });
 </script>
 

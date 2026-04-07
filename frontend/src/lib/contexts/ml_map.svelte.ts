@@ -99,7 +99,12 @@ export class MapLibreState {
     this.#map.fitBounds(bbox, { animate: false });
   }
 
-  private upsertImageSource(id: string, url: string, coordinates: Coordinates) {
+  private upsertImageSource(
+    id: string,
+    url: string,
+    coordinates: Coordinates,
+    beforeId?: string,
+  ) {
     if (!this.#map) return;
 
     const src = this.#map.getSource(id) as maplibre.ImageSource | undefined;
@@ -110,7 +115,7 @@ export class MapLibreState {
     }
 
     this.#map.addSource(id, { type: "image", url, coordinates });
-    this.#map.addLayer({ id, type: "raster", source: id });
+    this.#map.addLayer({ id, type: "raster", source: id }, beforeId);
   }
 
   private upsertSource(
@@ -136,6 +141,7 @@ export class MapLibreState {
     sourceId: string,
     polygons: GeoJSON.Polygon[],
     style: PolygonStyle = {},
+    beforeId?: string,
   ) {
     if (!this.#map) return;
 
@@ -170,17 +176,20 @@ export class MapLibreState {
       },
     };
 
-    this.#map.addLayer(lineLayer);
+    this.#map.addLayer(lineLayer, beforeId);
     if (fillColor) {
-      this.#map.addLayer({
-        id: `${sourceId}-fill`,
-        type: "fill",
-        source: sourceId,
-        paint: {
-          "fill-color": fillColor,
-          "fill-opacity": fillOpacity,
+      this.#map.addLayer(
+        {
+          id: `${sourceId}-fill`,
+          type: "fill",
+          source: sourceId,
+          paint: {
+            "fill-color": fillColor,
+            "fill-opacity": fillOpacity,
+          },
         },
-      });
+        beforeId,
+      );
     }
   }
 
@@ -323,8 +332,14 @@ export class MapLibreState {
 
     const url = `/thumbnails/${preview.filename}.png`;
 
-    this.upsertImageSource("image-preview", url, ordered);
-    this.setPolygons("footprint", [preview.polygon]);
+    this.upsertImageSource("image-preview", url, ordered, "search-extent-line");
+    const style = {};
+    this.setPolygons(
+      "footprint",
+      [preview.polygon],
+      style,
+      "search-extent-line",
+    );
 
     this.fitToPolygon(coords, {
       bearing: preview.azimuth_angle,
@@ -398,7 +413,6 @@ export class MapLibreState {
     const style = {};
 
     this.setPolygons(sourceId, [polygon]);
-    console.log("yay");
     const coords = polygon.coordinates[0];
     this.fitToPolygon(coords, options);
   }

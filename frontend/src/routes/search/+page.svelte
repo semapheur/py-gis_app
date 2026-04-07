@@ -5,7 +5,6 @@
   import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
   import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import { wktToBbox } from "$lib/utils/geo/bbox";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
   import { WktParser } from "$lib/utils/geo/wkt";
 
