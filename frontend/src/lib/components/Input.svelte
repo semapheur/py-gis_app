@@ -1,10 +1,13 @@
 <script lang="ts" generics="T extends string | number | null = string">
+  import type { Snippet } from "svelte";
   import type { HTMLInputAttributes } from "svelte/elements";
 
   interface Props extends HTMLInputAttributes {
     value?: T;
     invalid?: boolean;
     fieldSizing?: "content" | "fixed";
+    suffix?: Snippet;
+    suffixWidth?: string;
   }
 
   let {
@@ -14,6 +17,8 @@
     invalid = false,
     fieldSizing = "fixed",
     oninput,
+    suffix,
+    suffixWidth,
     ...rest
   }: Props = $props();
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
@@ -34,7 +39,7 @@
     {placeholder}
     bind:value={internal}
     {required}
-    style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch;`}
+    style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch; ${suffix ? `padding-right: ${suffixWidth};` : ""}`}
     oninput={(e) => {
       if (rest.type === "number") {
         let v = Number(e.currentTarget.value);
@@ -53,6 +58,11 @@
   {#if placeholder}
     <label for={uid}>{placeholder}</label>
   {/if}
+  {#if suffix}
+    <div class="suffix">
+      {@render suffix()}
+    </div>
+  {/if}
 </div>
 
 <style>
@@ -69,6 +79,7 @@
     transform: translateY(-50%);
     transition: all 0.15s ease;
     pointer-events: none;
+    text-shadow: var(--text-shadow);
   }
 
   input {
@@ -93,6 +104,7 @@
       background-color: transparent;
       transform: translateY(0);
       top: var(--size-sm);
+      text-shadow: none;
     }
 
     &:focus + label {
@@ -101,5 +113,14 @@
       transform: translateY(-50%);
       text-shadow: var(--text-shadow);
     }
+  }
+
+  .suffix {
+    position: absolute;
+    right: 0;
+    top: 50%;
+    transform: translateY(-50%);
+    display: flex;
+    align-items: center;
   }
 </style>

@@ -321,26 +321,46 @@
 
     return weeks;
   });
+
+  function isStartCell(c: CalendarCell) {
+    if (!range.start) return false;
+    const d = cellToDate(c);
+    return d.getTime() === stripTime(range.start).getTime();
+  }
+
+  function isEndCell(c: CalendarCell) {
+    if (!range.end) return false;
+    const d = cellToDate(c);
+    return d.getTime() === stripTime(range.end).getTime();
+  }
+
+  function isInRangeCell(c: CalendarCell) {
+    if (!range.start || !range.end || isDisabledCell(c)) return false;
+    const d = cellToDate(c);
+    return d > stripTime(range.start) && d < stripTime(range.end);
+  }
 </script>
 
 <div class="datepicker">
-  <div class="input-wrapper">
-    <Input
-      placeholder="Date interval"
-      value={range.start && range.end
-        ? `${formatDate(range.start)} - ${formatDate(range.end)}`
-        : range.start
-          ? `${formatDate(range.start)} - `
-          : ""}
-    />
-    <button
-      type="button"
-      class="calendar-toggle"
-      onclick={() => (open = !open)}
-    >
-      📅
-    </button>
-  </div>
+  <Input
+    placeholder="Date interval"
+    value={range.start && range.end
+      ? `${formatDate(range.start)} - ${formatDate(range.end)}`
+      : range.start
+        ? `${formatDate(range.start)} - `
+        : ""}
+    suffixWidth="1rem"
+  >
+    {#snippet suffix()}
+      <button
+        type="button"
+        class="calendar-toggle"
+        onclick={() => (open = !open)}
+      >
+        📅
+      </button>
+    {/snippet}
+  </Input>
 
   {#if open}
     <div class="calendar-wrapper">
@@ -446,10 +466,12 @@
               {#each week.days as day}
                 <button
                   class="day"
+                  class:start={isStartCell(day)}
+                  class:end={isEndCell(day)}
+                  class:in-range={isInRangeCell(day)}
                   class:other-month={!day.isCurrentMonth}
-                  class:selected={isSelectedCell(day)}
-                  onclick={() => clickDayCell(day)}
                   disabled={isDisabledCell(day)}
+                  onclick={() => clickDayCell(day)}
                   aria-current={day.isCurrentMonth ? "date" : undefined}
                 >
                   {day.day}
@@ -464,19 +486,15 @@
 </div>
 
 <style>
+  :global(:root) {
+    --cell-size: 2rem;
+  }
+
   .datepicker {
     position: relative;
   }
 
-  .input-wrapper {
-    position: relative;
-    display: flex;
-    align-items: center;
-    width: calc(21ch + 2.5rem);
-  }
   .calendar-toggle {
-    position: absolute;
-    right: 2rem;
     background: none;
     border: none;
     cursor: pointer;
@@ -506,13 +524,13 @@
     background: none;
     border: none;
     font: inherit;
+    color: inherit;
   }
   .arrow {
     cursor: pointer;
     background: none;
     border: none;
-    font-size: 14px;
-    padding: 4px 8px;
+    color: inherit;
   }
   .arrow:disabled {
     opacity: 0.3;
@@ -523,72 +541,84 @@
   .calendar-grid {
     display: flex;
     flex-direction: column;
-    gap: 2px;
+    gap: var(--size-sm);
   }
 
   .calendar-header {
     display: grid;
-    grid-template-columns: 40px repeat(7, 1fr);
-    gap: 2px;
-    margin-bottom: 4px;
+    grid-template-columns: repeat(8, auto);
   }
 
   .week-number-header {
     text-align: center;
     font-weight: bold;
-    font-size: 12px;
-    background: #f0f0f0;
-    padding: 4px;
-    border-radius: 4px;
+    font-size: var(--text-xs);
+    width: var(--text-xs);
+    padding-right: var(--size-md);
   }
 
   .weekday {
     text-align: center;
-    font-weight: 600;
-    font-size: 12px;
-    padding: 4px;
+    font-weight: bold;
+    font-size: var(--text-xs);
+    width: var(--cell-size);
   }
 
   .week-row {
     display: grid;
-    grid-template-columns: 40px repeat(7, 1fr);
-    gap: 2px;
+    grid-template-columns: repeat(8, auto);
   }
 
   .week-number {
-    text-align: center;
-    font-weight: bold;
-    font-size: 11px;
-    background: #f0f0f0;
-    padding: 4px;
-    border-radius: 4px;
     display: flex;
     align-items: center;
     justify-content: center;
+    width: text(--xs);
+    text-align: center;
+    font-weight: bold;
+    font-size: var(--text-2xs);
+    padding-right: var(--size-md);
   }
 
   .day {
-    padding: 8px 4px;
-    cursor: pointer;
-    border-radius: 4px;
-    background: #f8f8f8;
-    border: 1px solid transparent;
+    all: unset;
+    position: relative;
     text-align: center;
-    font-size: 13px;
+    cursor: point;
+    width: var(--cell-size);
+    height: var(--cell-size);
   }
 
-  .day:hover:not(:disabled) {
-    background: #e8e8e8;
-    border-color: #ccc;
+  .day.in-range {
+    background: oklch(var(--color-secondary));
+  }
+
+  .day.start {
+    background: oklch(var(--color-secondary));
+    border-top-left-radius: 50%;
+    border-bottom-left-radius: 50%;
+  }
+
+  .day.end {
+    background: oklch(var(--color-secondary));
+    border-top-right-radius: 50%;
+    border-bottom-right-radius: 50%;
+  }
+
+  .day:hover:not(:disabled):not(.start):not(.end) {
+    background: oklch(var(--color-secondary) / 0.5);
+    border-radius: 50%;
+    aspect-ratio: 1;
   }
 
   .day.selected {
-    background: #007bff;
-    color: white;
+    background: oklch(var(--color-secondary));
+    border-radius: 50%;
+    aspect-ratio: 1;
   }
 
   .day:disabled {
-    opacity: 0.3;
+    opacity: 0.1;
     cursor: not-allowed;
   }
 
