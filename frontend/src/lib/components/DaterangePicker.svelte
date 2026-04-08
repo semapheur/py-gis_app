@@ -80,12 +80,20 @@
   let open = $state<boolean>(false);
   let range = $state<DateRange>({ start: null, end: null });
 
+  $effect(() => {
+    selectedRange = { start: range.start, end: range.end };
+  });
+
   let view = $state<ViewDate>({
     month: new Date().getMonth(),
     year: new Date().getFullYear(),
   });
 
   let mode = $state<"calendar" | "choose-month" | "choose-year">("calendar");
+
+  $effect(() => {
+    if (open) mode = "calendar";
+  });
 
   const months = [
     "January",
@@ -123,11 +131,20 @@
     const clampEnd = tempRange.end ? clampToBounds(tempRange.end) : null;
 
     range = { start: clampStart, end: clampEnd };
+
+    open = false;
   }
 
   function handleSelectPreset(e: Event) {
-    const index = Number((e.target as HTMLSelectElement).value);
+    const value = (e.target as HTMLSelectElement).value;
+    if (value === "") return;
+    const index = Number(value);
     if (!isNaN(index)) applyPreset(presets[index]);
+    (e.target as HTMLSelectElement).value = "";
+  }
+
+  function clearRange() {
+    range = { start: null, end: null };
   }
 
   function clampToBounds(d: Date) {
@@ -216,6 +233,7 @@
   }
 
   function isDisabledCell(c: CalendarCell) {
+    if (!c.isCurrentMonth) return true;
     const d = cellToDate(c);
     if (minDate && d < stripTime(minDate)) return true;
     if (maxDate && d > stripTime(maxDate)) return true;
@@ -232,11 +250,10 @@
     } else {
       if (date >= range.start) {
         range.end = date;
-        open = false;
       } else {
         range = { start: date, end: range.start };
-        open = false;
       }
+      open = false;
     }
   }
 
@@ -256,8 +273,7 @@
   const calendarWeeks = $derived.by(() => {
     const weeks: Week[] = [];
 
-    const year = view.year;
-    const month = view.month;
+    const { year, month } = view;
 
     const firstDay = getFirstDayOfMonth(month, year);
     const daysThisMonth = daysInMonth(month, year);
@@ -471,7 +487,8 @@
     padding: 8px;
     border-radius: 6px;
     margin-top: 4px;
-    background: white;
+    background-color: oklch(var(--color-accent));
+    z-index: 1;
   }
   .header {
     display: flex;
