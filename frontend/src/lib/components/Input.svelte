@@ -1,31 +1,27 @@
-<script lang="ts">
-  interface Props {
-    value?: string | number | null;
-    placeholder?: string;
-    required?: boolean;
+<script lang="ts" generics="T extends string | number | null = string">
+  import type { HTMLInputAttributes } from "svelte/elements";
+
+  interface Props extends HTMLInputAttributes {
+    value?: T;
     invalid?: boolean;
     fieldSizing?: "content" | "fixed";
-    oninput?: (value: string) => void;
-    onfocus?: () => void;
-    onblur?: () => void;
   }
 
   let {
-    value = null,
+    value = null as T,
     placeholder,
     required = false,
     invalid = false,
     fieldSizing = "fixed",
     oninput,
-    onfocus,
-    onblur,
+    ...rest
   }: Props = $props();
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
 
-  let internal = $state(value ?? "");
+  let internal = $state<T>(value);
 
   $effect(() => {
-    internal = value ?? "";
+    internal = value;
   });
 
   const uid = $props.id();
@@ -39,9 +35,20 @@
     bind:value={internal}
     {required}
     style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch;`}
-    oninput={(e) => oninput?.(e.currentTarget.value)}
-    {onfocus}
-    {onblur}
+    oninput={(e) => {
+      if (rest.type === "number") {
+        let v = Number(e.currentTarget.value);
+        const min = Number(rest.min ?? -Infinity);
+        const max = Number(rest.max ?? Infinity);
+        if (!isNaN(v)) {
+          const clamped = Math.min(max, Math.max(min, v));
+          e.currentTarget.value = String(clamped);
+          internal = clamped as T;
+        }
+      }
+      oninput?.(e);
+    }}
+    {...rest}
   />
   {#if placeholder}
     <label for={uid}>{placeholder}</label>

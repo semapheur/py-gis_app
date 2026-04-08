@@ -333,7 +333,9 @@ export class MapLibreState {
     const url = `/thumbnails/${preview.filename}.png`;
 
     this.upsertImageSource("image-preview", url, ordered, "search-extent-line");
-    const style = {};
+    const style = {
+      lineColor: "#f5bb27",
+    };
     this.setPolygons(
       "footprint",
       [preview.polygon],

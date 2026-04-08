@@ -49,5 +49,6 @@
     gap: var(--size-md);
     width: 100%;
     padding: var(--size-md);
+    overflow: hidden;
   }
 </style>

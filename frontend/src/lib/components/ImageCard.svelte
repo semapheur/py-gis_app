@@ -1,8 +1,13 @@
 <script lang="ts">
+  import Badge from "$lib/components/Badge.svelte";
   import { type ImageMetadata } from "$lib/utils/types";
 
-  export let image: ImageMetadata;
-  export let onHoverImage: (image: ImageMetadata | null) => void;
+  interface Props {
+    image: ImageMetadata;
+    onHoverImage: (image: ImageMetadata | null) => void;
+  }
+
+  const { image, onHoverImage }: Props = $props();
 
   const href = `/view/${image.id}`;
 
@@ -30,21 +35,21 @@
 
     <div class="header">
       <div class="parameter-badges">
-        <span class="badge">
+        <Badge>
           {coverage}
-        </span>
-        <span class="badge">
+        </Badge>
+        <Badge>
           {image.interpretation_rating}
-        </span>
-        <span class="badge">
+        </Badge>
+        <Badge>
           {gsd_text}
-        </span>
-        <span class="badge">
+        </Badge>
+        <Badge>
           {azimuth_angle}
-        </span>
-        <span class="badge">
+        </Badge>
+        <Badge>
           {look_angle}
-        </span>
+        </Badge>
       </div>
     </div>
 
@@ -56,6 +61,10 @@
 </a>
 
 <style>
+  .card-link {
+    color: inherit;
+  }
+
   .card {
     position: relative;
     width: 100%;

@@ -31,9 +31,14 @@
   interface Props {
     minDate?: Date | null;
     maxDate?: Date | null;
+    selectedRange?: DateRange;
   }
 
-  let { minDate = null, maxDate = new Date() }: Props = $props();
+  let {
+    minDate = null,
+    maxDate = new Date(),
+    selectedRange = $bindable({ start: null, end: null }),
+  }: Props = $props();
 
   const minYear = $derived(minDate ? minDate.getFullYear() : -Infinity);
   const maxYear = $derived(maxDate ? maxDate.getFullYear() : Infinity);

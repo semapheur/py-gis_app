@@ -1,6 +1,7 @@
 <script lang="ts">
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import Input from "$lib/components/Input.svelte";
+  import Button from "$lib/components/Button.svelte";
 
   let filename: string | null = null;
   let coverage: number | null = null;
@@ -30,22 +31,30 @@
 </script>
 
 <form class="form" on:submit={submitForm}>
-  <Input placeholder="File name" name="filename" bind:value={filename} />
-  <Input placeholder="Min coverage" name="coverage" bind:value={coverage} />
+  <Button>Filter</Button>
+  <Input placeholder="File name" name="filename" value={filename} />
+  <Input
+    placeholder="Min coverage"
+    name="coverage"
+    value={coverage}
+    type="number"
+    min="0"
+    max="100"
+  />
   <Input
     placeholder="Min IIRS"
     type="number"
+    value={iirs}
     min="0"
     max="9"
     name="min_iirs"
-    bind:value={iirs}
   />
   <Input
     placeholder="Max GSD"
-    type="number"
-    min="0"
     name="max_gsd"
-    bind:value={gsd}
+    type="number"
+    value={gsd}
+    min="0"
   />
   <DaterangePicker bind:selectedRange={dateRange} />
 </form>
@@ -53,6 +62,7 @@
 <style>
   .form {
     display: flex;
+    flex-wrap: wrap;
     gap: 0.2rem;
     width: 100%;
   }
