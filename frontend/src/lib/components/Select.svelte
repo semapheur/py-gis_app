@@ -76,6 +76,9 @@
   select {
     width: 100%;
     padding: var(--size-sm);
+    background-color: oklch(var(--color-accent));
+    color: oklch(var(--color-text));
+    border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-sm);
 
     /* hide placeholder text */

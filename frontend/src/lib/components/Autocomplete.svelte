@@ -70,10 +70,9 @@
 
 <div class="autocomplete" bind:this={container}>
   <Input
-    value={query}
+    bind:value={query}
     {placeholder}
-    oninput={(v) => {
-      query = v;
+    oninput={(e) => {
       onchange?.(null);
     }}
     {onblur}

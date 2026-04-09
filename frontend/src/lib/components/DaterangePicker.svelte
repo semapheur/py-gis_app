@@ -1,11 +1,7 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
+  import { formatDate, type DateRange } from "$lib/utils/date";
   import MdiCalendarMonthOutline from "@iconify-svelte/mdi/calendar-month-outline";
-
-  interface DateRange {
-    start: Date | null;
-    end: Date | null;
-  }
 
   interface ViewDate {
     month: number;
@@ -204,14 +200,6 @@
 
     view.year = newYear;
     view.month = newMonth;
-  }
-
-  function formatDate(date: Date | null) {
-    if (!date) return "";
-    const y = date.getFullYear();
-    const m = String(date.getMonth() + 1).padStart(2, "0");
-    const d = String(date.getDate()).padStart(2, "0");
-    return `${y}-${m}-${d}`;
   }
 
   const yearOptions = $derived(

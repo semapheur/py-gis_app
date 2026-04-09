@@ -11,7 +11,7 @@
   }
 
   let {
-    value = null as T,
+    value = $bindable(null as T),
     placeholder,
     required = false,
     invalid = false,
@@ -23,12 +23,6 @@
   }: Props = $props();
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
 
-  let internal = $state<T>(value);
-
-  $effect(() => {
-    internal = value;
-  });
-
   const uid = $props.id();
 </script>
 
@@ -36,19 +30,22 @@
   <input
     id={uid}
     class:invalid
+    bind:value
     {placeholder}
-    bind:value={internal}
     {required}
     style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch; ${suffix ? `padding-right: ${suffixWidth};` : ""}`}
     oninput={(e) => {
       if (rest.type === "number") {
-        let v = Number(e.currentTarget.value);
+        const raw = e.currentTarget.value;
+        let v = Number(raw);
         const min = Number(rest.min ?? -Infinity);
         const max = Number(rest.max ?? Infinity);
-        if (!isNaN(v)) {
+        if (!isNaN(v) && raw !== "" && !raw.endsWith(".")) {
           const clamped = Math.min(max, Math.max(min, v));
           e.currentTarget.value = String(clamped);
-          internal = clamped as T;
+          value = clamped as T;
+        } else {
+          value = raw as T;
         }
       }
       oninput?.(e);
