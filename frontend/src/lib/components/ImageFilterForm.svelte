@@ -9,7 +9,7 @@
   const params = page.url.searchParams;
   let filename = $state<string | null>(params.get("filename") ?? null);
   let coverage = $state<number | null>(
-    params.has("coverage") ? Number(params.get("coverage")) : null,
+    params.has("min_coverage") ? Number(params.get("min_coverage")) : null,
   );
   let iirs = $state<number | null>(
     params.has("min_iirs") ? Number(params.get("min_iirs")) : null,
@@ -23,24 +23,29 @@
     end: parseIsoDate(params.get("date_end")),
   });
 
-  let lastDateRangeKey = $state<string>("");
+  let lastDateRangeKey = $state<string | null>(null);
 
   $effect(() => {
-    if (!dateRange.start || !dateRange.end) return;
-
-    const start = formatDate(dateRange.start);
-    const end = formatDate(dateRange.end);
-    const key = `${start}_${end}`;
-
-    if (key === lastDateRangeKey) return;
-    lastDateRangeKey = key;
-
     const params = new URLSearchParams(page.url.searchParams);
-    if (dateRange.start) params.set("date_start", start);
-    else params.delete("date_start");
 
-    if (dateRange.end) params.set("date_end", end);
-    else params.delete("date_end");
+    if (dateRange.start && dateRange.end) {
+      const start = formatDate(dateRange.start);
+      const end = formatDate(dateRange.end);
+      const key = `${start}_${end}`;
+
+      if (key === lastDateRangeKey) return;
+      lastDateRangeKey = key;
+
+      params.set("date_start", start);
+      params.set("date_end", end);
+    } else if (lastDateRangeKey !== null) {
+      lastDateRangeKey = null;
+
+      params.delete("date_start");
+      params.delete("date_end");
+    } else {
+      return;
+    }
 
     goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
   });
@@ -53,8 +58,8 @@
     if (filename) params.set("filename", filename);
     else params.delete("filename");
 
-    if (coverage !== null) params.set("coverage", String(coverage));
-    else params.delete("coverage");
+    if (coverage !== null) params.set("min_coverage", String(coverage));
+    else params.delete("min_coverage");
 
     if (iirs !== null) params.set("min_iirs", String(iirs));
     else params.delete("min_iirs");
@@ -62,22 +67,15 @@
     if (gsd !== null) params.set("max_gsd", String(gsd));
     else params.delete("max_gsd");
 
+    if (dateRange.start && dateRange.end) {
+      params.set("date_start", formatDate(dateRange.start));
+      params.set("date_end", formatDate(dateRange.end));
+    } else {
+      params.delete("date_start");
+      params.delete("date_end");
+    }
+
     goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
-
-    const payload = {
-      filename: filename,
-      min_iirs: iirs,
-      max_gsd: gsd,
-      daterange: dateRange,
-    };
-
-    //const res = await fetch("http://localhost:8000/api/filter-images", {
-    //  method: "POST",
-    //  headers: { "Content-Type": "application/json" },
-    //  body: JSON.stringify(payload),
-    //});
-    //
-    //const data = await res.json();
   }
 </script>
 
@@ -85,8 +83,8 @@
   <Button type="submit">Filter</Button>
   <Input placeholder="File name" name="filename" bind:value={filename} />
   <Input
-    placeholder="Min coverage"
-    name="coverage"
+    placeholder="Min coverage (%)"
+    name="min_coverage"
     bind:value={coverage}
     type="number"
     min="0"
@@ -94,14 +92,15 @@
   />
   <Input
     placeholder="Min IIRS"
+    name="min_iirs"
     type="number"
     bind:value={iirs}
     min="0"
     max="9"
-    name="min_iirs"
+    step="any"
   />
   <Input
-    placeholder="Max GSD"
+    placeholder="Max GSD (m)"
     name="max_gsd"
     type="number"
     bind:value={gsd}

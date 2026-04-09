@@ -27,3 +27,7 @@ def unix_to_datetime(value: int, unit: TimeUnit = TimeUnit.MILLISECONDS) -> date
   microseconds = (remainder * 1_000_000) // unit.value
 
   return EPOCH + timedelta(seconds=seconds, microseconds=microseconds)
+
+
+def parse_date_to_unix(date: str) -> int:
+  return datetime_to_unix(datetime.strptime(date, "%Y-%m-%d"))

@@ -5,7 +5,7 @@ import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, TypeAlias, TypedDict, Union, cast
+from typing import Any, Literal, Optional, TypeAlias, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
@@ -34,6 +34,7 @@ from src.spatialite import (
   hash_field,
   path_field,
 )
+from src.timeutils import datetime_to_unix, parse_date_to_unix
 
 app_settings = get_settings()
 
@@ -479,37 +480,85 @@ def index_images(
       db.insert_models(radiometric_index)
 
 
-class ImageQuery(TypedDict):
-  wkt: Union[str, None]
-  area_id: Union[str, None]
+class ImageQuery(TypedDict, total=False):
+  wkt: Optional[str]
+  area_id: Optional[str]
+  filename: Optional[str]
+  min_coverage: Optional[int]
+  min_iirs: Optional[float]
+  max_gsd: Optional[float]
+  date_start: Optional[int]
+  date_end: Optional[int]
 
 
 def search_images(payload: ImageQuery):
-  wkt = payload["wkt"]
-  area_id = payload["area_id"]
+  wkt = payload.get("wkt")
+  area_id = payload.get("area_id")
   if area_id is not None:
     wkt = get_area_wkt(area_id)["geometry"]
 
-  return get_images_by_intersection(wkt)
+  return get_images_by_intersection(wkt, payload)
 
 
-def get_images_by_intersection(polygon_wkt: Union[str, None]):
+def get_images_by_intersection(polygon_wkt: Union[str, None], payload: ImageQuery):
+  where: list[str] = []
+  params = {}
+
+  filename = payload.get("filename")
+  if filename is not None:
+    where.append("filename = :filename")
+    params["filename"] = filename
+
+  min_coverage = payload.get("min_coverage")
+  if min_coverage is not None:
+    where.append("coverage >= :min_coverage")
+    params["min_coverage"] = min_coverage
+
+  min_iirs = payload.get("min_iirs")
+  if min_iirs is not None:
+    where.append("interpretation_rating >= :min_iirs")
+    params["min_iirs"] = min_iirs
+
+  max_gsd = payload.get("max_gsd")
+  if max_gsd is not None:
+    where.append(
+      "ground_sample_distance_row <= :max_gsd AND ground_sample_distance_col <= :max_gsd"
+    )
+    params["max_gsd"] = max_gsd
+
+  date_start = payload.get("date_start")
+  date_end = payload.get("date_end")
+  if date_start is not None and date_end is not None:
+    where.append(
+      "datetime_collected >= :date_start AND datetime_collected <= :date_end"
+    )
+    params["date_start"] = date_start
+    params["date_end"] = date_end
+
+  base_where = " AND ".join(where) if where else None
+
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     kwargs: dict[str, Any] = dict(
       columns="*",
+      where=base_where,
+      params=params,
       geo_format="AsGeoJSON",
       to_json=True,
     )
 
     if polygon_wkt is not None:
+      intersection_where = "ST_Intersects(footprint, poly.geom)"
+      if base_where is not None:
+        intersection_where += f" AND {base_where}"
+
       kwargs.update(
-        where="ST_Intersects(footprint, poly.geom)",
+        where=intersection_where,
         derived={
           "coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"
         },
         with_clause="poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)",
         join=JoinClause(join_type="CROSS", expression="poly"),
-        params={"polygon": polygon_wkt},
+        params={**params, "polygon": polygon_wkt},
       )
 
     results = db.select_records(ImageIndexTable, **kwargs)

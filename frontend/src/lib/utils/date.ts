@@ -16,3 +16,7 @@ export function parseIsoDate(dateText: string | null): Date | null {
   const [y, m, d] = dateText.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
+
+export function toUnix(date: string) {
+  return Math.floor(new Date(date).getTime() / 1000);
+}

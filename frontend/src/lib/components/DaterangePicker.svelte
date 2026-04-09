@@ -78,6 +78,13 @@
 
   let open = $state<boolean>(false);
   let range = $state<DateRange>({ start: null, end: null });
+  let inputValue = $derived(
+    range.start && range.end
+      ? `${formatDate(range.start)} - ${formatDate(range.end)}`
+      : range.start
+        ? `${formatDate(range.start)} - `
+        : "",
+  );
 
   $effect(() => {
     selectedRange = { start: range.start, end: range.end };
@@ -362,19 +369,50 @@
 
     return () => observer.disconnect();
   }
+
+  function parseInputDate(text: string): Date | null {
+    const [year, month, day] = text.split("-").map(Number);
+
+    if (!day || !month || !year || year < 1000) return null;
+
+    const d = new Date(year, month - 1, day);
+    if (d.getMonth() !== month - 1) return null;
+    return d;
+  }
+
+  function handleInputChange(e: Event) {
+    const raw = (e.target as HTMLInputElement).value.trim();
+
+    if (!raw) {
+      clearRange();
+      return;
+    }
+
+    const parts = raw.split(" - ").map((s) => s.trim());
+    if (parts.length !== 2) return;
+
+    const start = parseInputDate(parts[0]);
+    const end = parseInputDate(parts[1]);
+    if (!start || !end) return;
+
+    range = {
+      start: clampToBounds(start),
+      end: clampToBounds(end),
+    };
+  }
 </script>
 
 <div class="datepicker">
   <Input
     placeholder="Date interval"
-    value={range.start && range.end
-      ? `${formatDate(range.start)} - ${formatDate(range.end)}`
-      : range.start
-        ? `${formatDate(range.start)} - `
-        : ""}
-    suffixWidth="1rem"
+    value={inputValue}
+    onchange={handleInputChange}
+    suffixWidth="2.5rem"
   >
     {#snippet suffix()}
+      {#if range.start || range.end}
+        <button type="button" class="clear" onclick={clearRange}>✕</button>
+      {/if}
       <button
         type="button"
         class="calendar-toggle"
@@ -536,6 +574,16 @@
     border: none;
     cursor: pointer;
     color: inherit;
+  }
+
+  .clear {
+    background: none;
+    border: none;
+    color: oklch(var(--color-text));
+  }
+
+  .clear:hover {
+    color: red;
   }
 
   .calendar-wrapper {
