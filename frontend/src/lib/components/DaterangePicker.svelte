@@ -1,5 +1,6 @@
 <script lang="ts">
   import Input from "$lib/components/Input.svelte";
+  import MdiCalendarMonthOutline from "@iconify-svelte/mdi/calendar-month-outline";
 
   interface DateRange {
     start: Date | null;
@@ -39,6 +40,8 @@
     maxDate = new Date(),
     selectedRange = $bindable({ start: null, end: null }),
   }: Props = $props();
+
+  let hoverDate = $state<Date | null>(null);
 
   const minYear = $derived(minDate ? minDate.getFullYear() : -Infinity);
   const maxYear = $derived(maxDate ? maxDate.getFullYear() : Infinity);
@@ -257,19 +260,6 @@
     }
   }
 
-  function isSelectedCell(c: CalendarCell) {
-    if (isDisabledCell(c)) return false;
-
-    const d = cellToDate(c);
-    if (range.start && !range.end) {
-      return d.getTime() === stripTime(range.start).getTime();
-    }
-    if (range.start && range.end) {
-      return d >= stripTime(range.start) && d <= stripTime(range.end);
-    }
-    return false;
-  }
-
   const calendarWeeks = $derived.by(() => {
     const weeks: Week[] = [];
 
@@ -325,19 +315,64 @@
   function isStartCell(c: CalendarCell) {
     if (!range.start) return false;
     const d = cellToDate(c);
-    return d.getTime() === stripTime(range.start).getTime();
+    const start = stripTime(range.start);
+
+    if (!range.end && hoverDate && hoverDate < start) {
+      return d.getTime() === hoverDate.getTime();
+    }
+    return d.getTime() === start.getTime();
   }
 
   function isEndCell(c: CalendarCell) {
-    if (!range.end) return false;
     const d = cellToDate(c);
-    return d.getTime() === stripTime(range.end).getTime();
+    if (range.end) return d.getTime() === stripTime(range.end).getTime();
+
+    if (range.start && !range.end && hoverDate) {
+      const start = stripTime(range.start);
+      if (hoverDate > start) return d.getTime() === hoverDate.getTime();
+      if (hoverDate < start) return d.getTime() === start.getTime();
+    }
+    return false;
   }
 
   function isInRangeCell(c: CalendarCell) {
-    if (!range.start || !range.end || isDisabledCell(c)) return false;
+    if (isDisabledCell(c)) return false;
     const d = cellToDate(c);
-    return d > stripTime(range.start) && d < stripTime(range.end);
+    const start = range.start ? stripTime(range.start) : null;
+    const end = range.end ? stripTime(range.end) : hoverDate;
+
+    if (!start || !end) return false;
+    const from = start < end ? start : end;
+    const to = start < end ? end : start;
+    return d > from && d < to;
+  }
+
+  function repositionCalendar(node: HTMLElement) {
+    function recheck() {
+      node.style.left = "auto";
+      node.style.right = "0";
+
+      const rect = node.getBoundingClientRect();
+      const containerRect = container?.getBoundingClientRect();
+
+      if (rect.right > window.innerWidth) {
+        node.style.left = "auto";
+        node.style.right = "0";
+      }
+
+      if (containerRect && rect.left < containerRect.left) {
+        node.style.left = "0";
+        node.style.right = "auto";
+      }
+    }
+
+    const container = node.closest(".datepicker")?.parentElement;
+    const observer = new ResizeObserver(recheck);
+
+    if (container) observer.observe(container);
+    recheck();
+
+    return () => observer.disconnect();
   }
 </script>
 
@@ -357,17 +392,17 @@
         class="calendar-toggle"
         onclick={() => (open = !open)}
       >
-        📅
+        <MdiCalendarMonthOutline width="1rem" />
       </button>
     {/snippet}
   </Input>
 
   {#if open}
-    <div class="calendar-wrapper">
+    <div class="calendar-wrapper" {@attach repositionCalendar}>
       <!-- PRESETS DROPDOWN -->
       <label>
         Presets
-        <select onchange={handleSelectPreset}>
+        <select class="preset-select" onchange={handleSelectPreset}>
           {#each presets as preset, i}
             <option value={i}>{preset.label}</option>
           {/each}
@@ -376,11 +411,13 @@
 
       <!-- HEADER -->
       <div class="header">
-        <button
-          class="arrow"
-          onclick={() => changeMonth(-1)}
-          disabled={!canGoPrevMonth}>◀</button
-        >
+        {#if mode === "calendar"}
+          <button
+            class="arrow"
+            onclick={() => changeMonth(-1)}
+            disabled={!canGoPrevMonth}>◀</button
+          >
+        {/if}
 
         <span class="month-year">
           <button
@@ -390,7 +427,6 @@
           >
             {months[view.month]}
           </button>
-          &nbsp;
           <button
             type="button"
             class="year"
@@ -400,11 +436,13 @@
           </button>
         </span>
 
-        <button
-          class="arrow"
-          onclick={() => changeMonth(1)}
-          disabled={!canGoNextMonth}>▶</button
-        >
+        {#if mode === "calendar"}
+          <button
+            class="arrow"
+            onclick={() => changeMonth(1)}
+            disabled={!canGoNextMonth}>▶</button
+          >
+        {/if}
       </div>
 
       <!-- MONTH PICKER -->
@@ -450,7 +488,11 @@
 
       <!-- CALENDAR -->
       {#if mode === "calendar"}
-        <div class="calendar-grid">
+        <div
+          class="calendar-grid"
+          role="presentation"
+          onmouseleave={() => (hoverDate = null)}
+        >
           <!-- Header row with week number label and weekdays -->
           <div class="calendar-header">
             <div class="week-number-header">Wk</div>
@@ -472,6 +514,11 @@
                   class:other-month={!day.isCurrentMonth}
                   disabled={isDisabledCell(day)}
                   onclick={() => clickDayCell(day)}
+                  onmouseenter={() => {
+                    if (range.start && !range.end && !isDisabledCell(day)) {
+                      hoverDate = cellToDate(day);
+                    }
+                  }}
                   aria-current={day.isCurrentMonth ? "date" : undefined}
                 >
                   {day.day}
@@ -486,7 +533,7 @@
 </div>
 
 <style>
-  :global(:root) {
+  :root {
     --cell-size: 2rem;
   }
 
@@ -495,29 +542,44 @@
   }
 
   .calendar-toggle {
+    display: flex;
+    align-items: center;
     background: none;
     border: none;
     cursor: pointer;
+    color: inherit;
   }
+
   .calendar-wrapper {
     position: absolute;
+    top: 100%;
+    right: 0;
+    padding: var(--size-lg);
+    margin-top: var(--size-md);
     border: 1px solid #ccc;
-    padding: 8px;
-    border-radius: 6px;
-    margin-top: 4px;
+    border-radius: var(--size-md);
     background-color: oklch(var(--color-accent));
     z-index: 1;
   }
+
   .header {
     display: flex;
-    justify-content: space-between;
+    justify-content: center;
     align-items: center;
     margin-bottom: 6px;
   }
+
+  .preset-select {
+    background-color: oklch(var(--color-secondary));
+    color: inherit;
+    border-radius: var(--size-sm);
+  }
+
   .month-year {
     cursor: default;
     font-weight: 600;
   }
+
   .month,
   .year {
     cursor: pointer;
@@ -541,7 +603,6 @@
   .calendar-grid {
     display: flex;
     flex-direction: column;
-    gap: var(--size-sm);
   }
 
   .calendar-header {
@@ -553,8 +614,8 @@
     text-align: center;
     font-weight: bold;
     font-size: var(--text-xs);
-    width: var(--text-xs);
-    padding-right: var(--size-md);
+    width: var(--text-xl);
+    border-right: 1px solid oklch(var(--color-text));
   }
 
   .weekday {
@@ -562,6 +623,7 @@
     font-weight: bold;
     font-size: var(--text-xs);
     width: var(--cell-size);
+    border-bottom: 1px solid oklch(var(--color-text));
   }
 
   .week-row {
@@ -573,11 +635,11 @@
     display: flex;
     align-items: center;
     justify-content: center;
-    width: text(--xs);
+    width: var(--text-xl);
     text-align: center;
     font-weight: bold;
     font-size: var(--text-2xs);
-    padding-right: var(--size-md);
+    border-right: 1px solid oklch(var(--color-text));
   }
 
   .day {
@@ -587,31 +649,45 @@
     cursor: point;
     width: var(--cell-size);
     height: var(--cell-size);
+    margin-top: var(--size-sm);
   }
 
-  .day.in-range {
-    background: oklch(var(--color-secondary));
+  .day.in-range::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: oklch(var(--color-secondary) / 0.5);
   }
 
-  .day.start {
-    background: oklch(var(--color-secondary));
-    border-top-left-radius: 50%;
-    border-bottom-left-radius: 50%;
-  }
-
+  .day.start,
   .day.end {
     background: oklch(var(--color-secondary));
-    border-top-right-radius: 50%;
-    border-bottom-right-radius: 50%;
-  }
-
-  .day:hover:not(:disabled):not(.start):not(.end) {
-    background: oklch(var(--color-secondary) / 0.5);
     border-radius: 50%;
     aspect-ratio: 1;
   }
 
-  .day.selected {
+  .day.start::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: oklch(var(--color-secondary) / 0.5);
+    border-top-left-radius: 50%;
+    border-bottom-left-radius: 50%;
+  }
+
+  .day.end::after {
+    content: "";
+    position: absolute;
+    inset: 0;
+    z-index: -1;
+    background: oklch(var(--color-secondary) / 0.5);
+    border-top-right-radius: 50%;
+    border-bottom-right-radius: 50%;
+  }
+
+  .day:hover:not(:disabled) {
     background: oklch(var(--color-secondary));
     border-radius: 50%;
     aspect-ratio: 1;
@@ -626,21 +702,19 @@
   .year-grid {
     display: grid;
     grid-template-columns: repeat(3, 1fr);
-    gap: 6px;
-    padding: 8px 0;
+    gap: var(--size-md);
   }
 
   .month-option,
   .year-option {
-    padding: 6px;
-    border-radius: 4px;
-    background: #efefef;
+    border: none;
+    background: none;
+    color: oklch(var(--color-text));
     cursor: pointer;
-    border: 1px solid #ddd;
   }
 
   .month-option:hover,
   .year-option:hover {
-    background: #e0e0e0;
+    background: oklch(var(--color-secondary) / 0.5);
   }
 </style>
