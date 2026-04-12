@@ -6,6 +6,8 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional, TypedDict, Union, cast
 
+from src.index.metdata import find_isd_xml, parse_isd_xml
+
 ResampleAlgorithms = Literal[
   "nearest",
   "bilinear",
@@ -185,7 +187,13 @@ def gdalinfo(
   if process.returncode != 0:
     raise RuntimeError(f"gdalinfo failed:\n{process.stderr}")
 
-  return json.loads(process.stdout)
+  result = json.loads(process.stdout)
+
+  resolved_xml = find_isd_xml(path)
+  if resolved_xml and resolved_xml.exists():
+    result.update(parse_isd_xml(resolved_xml))
+
+  return result
 
 
 def gdal_translate(
