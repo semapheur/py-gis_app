@@ -6,7 +6,7 @@ from dataclasses import dataclass
 from pathlib import Path
 from typing import Any, Iterable, Literal, Optional, TypedDict, Union, cast
 
-from src.index.metdata import find_isd_xml, parse_isd_xml
+from src.index.metadata import find_isd_xml, parse_isd_xml
 
 ResampleAlgorithms = Literal[
   "nearest",

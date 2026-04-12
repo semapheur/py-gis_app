@@ -1,11 +1,10 @@
 import json
-import math
 import tempfile
 import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, Optional, TypeAlias, TypedDict, Union, cast
+from typing import Any, Literal, Optional, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
@@ -23,9 +22,8 @@ from src.index.radiometric import (
   RadiometricParamsTable,
   generate_intensity_vrt,
 )
-from src.math_utils import dot, norm
 from src.models.areas import get_area_wkt
-from src.sicd_model import SicdObject
+from src.sicd_model import SicdObject, sicd_polygon_wkt
 from src.spatialite import (
   ColumnType,
   Field,
@@ -40,8 +38,6 @@ from src.spatialite import (
 )
 
 app_settings = get_settings()
-
-Vec3: TypeAlias = tuple[float, float, float]
 
 
 class ImagerySensorType(Enum):
@@ -76,36 +72,14 @@ class ImageIndexTable(Model):
   interpretation_rating = Field(float)
 
 
-def ground_sample_distance(
-  sample_spacing: float, unit_vector: Vec3, point: Vec3
-) -> float:
-  n_mag = norm(point)
-  surface_normal = (point[0] / n_mag, point[1] / n_mag, point[2] / n_mag)
-  udotn = dot(unit_vector, surface_normal)
-  ground_factor = math.sqrt(1.0 - udotn**2)
-
-  return sample_spacing * ground_factor
-
-
-def tiff_metadata(
-  gdal_info: dict, schema: Literal["SICD_METADATA", "TIFFTAG_IMAGEDESCRIPTION"]
-) -> Union[dict, None]:
-  metadata_text = gdal_info.get("metadata", {}).get("", {}).get(schema)
-
-  if metadata_text is not None:
-    return json.loads(metadata_text)
-
-  return None
-
-
 def detect_image_type(
   gdal_info: dict,
 ) -> tuple[ImagerySensorType, ImageryType]:
-  metadata = gdal_info.get("metadata", {}).get("", {})
   bands = gdal_info.get("bands")
   if bands is None:
     raise ValueError("'bands' missing from gdalinfo")
 
+  metadata = gdal_info.get("metadata", {}).get("", {})
   complex_bands = [band.get("type", "").lower().startswith("c") for band in bands]
   if any(complex_bands):
     return (ImagerySensorType.SAR, ImageryType.SLC)
@@ -120,21 +94,78 @@ def detect_image_type(
   return (ImagerySensorType.EO, ImageryType.MS)
 
 
-def parse_image_metadata(
-  gdal_info: dict,
-  hash: bytes,
-  catalog_id: int,
-  file_path: Path,
-  relative_directory: Path,
-) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
-  sensor_type, image_type = detect_image_type(gdal_info)
+def tiff_metadata(
+  gdal_info: dict, schema: Literal["SICD_METADATA", "TIFFTAG_IMAGEDESCRIPTION"]
+) -> Union[dict, None]:
+  metadata_text = gdal_info.get("metadata", {}).get("", {}).get(schema)
 
-  sicd_obj = tiff_metadata(gdal_info, "SICD_METADATA")
+  if metadata_text is not None:
+    return json.loads(metadata_text)
 
-  if sicd_obj is None:
-    raise ValueError(f"No SICD metadata found for {str(file_path)}")
+  return None
 
-  sicd = cast(SicdObject, sicd_obj)["metadata"]
+
+def make_index_row(data: dict) -> ImageIndexTable:
+  row = ImageIndexTable()
+  for key, value in data.items():
+    setattr(row, key, value)
+
+  return row
+
+
+def make_radiometric_row(
+  sicd: dict, image_hash: bytes
+) -> RadiometricParamsTable | None:
+  radiometric_metadata = sicd.get("Radiometric", {})
+  if not radiometric_metadata:
+    return None
+
+  noise_params = radiometric_metadata.get("NoiseLevel", {})
+  noise_data = (
+    NoiseParameters(
+      type=noise_params["NoiseLevelType"],
+      poly=noise_params["NoisePoly"]["Coefs"],
+    )
+    if noise_params
+    else None
+  )
+
+  radiometric_params = {
+    "id": image_hash,
+    "noise": noise_data,
+    "sigma0": radiometric_metadata.get("SigmaZeroSFPoly", {}).get("Coefs", []),
+    "beta0": radiometric_metadata.get("BetaZeroSFPoly", {}).get("Coefs", []),
+    "gamma0": radiometric_metadata.get("GammaZeroSFPoly", {}).get("Coefs", []),
+  }
+
+  row = RadiometricParamsTable()
+  for key, value in radiometric_params.items():
+    setattr(row, key, value)
+
+  return row
+
+
+def find_tile_for_file(isd: dict, stem: str) -> dict:
+  for tile in isd.get("tiles", []):
+    if Path(tile.get("filename", "")).stem == stem:
+      return tile
+  return {}
+
+
+def isd_polygon_wkt(tile: dict) -> str:
+  points = (
+    f"{tile['ullon']} {tile['ullat']}",
+    f"{tile['urlon']} {tile['urlat']}",
+    f"{tile['lrlon']} {tile['lrlat']}",
+    f"{tile['lllon']} {tile['lllat']}",
+    f"{tile['ullon']} {tile['ullat']}",
+  )
+  return f"POLYGON(({', '.join(points)}))"
+
+
+def parse_sicd_metadata(gdal_info: dict, sicd_obj: SicdObject):
+
+  sicd = sicd_obj["metadata"]
 
   tifftag = tiff_metadata(gdal_info, "TIFFTAG_IMAGEDESCRIPTION") or {}
   tifftag = tifftag.get("collect", {}).get("image", {})
@@ -149,8 +180,7 @@ def parse_image_metadata(
   interpretation_rating = collection_info.get("Parameters", {}).get("PREDICTED_RNIIRS")
 
   image_corners = geo_data["ImageCorners"]
-  points = (f"{corner['Lon']} {corner['Lat']}" for corner in image_corners)
-  footprint = f"POLYGON(({', '.join(points)}))"
+  footprint = sicd_polygon_wkt(image_corners)
 
   datetime_collected = datetime.fromisoformat(timeline["CollectStart"])
   look_angle = 90.0 - scpcoa["IncidenceAng"]
@@ -158,24 +188,18 @@ def parse_image_metadata(
 
   plane = sicd["RadarCollection"].get("Area", {}).get("Plane", {})
 
-  gsd_row = plane.get("XDir", {}).get(
-    "LineSpacing", tifftag.get("ground_range_resolution")
-  )
-  gsd_col = plane.get("YDir", {}).get(
-    "SampleSpacing", tifftag.get("ground_azimuth_resolution")
+  gsd_row = plane.get("XDir", {}).get("LineSpacing") or tifftag.get(
+    "ground_range_resolution"
   )
 
-  data = {
-    "id": hash,
-    "catalog": catalog_id,
-    "relative_path": relative_directory,
-    "filename": file_path.stem,
-    "filetype": file_path.suffix,
+  gsd_col = plane.get("YDir", {}).get("SampleSpacing") or tifftag.get(
+    "ground_azimuth_resolution"
+  )
+
+  return {
     "classification": classification,
     "datetime_collected": datetime_collected,
     "sensor_name": sensor_name,
-    "sensor_type": sensor_type,
-    "image_type": image_type,
     "footprint": footprint,
     "look_angle": look_angle,
     "azimuth_angle": azimuth_angle,
@@ -184,39 +208,64 @@ def parse_image_metadata(
     "interpretation_rating": interpretation_rating,
   }
 
-  index_row = ImageIndexTable()
-  for key, value in data.items():
-    setattr(index_row, key, value)
 
-  if image_type != ImageryType.SLC:
-    return index_row, None
+def parse_image_metadata(
+  gdal_info: dict,
+  hash: bytes,
+  catalog_id: int,
+  file_path: Path,
+  relative_directory: Path,
+) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
 
-  radiometric_metadata = sicd.get("Radiometric", {})
-  if not radiometric_metadata:
-    return index_row, None
+  sensor_type, image_type = detect_image_type(gdal_info)
 
-  noise_params = radiometric_metadata.get("NoiseLevel", {})
-  noise_data = (
-    NoiseParameters(
-      type=noise_params["NoiseLevelType"], poly=noise_params["NoisePoly"]["Coefs"]
-    )
-    if noise_params
-    else None
-  )
-
-  radiometric_params = {
+  base_data = {
     "id": hash,
-    "noise": noise_data,
-    "sigma0": radiometric_metadata.get("SigmaZeroSFPoly", {}).get("Coefs", []),
-    "beta0": radiometric_metadata.get("BetaZeroSFPoly", {}).get("Coefs", []),
-    "gamma0": radiometric_metadata.get("GammaZeroSFPoly", {}).get("Coefs", []),
+    "catalog": catalog_id,
+    "relative_path": relative_directory,
+    "filename": file_path.stem,
+    "filetype": file_path.suffix,
+    "sensor_type": sensor_type,
+    "image_type": image_type,
   }
 
-  radiometric_row = RadiometricParamsTable()
-  for key, value in radiometric_params.items():
-    setattr(radiometric_row, key, value)
+  isd = gdal_info.get("isd")
+  if isd is not None:
+    image_info = isd.get("image", {})
+    tile = find_tile_for_file(isd, file_path.stem)
 
-  return index_row, radiometric_row
+    datetime_collected = datetime.fromisoformat(image_info.get("acquisition_time"))
+    footprint = isd_polygon_wkt(tile)
+
+    data = {
+      **base_data,
+      "classification": "UNCLASSIFIED",
+      "datetime_collected": datetime_collected,
+      "sensor_name": image_info.get("satellite_id"),
+      "footprint": footprint,
+      "look_angle": image_info.get("mean_off_nadir"),
+      "azimuth_angle": image_info.get("mean_sat_azimuth"),
+      "ground_sample_distance_row": image_info.get("mean_gsd_row"),
+      "ground_sample_distance_col": image_info.get("mean_gsd_col"),
+      "interpretation_rating": image_info.get("pniirs"),
+    }
+
+    index_row = make_index_row(data)
+    return index_row, None
+
+  sicd_obj = tiff_metadata(gdal_info, "SICD_METADATA")
+
+  if sicd_obj is not None:
+    sicd_data = parse_sicd_metadata(gdal_info, cast(SicdObject, sicd_obj))
+
+    data = {**base_data, **sicd_data}
+    index_row = make_index_row(data)
+
+    if image_type != ImageryType.SLC:
+      return index_row, None
+
+    radiometric_row = make_radiometric_row(sicd_obj["metadata"], hash)
+    return index_row, radiometric_row
 
 
 def generate_cog(

@@ -86,7 +86,7 @@ def parse_isd_xml(xml_path: Path) -> dict:
   return {
     "isd": {
       "image": {
-        "satellite": image.findtext("SATID"),
+        "satellite_id": image.findtext("SATID"),
         "acquisition_time": image.findtext("FIRSTLINETIME"),
         "scan_direction": imd.findtext("IMAGEDESCRIPTOR"),
         "product_level": imd.findtext("PRODUCTLEVEL"),

@@ -3,7 +3,6 @@ from pathlib import Path
 
 from src.bootstrap import load_env
 from src.gdal_utils import gdalinfo
-from src.index.metdata import parse_isd_xml
 
 if __name__ == "__main__":
   load_env()
@@ -14,4 +13,5 @@ if __name__ == "__main__":
     )
   )
 
-  print(json.dumps(test, indent=2))
+  with open("data/test.json", "w") as f:
+    json.dump(test, f, indent=2)

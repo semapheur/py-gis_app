@@ -1,4 +1,4 @@
-from typing import Literal, Optional, TypedDict
+from typing import Literal, Optional, Sequence, TypedDict, Union
 
 
 class RadarModeObject(TypedDict):
@@ -244,3 +244,15 @@ class Sicd(TypedDict):
 class SicdObject(TypedDict):
   version: str
   metadata: Sicd
+
+
+def sicd_polygon_wkt(points: Sequence[Union[LatLon, ImageCorner]]) -> str:
+  if len(points) < 3:
+    raise ValueError(f"Need at least 3 corners for a polygon, got {len('points')}")
+
+  vertices = [f"{p['Lon']} {p['Lat']}" for p in points]
+
+  if vertices[0] != vertices[-1]:
+    vertices.append(vertices[0])
+
+  return f"POLYGON(({', '.join(vertices)}))"
