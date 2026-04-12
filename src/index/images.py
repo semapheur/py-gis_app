@@ -18,7 +18,11 @@ from src.gdal_utils import (
 )
 from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalogs, update_index_time
-from src.index.radiometric import NoiseParameters, RadiometricParamsTable
+from src.index.radiometric import (
+  NoiseParameters,
+  RadiometricParamsTable,
+  generate_intensity_vrt,
+)
 from src.math_utils import dot, norm
 from src.models.areas import get_area_wkt
 from src.sicd_model import SicdObject
@@ -34,7 +38,6 @@ from src.spatialite import (
   hash_field,
   path_field,
 )
-from src.timeutils import datetime_to_unix, parse_date_to_unix
 
 app_settings = get_settings()
 
@@ -214,52 +217,6 @@ def parse_image_metadata(
     setattr(radiometric_row, key, value)
 
   return index_row, radiometric_row
-
-
-def generate_intensity_vrt(image_path: Path, vrt_path: Path, gdal_info: dict):
-  width, height = gdal_info["size"]
-  geo_info = gdal_info.get("gcps")
-  if geo_info is None:
-    raise ValueError(f"'gcps' not in metadata for {str(image_path)}")
-
-  srs_wkt = geo_info.get("coordinateSystem", {}).get("wkt", "EPSG:4326")
-  gcps = geo_info.get("gcpList", [])
-
-  vrt_lines = [
-    f'<VRTDataset rasterXSize="{width}" rasterYSize="{height}">',
-    f"<SRS>{srs_wkt}</SRS>",
-    "<GCPList>",
-  ]
-
-  for g in gcps:
-    vrt_lines.append(
-      f'<GCP Id="{g["id"]}" '
-      f'Pixel="{g["pixel"]}" '
-      f'Line="{g["line"]}" '
-      f'X="{g["x"]}" '
-      f'Y="{g["y"]}" '
-      f'Z="{g.get("z", 0)}"/>'
-    )
-
-  vrt_lines.extend(
-    [
-      "</GCPList>",
-      (
-        "<VRTRasterBand dataType='Float32' band='1'>"
-        "<PixelFunctionType>complex_magnitude_squared</PixelFunctionType>"
-        "<SourceTransferType>Float32</SourceTransferType>"
-        "<SimpleSource>"
-        f"<SourceFilename>{str(image_path)}</SourceFilename>"
-        "<SourceBand>1</SourceBand>"
-        "</SimpleSource>"
-        "</VRTRasterBand>"
-        "</VRTDataset>"
-      ),
-    ]
-  )
-
-  with open(vrt_path, "w", encoding="utf-8") as f:
-    f.write("".join(vrt_lines))
 
 
 def generate_cog(

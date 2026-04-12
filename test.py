@@ -1,15 +1,15 @@
-import os
-import sqlite3
+import json
+from pathlib import Path
 
-from src.env import add_to_path, load_env
+from src.bootstrap import load_env
+from src.gdal_utils import gdalinfo
+from src.index.metdata import parse_isd_xml
 
 if __name__ == "__main__":
-  load_env()
+  test = parse_isd_xml(
+    Path(
+      r"C:\Users\danfy\Documents\Projects\py-gis_app\data\056965205010_01_P001_PAN\17APR18154116-P2AS-056965205010_01_P001.XML"
+    )
+  )
 
-  test = "C:/Program Files/QGIS 4.0.0/bin/mod_spatialite"
-
-  print(os.path.dirname(test))
-
-  # conn = sqlite3.connect(":memory:")
-  # conn.enable_load_extension(True)
-  # conn.load_extension(r"C:\Program Files\QGIS 4.0.0\bin\mod_spatialite")
+  print(json.dumps(test, indent=2))

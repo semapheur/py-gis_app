@@ -1,4 +1,5 @@
 import json
+from pathlib import Path
 from typing import Literal, TypedDict
 
 from src.bootstrap import get_settings
@@ -41,3 +42,49 @@ def get_radiometric_parameters(
       to_json=True,
     )
     return rows[0]
+
+
+def generate_intensity_vrt(image_path: Path, vrt_path: Path, gdal_info: dict):
+  width, height = gdal_info["size"]
+  geo_info = gdal_info.get("gcps")
+  if geo_info is None:
+    raise ValueError(f"'gcps' not in metadata for {str(image_path)}")
+
+  srs_wkt = geo_info.get("coordinateSystem", {}).get("wkt", "EPSG:4326")
+  gcps = geo_info.get("gcpList", [])
+
+  vrt_lines = [
+    f'<VRTDataset rasterXSize="{width}" rasterYSize="{height}">',
+    f"<SRS>{srs_wkt}</SRS>",
+    "<GCPList>",
+  ]
+
+  for g in gcps:
+    vrt_lines.append(
+      f'<GCP Id="{g["id"]}" '
+      f'Pixel="{g["pixel"]}" '
+      f'Line="{g["line"]}" '
+      f'X="{g["x"]}" '
+      f'Y="{g["y"]}" '
+      f'Z="{g.get("z", 0)}"/>'
+    )
+
+  vrt_lines.extend(
+    [
+      "</GCPList>",
+      (
+        "<VRTRasterBand dataType='Float32' band='1'>"
+        "<PixelFunctionType>complex_magnitude_squared</PixelFunctionType>"
+        "<SourceTransferType>Float32</SourceTransferType>"
+        "<SimpleSource>"
+        f"<SourceFilename>{str(image_path)}</SourceFilename>"
+        "<SourceBand>1</SourceBand>"
+        "</SimpleSource>"
+        "</VRTRasterBand>"
+        "</VRTDataset>"
+      ),
+    ]
+  )
+
+  with open(vrt_path, "w", encoding="utf-8") as f:
+    f.write("".join(vrt_lines))
