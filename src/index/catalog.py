@@ -1,6 +1,6 @@
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union, cast
+from typing import Optional, Union
 
 from src.bootstrap import get_settings
 from src.path_utils import verify_dir
@@ -107,19 +107,9 @@ def add_calatog(path: Path, name: str):
     insert_catalog(db, path, name)
 
 
-def get_catalogs() -> dict[int, dict[str, str]]:
+def get_catalogs():
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    catalogs = db.select_records(CatalogTable, columns="*")
-
-  result: dict[int, dict[str, str]] = {}
-  for row in catalogs:
-    result[row["id"]] = {
-      "name": row["name"],
-      "path": str(row["path"].resolve()),
-      "last_indexed": cast(datetime, row["last_indexed"]).isoformat(timespec="seconds"),
-    }
-
-  return result
+    return db.select_records(CatalogTable, columns="*", to_json=True)
 
 
 def edit_catalog(

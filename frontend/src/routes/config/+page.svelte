@@ -3,5 +3,6 @@
 </script>
 
 <nav>
+  <Link href="config/catalog">Edit catalog</Link>
   <Link href="config/attributes">Edit attributes</Link>
 </nav>

@@ -431,6 +431,8 @@
           label={column.header}
           oninput={(v) => (editRow[column.id] = v)}
         />
+      {:else if column.editor === "directory"}
+        <input type="file" webkitdirectory />
       {/if}
     {/each}
 

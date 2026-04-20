@@ -3,10 +3,12 @@ import mimetypes
 import os
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
+from pathlib import Path
 from typing import Any, Callable, TypedDict, TypeVar
 
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
+from src.index.catalog import get_catalogs
 from src.index.images import ImageQuery, get_image_info, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
@@ -35,6 +37,7 @@ from src.models.attributes import (
   search_equipment,
   update_attributes,
 )
+from src.path_utils import verify_dir
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -89,6 +92,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/get-areas":
       self._get_areas()
+      return
+
+    if self.path == "/api/get-catalogs":
+      self._get_catalogs()
       return
 
     if self.path.startswith("/api"):
@@ -181,6 +188,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/delete-areas":
       self._post_delete_areas()
+      return
+
+    if self.path == "/api/verify-dir":
+      self._post_verify_dir()
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -328,6 +339,18 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
+  def _post_verify_dir(self):
+    class Payload(TypedDict):
+      path: str
+
+    def logic(payload: Payload):
+      input_path = Path(payload["path"])
+      is_dir = verify_dir(input_path)
+      if not is_dir:
+        self.send_error(409, f"Invalid directory: {str(input_path)}")
+
+    self._handle_post(logic)
+
   def _get_attribute_tables(self):
     try:
       tables = get_attribute_tables()
@@ -383,3 +406,8 @@ class Handler(SimpleHTTPRequestHandler):
   def _get_areas(self):
     areas = get_areas()
     self._json_response(areas)
+
+  def _get_catalogs(self):
+    catalogs = get_catalogs()
+    result = {"catalogs": catalogs}
+    self._json_response(result)
