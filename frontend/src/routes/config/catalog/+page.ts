@@ -8,9 +8,9 @@ export const load: PageLoad = async ({ params, fetch }) => {
     throw error(response.status, "Failed to load catalogs");
   }
 
-  const { data } = await response.json();
+  const { catalogs } = await response.json();
 
   return {
-    data,
+    catalogs,
   };
 };

@@ -40,6 +40,7 @@
   dialog {
     display: grid;
     grid-template-rows: auto 1fr;
+    background-color: oklch(var(--color-primary));
 
     &::backdrop {
       background: rbga(0 0 0 / 0.4);

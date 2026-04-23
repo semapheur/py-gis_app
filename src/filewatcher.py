@@ -1,6 +1,6 @@
-import os
 import threading
 from pathlib import Path
+from typing import Callable
 
 import win32con
 import win32file
@@ -22,7 +22,7 @@ class FolderWatcher(threading.Thread):
 
   def run(self):
     hDir = win32file.CreateFile(
-      self.path,
+      str(self.path),
       win32con.FILE_LIST_DIRECTORY,
       win32con.FILE_SHARE_READ | win32con.FILE_SHARE_WRITE | win32con.FILE_SHARE_DELETE,
       None,
@@ -45,5 +45,5 @@ class FolderWatcher(threading.Thread):
       )
 
       for action, filename in results:
-        full_path = os.path.join(self.path, filename)
+        full_path = self.path / filename
         self.callback(action, full_path)

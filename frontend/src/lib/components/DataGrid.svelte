@@ -52,6 +52,7 @@
 
   let selectedRows = $state([]);
   let editRow = $state<Record<string, string | number>>({});
+  let validationErrors = $state<Record<string, string>>({});
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
     update: {} as Record<string, Record<string, string | number>>[],
@@ -107,6 +108,7 @@
     form.rowId = null;
     form.initial = {};
     editRow = {};
+    validationErrors = {};
   }
 
   function addRow() {
@@ -146,8 +148,27 @@
     }
   }
 
-  function saveForm(event: PointerEvent) {
+  async function saveForm(event: PointerEvent) {
     event.preventDefault();
+
+    for (const column of editColumns) {
+      const validateFn = (column as any).validate;
+      if (validateFn && editRow[column.id] !== undefined) {
+        try {
+          const isValid = await validateFn(editRow[column.id]);
+          if (!isValid) {
+            validationErrors[column.id] = `Invalid value for ${column.header}`;
+            return;
+          }
+        } catch (err) {
+          validationErrors[column.id] =
+            `Validation failed for ${column.header}`;
+          return;
+        }
+      }
+    }
+
+    validationErrors = {};
 
     if (form.mode === "add") {
       addRow();
@@ -417,7 +438,7 @@
 </div>
 
 <Modal bind:open={form.open}>
-  <form onsubmit={saveForm}>
+  <form class="grid-form" onsubmit={saveForm}>
     {#each editColumns as column}
       {#if column.editor === "text"}
         <Input
@@ -431,13 +452,16 @@
           label={column.header}
           oninput={(v) => (editRow[column.id] = v)}
         />
-      {:else if column.editor === "directory"}
-        <input type="file" webkitdirectory />
+      {/if}
+      {#if validationErrors[column.id]}
+        <span class="error">
+          {validationErrors[column.id]}
+        </span>
       {/if}
     {/each}
 
-    <button type="submit"
-      >{form.mode === "add" ? "Add row" : "Save changes"}</button
+    <Button type="submit"
+      >{form.mode === "add" ? "Add row" : "Save changes"}</Button
     >
   </form>
 </Modal>
@@ -487,9 +511,20 @@
     gap: var(--size-md);
   }
 
+  .grid-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-sm);
+  }
+
   .grid-footer {
     min-height: calc(1rem + var(--size-sm));
     padding: var(--size-sm);
     background: oklch(var(--color-accent));
+  }
+
+  .error {
+    color: red;
+    font-size: var(--text-sm);
   }
 </style>

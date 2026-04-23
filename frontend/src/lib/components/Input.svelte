@@ -75,6 +75,7 @@
     top: 0;
     transform: translateY(-50%);
     transition: all 0.15s ease;
+    color: oklch(var(--color-text));
     pointer-events: none;
     text-shadow: var(--text-shadow);
   }

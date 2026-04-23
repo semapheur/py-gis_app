@@ -349,6 +349,8 @@ class Handler(SimpleHTTPRequestHandler):
       if not is_dir:
         self.send_error(409, f"Invalid directory: {str(input_path)}")
 
+      return is_dir
+
     self._handle_post(logic)
 
   def _get_attribute_tables(self):
