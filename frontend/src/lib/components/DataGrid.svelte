@@ -1,4 +1,5 @@
-<script lang="ts">
+<script lang="ts" generics="T">
+  import { error } from "@sveltejs/kit";
   import {
     Grid,
     HeaderMenu,
@@ -28,8 +29,12 @@
     initial: Record<string, string | number>;
   }
 
+  interface Column extends IColumnConfig {
+    validate?: (input: T) => Promise<boolean>;
+  }
+
   interface Props {
-    columns: IColumnConfig[];
+    columns: Column[];
     data: Record<string, string>[];
     addFill?: Record<string, () => any>;
     editFill?: Record<string, () => any>;
@@ -152,7 +157,7 @@
     event.preventDefault();
 
     for (const column of editColumns) {
-      const validateFn = (column as any).validate;
+      const validateFn = column.validate;
       if (validateFn && editRow[column.id] !== undefined) {
         try {
           const isValid = await validateFn(editRow[column.id]);
@@ -222,7 +227,7 @@
         delete: Array.from(cud.delete),
       };
 
-      const res = await fetch(saveApi, {
+      const response = await fetch(saveApi, {
         method: "POST",
         headers: {
           "Content-Type": "application/json",
@@ -230,8 +235,8 @@
         body: JSON.stringify(payload),
       });
 
-      if (!res.ok) {
-        throw new Error(await res.text());
+      if (!response.ok) {
+        throw error(response.status, "Failed to save changes");
       }
 
       cud.create = {} as Record<string, Record<string, string | number>>[];
