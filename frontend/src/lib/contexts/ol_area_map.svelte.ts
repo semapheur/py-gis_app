@@ -77,6 +77,7 @@ export class AreaMapState {
 
     this.#map = new Map({
       target: target,
+      controls: [],
       layers: [...baseLayers, polygonLayer],
       view: mapView,
       interactions: defaults({

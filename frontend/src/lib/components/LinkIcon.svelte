@@ -35,7 +35,7 @@
     content: attr(data-tooltip);
     display: none;
     position: absolute;
-    z-index: 1;
+    z-index: 2;
     padding: 0 var(--size-sm);
     background-color: oklch(var(--color-primary));
     border: 1px solid oklch(var(--color-accent));

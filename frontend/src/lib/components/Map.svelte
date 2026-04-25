@@ -5,7 +5,9 @@
   import { type ImagePreviewInfo } from "$lib/utils/types";
   import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
   import Button from "$lib/components/Button.svelte";
-  import { parseBbox, type BBox } from "$lib/utils/geo/bbox";
+  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
+  import MdiLayersOutline from "@iconify-svelte/mdi/layers-outline";
+  import { parseBbox } from "$lib/utils/geo/bbox";
 
   interface Props {
     imagePreview?: ImagePreviewInfo | null;
@@ -23,6 +25,7 @@
     onSearchExtent,
   }: Props = $props();
 
+  let showLayers = $state<boolean>(false);
   const initialBbox = syncBbox ? page.url.searchParams.get("bbox") : null;
   const mapLibre = getMapLibreState();
 
@@ -77,19 +80,28 @@
     </div>
   {/if}
 
-  <div class="layer-select">
-    {#each mapLibre.layers as layer}
-      <label>
-        <input
-          type="radio"
-          name="map-layer"
-          value={layer.id}
-          checked={layer.visible}
-          onchange={() => mapLibre.selectLayer(layer.id)}
-        />
-        {layer.label}
-      </label>
-    {/each}
+  <div
+    class="layer-control"
+    role="group"
+    onmouseenter={() => (showLayers = true)}
+    onmouseleave={() => (showLayers = false)}
+  >
+    {#if showLayers}
+      {#each mapLibre.layers as layer}
+        <label>
+          <input
+            type="radio"
+            name="map-layer"
+            value={layer.id}
+            checked={layer.visible}
+            onchange={() => mapLibre.selectLayer(layer.id)}
+          />
+          {layer.label}
+        </label>
+      {/each}
+    {:else}
+      <MdiLayersOutline width="1.5rem" />
+    {/if}
   </div>
 </div>
 
@@ -100,10 +112,10 @@
     height: 100%;
   }
 
-  .layer-select {
+  .layer-control {
     position: absolute;
-    top: 1rem;
-    left: 1rem;
+    top: var(--size-lg);
+    right: var(--size-lg);
     z-index: 1;
     display: flex;
     flex-direction: column;
@@ -115,8 +127,8 @@
 
   .map-button {
     position: absolute;
-    bottom: 1rem;
-    left: 1rem;
+    bottom: var(--size-lg);
+    left: var(--size-lg);
     z-index: 1;
   }
 </style>

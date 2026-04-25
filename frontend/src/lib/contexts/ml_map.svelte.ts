@@ -76,7 +76,7 @@ export class MapLibreState {
       },
     });
 
-    map.addControl(new maplibre.NavigationControl(), "top-right");
+    //map.addControl(new maplibre.NavigationControl(), "top-right");
 
     map.on("load", () => {
       this.#isLoaded = true;

@@ -210,6 +210,7 @@ export class ImageViewerController {
 
     this.#map = new Map({
       target: target,
+      controls: [],
       layers: [
         this.#rasterLayer,
         this.#equipmentLayer,

@@ -2,7 +2,7 @@
   import { toast } from "$lib/stores/toast.svelte";
 </script>
 
-<div class="toast-container">
+<div class="toaster">
   {#each toast.items as t (t.id)}
     <div class="toast {t.type}" role="alert">
       <span>{t.message}</span>
@@ -12,7 +12,7 @@
 </div>
 
 <style>
-  .toast-container {
+  .toaster {
     position: fixed;
     top: var(--size-md);
     right: var(--size-md);

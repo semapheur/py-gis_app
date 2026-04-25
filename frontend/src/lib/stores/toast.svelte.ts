@@ -8,18 +8,18 @@ interface Toast {
 }
 
 class ToastStore {
-  toasts = $state<Toast[]>([]);
+  items = $state<Toast[]>([]);
   #counter = 0;
 
   #add(message: string, type: ToastType, duration = 3000) {
     const id = this.#counter++;
-    this.toasts.push({ id, message, type, duration });
+    this.items.push({ id, message, type, duration });
     setTimeout(() => this.remove(id), duration);
   }
 
   remove(id: number) {
-    const index = this.toasts.findIndex((t) => t.id === id);
-    if (index !== -1) this.toasts.splice(index, 1);
+    const index = this.items.findIndex((t) => t.id === id);
+    if (index !== -1) this.items.splice(index, 1);
   }
 
   success(message: string, duration = 3000) {
