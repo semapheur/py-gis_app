@@ -213,6 +213,11 @@ class AttributeUpdate(TypedDict):
   delete: list[str]
 
 
+class CreatedAttribute(TypedDict):
+  _clientKey: str
+  id: str
+
+
 def update_attributes(table: str, payload: AttributeUpdate):
   validate_attribute_table(table)
 
@@ -244,6 +249,19 @@ def update_attributes(table: str, payload: AttributeUpdate):
   else:
     raise ValueError(f"Invalid table name: {table}")
 
+  created: list[CreatedAttribute] = []
+  for record in payload["upsert"]:
+    if record.get("id") is not None:
+      continue
+
+    client_key = record.get("_clientKey")
+    if client_key is None:
+      continue
+
+    new_id = uuid.uuid4()
+    record["id"] = str(new_id)
+    created.append({"_clientKey": client_key, "id": str(new_id)})
+
   upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 
@@ -254,6 +272,8 @@ def update_attributes(table: str, payload: AttributeUpdate):
 
     if delete_ids:
       db.delete_by_ids(model, delete_ids)
+
+  return {"created": created}
 
 
 def search_equipment(query: str):

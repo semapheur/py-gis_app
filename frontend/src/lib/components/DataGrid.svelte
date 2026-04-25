@@ -1,5 +1,4 @@
 <script lang="ts" generics="T">
-  import { error } from "@sveltejs/kit";
   import {
     Grid,
     HeaderMenu,
@@ -12,9 +11,14 @@
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import Button from "$lib/components/Button.svelte";
   import TextArea from "$lib/components/TextArea.svelte";
+  import { toast } from "$lib/stores/toast.svelte";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
 
   type FormMode = "add" | "edit";
+
+  type EditRow = Record<string, string | number | null | undefined> & {
+    _clientKey: string | null;
+  };
 
   interface CUD {
     create: Record<string, Record<string, string | number>>[];
@@ -56,7 +60,7 @@
   });
 
   let selectedRows = $state([]);
-  let editRow = $state<Record<string, string | number>>({});
+  let editRow = $state<EditRow>({ _clientKey: null });
   let validationErrors = $state<Record<string, string>>({});
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
@@ -100,19 +104,19 @@
     form.mode = "add";
     form.rowId = null;
     form.initial = {};
-    editRow = {};
+    editRow = { _clientKey: null };
   }
 
   function resetAddForm() {
     form.initial = {};
-    editRow = {};
+    editRow = { _clientKey: null };
   }
 
   function closeForm() {
     form.open = false;
     form.rowId = null;
     form.initial = {};
-    editRow = {};
+    editRow = { _clientKey: null };
     validationErrors = {};
   }
 
@@ -123,11 +127,12 @@
       });
     }
 
+    editRow._clientKey = crypto.randomUUID();
     const addRow = structuredClone($state.snapshot(editRow));
     api.exec("add-row", {
       row: addRow,
     });
-    cud.create[editRow.id] = addRow;
+    cud.create[editRow._clientKey] = addRow;
   }
 
   function saveEdit() {
@@ -214,37 +219,48 @@
     if (!saveApi) return;
 
     if (
-      cud.create.length === 0 &&
-      cud.update.length === 0 &&
+      Object.keys(cud.create).length === 0 &&
+      Object.keys(cud.update).length === 0 &&
       cud.delete.size === 0
     ) {
       return;
     }
 
-    try {
-      const payload = {
-        upsert: [...Object.values(cud.create), ...Object.values(cud.update)],
-        delete: Array.from(cud.delete),
-      };
+    const payload = {
+      upsert: [...Object.values(cud.create), ...Object.values(cud.update)],
+      delete: Array.from(cud.delete),
+    };
 
-      const response = await fetch(saveApi, {
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-        },
-        body: JSON.stringify(payload),
-      });
+    const response = await fetch(saveApi, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify(payload),
+    });
 
-      if (!response.ok) {
-        throw error(response.status, "Failed to save changes");
-      }
-
-      cud.create = {} as Record<string, Record<string, string | number>>[];
-      cud.update = {} as Record<string, Record<string, string | number>>[];
-      cud.delete = new Set<string>();
-    } catch (err) {
-      console.error("Failed to save grid changes:", err);
+    if (!response.ok) {
+      toast.error(`Failed to save changes (${response.status})`);
+      return;
     }
+
+    const { created } = (await response.json()) as {
+      created: { _clientKey: string; id: string }[];
+    };
+
+    for (const { _clientKey, id } of created) {
+      const row = api.getRow(_clientKey);
+      if (row) {
+        api.exec("update-row", {
+          id: serverRow._clientKey,
+          row: { ...row, id },
+        });
+      }
+    }
+
+    cud.create = {} as Record<string, Record<string, string | number>>[];
+    cud.update = {} as Record<string, Record<string, string | number>>[];
+    cud.delete = new Set<string>();
   }
 
   function exportToJson() {

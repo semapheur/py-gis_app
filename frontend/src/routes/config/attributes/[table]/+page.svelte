@@ -30,7 +30,7 @@
   let columns = $derived([...metaColumns, ...data.columns]);
 
   const addFill = {
-    id: () => crypto.randomUUID(),
+    id: () => null,
     createdByUserId: () => "",
     createdAtTimestamp: () => Date.now(),
     modifiedByUserId: () => null,

@@ -289,8 +289,7 @@ class Handler(SimpleHTTPRequestHandler):
 
   def _post_update_attributes(self, table: str):
     def logic(payload: AttributeUpdate):
-      update_attributes(table, payload)
-      return {"message": "Successfully updated attributes"}
+      return update_attributes(table, payload)
 
     if not table or table not in ATTRIBUTE_TABLES:
       self.send_error(404, "Invalid POST endpoint")
