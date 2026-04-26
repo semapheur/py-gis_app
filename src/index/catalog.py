@@ -24,6 +24,16 @@ class CatalogTable(Model):
   last_indexed = datetime_field(True)
 
 
+def validate_catalog_dir(path: Path):
+
+  if not path.is_dir():
+    raise FileNotFoundError(f"Invalid directory path: {path}")
+
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    where = "WHERE path = ?"
+    db.select_records(CatalogTable, columns=("id",), to_json=True)
+
+
 def insert_catalog(
   db: SqliteDatabase,
   path: Path,

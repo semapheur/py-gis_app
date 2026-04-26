@@ -353,6 +353,7 @@ class Handler(SimpleHTTPRequestHandler):
     def logic(payload: Payload):
       input_path = Path(payload["path"])
       is_dir = verify_dir(input_path)
+      print(is_dir)
       if not is_dir:
         self.send_error(409, f"Invalid directory: {str(input_path)}")
 

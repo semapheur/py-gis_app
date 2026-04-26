@@ -257,6 +257,13 @@ class Model(metaclass=ModelMeta):
     ]
 
   @classmethod
+  def column_sql(cls, geo_format: GeoFormat = "AsGeoJSON") -> list[str]:
+    return [
+      name if field.geometry_type is None else f"{geo_format}({name}) AS {name}"
+      for name, field in cls._fields.items()
+    ]
+
+  @classmethod
   def geometry_fields(cls) -> dict[str, Field]:
     return {
       name: field

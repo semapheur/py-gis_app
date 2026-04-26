@@ -36,6 +36,7 @@ from src.spatialite import (
   hash_field,
   path_field,
 )
+from src.sql_builder import Query
 
 app_settings = get_settings()
 
@@ -503,6 +504,7 @@ def search_images(payload: ImageQuery):
   if area_id is not None:
     wkt = get_area_wkt(area_id)["geometry"]
 
+  print(get_images_by_intersection_(wkt, payload))
   return get_images_by_intersection(wkt, payload)
 
 
@@ -570,6 +572,47 @@ def get_images_by_intersection(polygon_wkt: Union[str, None], payload: ImageQuer
     results = db.select_records(ImageIndexTable, **kwargs)
 
     return {"wkt": polygon_wkt, "images": results}
+
+
+def get_images_by_intersection_(polygon_wkt: Optional[str], payload: ImageQuery):
+  columns = ImageIndexTable.column_sql()
+  query = Query().from_(ImageIndexTable._table_name).select(*columns)
+
+  filename = payload.get("filename")
+  if filename is not None:
+    query.where("filename = ?", filename)
+
+  min_coverage = payload.get("min_coverage")
+  if min_coverage is not None:
+    query.where("coverage >= ?", min_coverage)
+
+  min_iirs = payload.get("min_iirs")
+  if min_iirs is not None:
+    query.where("interpretation_rating >= ?", min_iirs)
+
+  max_gsd = payload.get("max_gsd")
+  if max_gsd is not None:
+    query.where("ground_sample_distance_row <= ?", max_gsd)
+    query.where("ground_sample_distance_col <= ?", max_gsd)
+
+  date_start = payload.get("date_start")
+  date_end = payload.get("date_end")
+  if date_start is not None and date_end is not None:
+    query.where("datetime_collected >= ?", date_start)
+    query.where("datetime_collected <= ?", date_end)
+
+  if polygon_wkt is not None:
+    poly_cte = (
+      Query()
+      .select("geom", "ST_Area(geom) AS area")
+      .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
+    )
+
+    query.with_("poly", poly_cte).cross_join("poly").where(
+      "ST_Intersects(footprint, poly.geom)"
+    ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
+
+  print(query.build())
 
 
 def get_image_info(id: bytes) -> dict:
