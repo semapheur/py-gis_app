@@ -1,3 +1,4 @@
+import re
 from typing import Literal, Optional, TypeAlias
 
 WhereOp: TypeAlias = Literal["AND", "OR"]
@@ -15,6 +16,19 @@ class Query:
     self._limit: Optional[int] = None
     self._offset: Optional[int] = None
     self._params = []
+
+  @property
+  def columns(self) -> list[tuple[str, Optional[str]]]:
+    as_regex = re.compile(r"\s+[Aa][Ss]\s+")
+    result: list[tuple[str, Optional[str]]] = []
+    for column in self._select:
+      if as_regex.search(column):
+        name, alias = as_regex.split(column)
+        result.append((name.strip(), alias.strip()))
+      else:
+        result.append((column.strip(), None))
+
+    return result
 
   def with_(self, name: str, query: "Query"):
     cte_sql, cte_params = query.build()

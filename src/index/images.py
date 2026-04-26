@@ -504,8 +504,7 @@ def search_images(payload: ImageQuery):
   if area_id is not None:
     wkt = get_area_wkt(area_id)["geometry"]
 
-  print(get_images_by_intersection_(wkt, payload))
-  return get_images_by_intersection(wkt, payload)
+  return get_images_by_intersection_(wkt, payload)
 
 
 def get_images_by_intersection(polygon_wkt: Union[str, None], payload: ImageQuery):
@@ -612,7 +611,10 @@ def get_images_by_intersection_(polygon_wkt: Optional[str], payload: ImageQuery)
       "ST_Intersects(footprint, poly.geom)"
     ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
 
-  print(query.build())
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
+    results = db.select_records_(ImageIndexTable, query, True)
+
+  return {"wkt": polygon_wkt, "images": results}
 
 
 def get_image_info(id: bytes) -> dict:

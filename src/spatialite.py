@@ -2,6 +2,7 @@ from __future__ import annotations
 
 import json
 import os
+import re
 import sqlite3
 import uuid
 from contextlib import contextmanager
@@ -23,6 +24,7 @@ from typing import (
 )
 
 from src.hashing import decode_sha256_from_b64, encode_sha256_to_b64
+from src.sql_builder import Query
 from src.timeutils import datetime_to_unix, unix_to_datetime
 
 SqliteValue = Union[bytes, int, float, str, None]
@@ -608,6 +610,39 @@ class SqliteDatabase:
 
     return [table.from_row(row, columns) for row in rows]
 
+  def select_records_(
+    self, table: type[Model], query: Query, to_json: bool = False
+  ) -> list[dict[str, SqliteValue]]:
+    columns = query.columns
+    sql, params = query.build()
+    cursor = self.conn.cursor()
+    rows = cursor.execute(sql, params).fetchall()
+
+    results: list[dict[str, SqliteValue]] = []
+    for row in rows:
+      result_row = {}
+      for i, (name, alias) in enumerate(columns):
+        col = alias or name
+        field = table._fields.get(col)
+        if field is None:
+          result_row[col] = row[i]
+          continue
+
+        if field.geometry_type is None:
+          value = field.deserialize_from_sql(row[i])
+        else:
+          geo_regex = re.compile("^As(GeoJSON|Text)")
+          match = geo_regex.search(name)
+          geo_format = "" if match is None else match.group()
+
+          value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
+
+        result_row[col] = field.serialize_to_json(value) if to_json else value
+
+      results.append(result_row)
+
+    return results
+
   def select_records(
     self,
     table: type[Model],
@@ -622,7 +657,7 @@ class SqliteDatabase:
     offset: Optional[int] = None,
     params: Optional[Union[dict[str, SqliteValue], tuple[SqliteValue, ...]]] = None,
     to_json: bool = False,
-  ) -> list[dict[str, Any]]:
+  ) -> list[dict[str, SqliteValue]]:
     rows, return_columns = self._select_rows(
       table,
       from_table=from_table,
