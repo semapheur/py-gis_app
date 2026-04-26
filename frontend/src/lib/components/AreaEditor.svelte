@@ -18,11 +18,11 @@
       <Input
         placeholder="Name"
         value={editor.data.name}
-        oninput={(v) => (editor.data.name = v)}
+        oninput={(e) => (editor.data.name = e.currentTarget.value)}
       />
       <TextArea
         placeholder="Description"
-        oninput={(v) => (editor.data.description = v)}
+        oninput={(e) => (editor.data.description = e.currentTarget.value)}
       />
     </form>
     <div class="button-group">

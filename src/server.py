@@ -239,6 +239,14 @@ class Handler(SimpleHTTPRequestHandler):
     self.end_headers()
     self.wfile.write(payload)
 
+  def _error_response(self, status: int, message: str):
+    payload = json.dumps({"detail": message}).encode("utf-8")
+    self.send_response(status)
+    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Length", str(len(payload)))
+    self.end_headers()
+    self.wfile.write(payload)
+
   def _handle_post(self, fn: Callable[[P], R]):
     try:
       content_length = int(self.headers.get("Content-Length", 0))
@@ -249,7 +257,7 @@ class Handler(SimpleHTTPRequestHandler):
       self._json_response(result)
 
     except Exception as e:
-      self.send_error(500, f"Server error: {str(e)}")
+      self._error_response(500, f"Server error: {str(e)}")
 
   def _post_query_images(self):
     def logic(payload: ImageQuery) -> list[dict[str, Any]]:

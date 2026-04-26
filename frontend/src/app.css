@@ -45,6 +45,8 @@
 
   --duration-normal: 250ms;
 
+  --blur-sm: 4px;
+
   --text-shadow:
     -1px -1px 0 oklch(var(--color-primary)),
     1px -1px 0 oklch(var(--color-primary)),

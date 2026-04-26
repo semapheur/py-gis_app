@@ -1,6 +1,7 @@
 <script lang="ts">
   import TextEditor from "$lib/components/TextEditor.svelte";
   import Window from "$lib/components/Window.svelte";
+  import type { HTMLTextareaAttributes } from "svelte/elements";
 
   type Resize =
     | "none"
@@ -10,22 +11,16 @@
     | "block"
     | "inline";
 
-  interface Props {
-    value?: string | null;
-    placeholder?: string;
-    required?: boolean;
-    rows?: number;
+  interface Props extends HTMLTextareaAttributes {
     resize?: Resize;
-    oninput?: (value: string) => void;
   }
 
   let {
-    value = null,
+    value = $bindable(null),
     placeholder = "",
-    required = false,
     rows = 4,
     resize = "none",
-    oninput,
+    ...rest
   }: Props = $props();
 
   let editorTitle = $derived(`Edit: ${placeholder}`);
@@ -45,10 +40,9 @@
     id={uid}
     {placeholder}
     bind:value={internal}
-    {required}
     {rows}
     style:resize
-    oninput={(e) => oninput?.(e.currentTarget.value)}
+    {...rest}
   ></textarea>
 
   <button
@@ -93,6 +87,7 @@
     left: var(--size-md);
     font-size: var(--text-2xs);
     top: var(--top-float);
+    color: oklch(var(--color-text));
     transform: translateY(-50%);
     transition: all 0.15s ease;
     text-shadow: var(--text-shadow);

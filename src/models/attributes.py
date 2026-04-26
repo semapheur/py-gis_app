@@ -1,6 +1,6 @@
 import json
 import uuid
-from typing import TypedDict
+from typing import Optional, TypedDict, cast
 
 from src.bootstrap import get_settings
 from src.spatialite import (
@@ -214,8 +214,8 @@ class AttributeUpdate(TypedDict):
 
 
 class CreatedAttribute(TypedDict):
-  _clientKey: str
-  id: str
+  client_id: str
+  server_id: str
 
 
 def update_attributes(table: str, payload: AttributeUpdate):
@@ -250,17 +250,18 @@ def update_attributes(table: str, payload: AttributeUpdate):
     raise ValueError(f"Invalid table name: {table}")
 
   created: list[CreatedAttribute] = []
-  for record in payload["upsert"]:
-    if record.get("id") is not None:
-      continue
 
-    client_key = record.get("_clientKey")
-    if client_key is None:
+  for record in payload["upsert"]:
+    record_id = cast(Optional[str], record.get("id"))
+    if record_id is None:
+      raise ValueError(f"Missing 'id' field in attribute upsert record: {record}")
+
+    if not record_id.startswith("temp://"):
       continue
 
     new_id = uuid.uuid4()
     record["id"] = str(new_id)
-    created.append({"_clientKey": client_key, "id": str(new_id)})
+    created.append(CreatedAttribute(client_id=record_id, server_id=str(new_id)))
 
   upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]

@@ -17,5 +17,7 @@
   button {
     all: unset;
     cursor: pointer;
+    display: inline-flex;
+    align-items: center;
   }
 </style>

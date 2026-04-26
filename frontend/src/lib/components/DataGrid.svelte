@@ -16,10 +16,6 @@
 
   type FormMode = "add" | "edit";
 
-  type EditRow = Record<string, string | number | null | undefined> & {
-    _clientKey: string | null;
-  };
-
   interface CUD {
     create: Record<string, Record<string, string | number>>[];
     update: Record<string, Record<string, string | number>>[];
@@ -60,7 +56,7 @@
   });
 
   let selectedRows = $state([]);
-  let editRow = $state<EditRow>({ _clientKey: null });
+  let editRow = $state<Record<string, string | number | null | undefined>>({});
   let validationErrors = $state<Record<string, string>>({});
   let cud = $state<CUD>({
     create: {} as Record<string, Record<string, string | number>>[],
@@ -104,19 +100,19 @@
     form.mode = "add";
     form.rowId = null;
     form.initial = {};
-    editRow = { _clientKey: null };
+    editRow = {};
   }
 
   function resetAddForm() {
     form.initial = {};
-    editRow = { _clientKey: null };
+    editRow = {};
   }
 
   function closeForm() {
     form.open = false;
     form.rowId = null;
     form.initial = {};
-    editRow = { _clientKey: null };
+    editRow = {};
     validationErrors = {};
   }
 
@@ -127,12 +123,15 @@
       });
     }
 
-    editRow._clientKey = crypto.randomUUID();
-    const addRow = structuredClone($state.snapshot(editRow));
+    const addRow = $state.snapshot(editRow);
     api.exec("add-row", {
-      row: addRow,
+      row: structuredClone(addRow),
     });
-    cud.create[editRow._clientKey] = addRow;
+    const tempId = api.getState().data.at(-1)?.id;
+
+    if (tempId) {
+      cud.create[tempId] = { id: tempId, ...addRow };
+    }
   }
 
   function saveEdit() {
@@ -144,7 +143,7 @@
       });
     }
 
-    const saveRow = structuredClone($state.snapshot(editRow));
+    const saveRow = $state.snapshot(editRow);
 
     api.exec("update-row", {
       id: form.rowId,
@@ -240,20 +239,21 @@
     });
 
     if (!response.ok) {
-      toast.error(`Failed to save changes (${response.status})`);
+      const { detail } = await response.json();
+      toast.error(detail ?? `Failed to save changes (${response.status})`);
       return;
     }
 
     const { created } = (await response.json()) as {
-      created: { _clientKey: string; id: string }[];
+      created: { client_id: string; server_id: string }[];
     };
 
-    for (const { _clientKey, id } of created) {
-      const row = api.getRow(_clientKey);
+    for (const { client_id, server_id } of created) {
+      const row = api.getRow(client_id);
       if (row) {
         api.exec("update-row", {
-          id: serverRow._clientKey,
-          row: { ...row, id },
+          id: client_id,
+          row: { ...row, id: server_id },
         });
       }
     }
@@ -465,13 +465,13 @@
         <Input
           value={form.initial[column.id]}
           placeholder={column.header}
-          oninput={(v) => (editRow[column.id] = v)}
+          oninput={(e) => (editRow[column.id] = e.currentTarget.value)}
         />
       {:else if column.editor === "textarea"}
         <TextArea
           value={form.initial[column.id]}
-          label={column.header}
-          oninput={(v) => (editRow[column.id] = v)}
+          placeholder={column.header}
+          oninput={(e) => (editRow[column.id] = e.currentTarget.value)}
         />
       {/if}
       {#if validationErrors[column.id]}
