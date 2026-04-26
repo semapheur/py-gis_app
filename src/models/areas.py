@@ -10,6 +10,7 @@ from src.spatialite import (
   datetime_field,
   uuid_field,
 )
+from src.sql_builder import Query
 
 app_settings = get_settings()
 
@@ -52,15 +53,16 @@ def update_area(payload: AreaUpdate):
 
   on_conflict = OnConflict(index="id", action=update_sql)
 
+  query = (
+    Query()
+    .select("name")
+    .from_(AreasTable._table_name)
+    .where("name = ?", payload["name"])
+    .where("id != ?", uuid.UUID(payload["id"]).bytes)
+  )
+
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    where = "areas.name = :name AND areas.id != :id"
-    params = {"name": payload["name"], "id": uuid.UUID(payload["id"]).bytes}
-    found_name = db.select_records(
-      AreasTable,
-      columns=("name",),
-      where=where,
-      params=params,
-    )
+    found_name = db.select_records(AreasTable, query)
 
     if found_name:
       return found_name
@@ -74,46 +76,40 @@ class AreaId(TypedDict):
 
 
 def get_area(payload: AreaId):
+  query = (
+    Query()
+    .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
+    .from_(AreasTable._table_name)
+    .where("id = ?", uuid.UUID(payload["id"]).bytes)
+  )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    where = "areas.id = :id"
-    params = {"id": uuid.UUID(payload["id"]).bytes}
-    area = db.select_records(
-      AreasTable,
-      columns=("id", "name", "description", "geometry"),
-      where=where,
-      params=params,
-      geo_format="AsGeoJSON",
-      to_json=True,
-    )
-
+    area = db.select_records(AreasTable, query, True)
     return area[0]
 
 
 def get_area_wkt(area_id: str):
-  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    where = "areas.id = :id"
-    params = {"id": uuid.UUID(area_id).bytes}
-    area = db.select_records(
-      AreasTable,
-      columns=("geometry",),
-      where=where,
-      params=params,
-      geo_format="AsText",
-      to_json=True,
-    )
+  query = (
+    Query()
+    .select("AsText(geometry) AS geometry")
+    .from_(AreasTable._table_name)
+    .where("id = ?", uuid.UUID(area_id).bytes)
+  )
 
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
+    area = db.select_records(AreasTable, query, True)
     return area[0]
 
 
 def get_areas():
+  query = (
+    Query()
+    .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
+    .from_(AreasTable._table_name)
+  )
+
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    areas = db.select_records(
-      AreasTable,
-      columns=("id", "name", "description", "geometry"),
-      geo_format="AsGeoJSON",
-      to_json=True,
-    )
+    areas = db.select_records(AreasTable, query, True)
     return areas
 
 

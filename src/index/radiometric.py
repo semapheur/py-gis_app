@@ -1,11 +1,14 @@
 import json
 from pathlib import Path
-from typing import Literal, TypedDict
+from typing import Literal, TypeAlias, TypedDict
 
 from src.bootstrap import get_settings
 from src.spatialite import ColumnType, Field, Model, SqliteDatabase, hash_field
+from src.sql_builder import Query
 
 app_settings = get_settings()
+
+RadiometricFactors: TypeAlias = Literal["noise", "sigma0", "beta0", "gamma0"]
 
 
 class NoiseParameters(TypedDict):
@@ -30,17 +33,16 @@ class RadiometricParamsTable(Model):
   gamma0 = polygon
 
 
-def get_radiometric_parameters(
-  hash_id: bytes, factors: tuple[Literal["noise", "sigma0", "beta0", "gamma0"], ...]
-):
+def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors, ...]):
+  query = (
+    Query()
+    .select(*factors)
+    .from_(RadiometricParamsTable._table_name)
+    .where("id = ?", hash_id)
+  )
+
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    rows = db.select_records(
-      RadiometricParamsTable,
-      columns=factors,
-      where="id = :id",
-      params={"id": hash_id},
-      to_json=True,
-    )
+    rows = db.select_records(RadiometricParamsTable, query, True)
     return rows[0]
 
 

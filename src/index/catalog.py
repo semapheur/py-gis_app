@@ -11,6 +11,7 @@ from src.spatialite import (
   datetime_field,
   path_field,
 )
+from src.sql_builder import Query
 from src.timeutils import datetime_to_unix
 
 app_settings = get_settings()
@@ -118,8 +119,11 @@ def add_calatog(path: Path, name: str):
 
 
 def get_catalogs():
+  columns = CatalogTable.column_sql()
+  query = Query().select(*columns).from_(CatalogTable._table_name)
+
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    return db.select_records(CatalogTable, columns="*", to_json=True)
+    return db.select_records(CatalogTable, query, True)
 
 
 def edit_catalog(

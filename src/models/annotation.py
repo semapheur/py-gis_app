@@ -15,6 +15,7 @@ from src.spatialite import (
   hash_field,
   uuid_field,
 )
+from src.sql_builder import Query
 
 EquipmentGeometry = Literal["POINT", "POLYGON"]
 
@@ -180,30 +181,31 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
 
   attach_sql = f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a"
   detach_sql = "DETACH DATABASE a"
-  select_sql = f"""
-    SELECT
-      ep.id AS id,
-      AsGeoJSON(ep.geometry) AS geometry,
-      ep.equipment AS equipment_id,
-      a.equipment.displayName AS equipment_label,
-      ep.confidence AS confidence_id,
-      a.observation_confidence.text AS confidence_label,
-      ep.status AS status_id,
-      a.equipment_status.text AS status_label,
-      ep.createdByUserId AS createdByUserId,
-      ep.modifiedByUserId AS modifiedByUserId,
-      ep.createdAtTimestamp AS createdAtTimestamp,
-      ep.modifiedAtTimestamp AS modifiedAtTimestamp
-    FROM equipment_{geometry.lower()} AS ep
-    JOIN a.equipment
-      ON a.equipment.id = ep.equipment
-    JOIN a.observation_confidence
-      ON a.observation_confidence.id = ep.confidence
-    JOIN a.equipment_status
-      ON a.equipment_status.id = ep.status
-    WHERE ep.image = :image
-  """
-  params = {"image": image_id}
+  select_sql, params = (
+    Query()
+    .select(
+      "ep.id AS id",
+      "AsGeoJSON(ep.geometry) AS geometry",
+      "ep.equipment AS equipment_id",
+      "a.equipment.displayName AS equipment_label",
+      "ep.confidence AS confidence_id",
+      "a.observation_confidence.text AS confidence_label",
+      "ep.status AS status_id",
+      "a.equipment_status.text AS status_label",
+      "ep.createdByUserId AS createdByUserId",
+      "ep.modifiedByUserId AS modifiedByUserId",
+      "ep.createdAtTimestamp AS createdAtTimestamp",
+      "ep.modifiedAtTimestamp AS modifiedAtTimestamp",
+    )
+    .from_(f"equipment_{geometry.lower()} ep")
+    .inner_join("a.equipment", "a.equipment.id = ep.equipment")
+    .inner_join(
+      "a.observation_confidence", "a.observation_confidence.id = ep.confidence"
+    )
+    .inner_join("a.equipment_status", "a.equipment_status.id = ep.status")
+    .where("ep.image = ?", image_id)
+    .build()
+  )
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     db.conn.row_factory = Row

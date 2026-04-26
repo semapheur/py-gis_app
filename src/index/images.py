@@ -346,19 +346,18 @@ class IndexAction(Enum):
 
 
 def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, None]]:
-  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    derived_columns = {
-      "path": "concat(catalog.path, '/', images.relative_path, '/', images.filename, images.filetype)",
-    }
-    join = JoinClause(
-      join_type="INNER", expression="catalog ON catalog.id = images.catalog"
+  query = (
+    Query()
+    .select(
+      "concat(c.path, '/', i.relative_path, '/', i.filename, '.', i.filetype) AS path"
     )
-    where = "images.id = :id"
-    params = {"id": hash}
+    .from_(f"{ImageIndexTable._table_name} i")
+    .inner_join("catalog c", "c.id = i.catalog")
+    .where("i.id = ?", hash)
+  )
 
-    result = db.select_records(
-      ImageIndexTable, derived=derived_columns, join=join, where=where, params=params
-    )
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
+    result = db.select_records(ImageIndexTable, query)
 
   if not result:
     return (IndexAction.NOT_INDEXED, None)
@@ -389,16 +388,15 @@ def index_images(
   thumbnail_dir = app_settings.STATIC_DIR / "thumbnails"
   thumbnail_dir.mkdir(exist_ok=True)
 
+  query = (
+    Query().select("path").from_(CatalogTable._table_name).where("id = ?", catalog_id)
+  )
+
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     db.create_table(ImageIndexTable)
     db.create_table(RadiometricParamsTable)
 
-    catalog_record = db.select_records(
-      CatalogTable,
-      columns=("path",),
-      where="id = :id",
-      params={"id": catalog_id},
-    )
+    catalog_record = db.select_records(CatalogTable, query)
     if not catalog_record:
       from pprint import pformat
 
@@ -504,76 +502,10 @@ def search_images(payload: ImageQuery):
   if area_id is not None:
     wkt = get_area_wkt(area_id)["geometry"]
 
-  return get_images_by_intersection_(wkt, payload)
+  return get_images_by_intersection(wkt, payload)
 
 
-def get_images_by_intersection(polygon_wkt: Union[str, None], payload: ImageQuery):
-  where: list[str] = []
-  params = {}
-
-  filename = payload.get("filename")
-  if filename is not None:
-    where.append("filename = :filename")
-    params["filename"] = filename
-
-  min_coverage = payload.get("min_coverage")
-  if min_coverage is not None:
-    where.append("coverage >= :min_coverage")
-    params["min_coverage"] = min_coverage
-
-  min_iirs = payload.get("min_iirs")
-  if min_iirs is not None:
-    where.append("interpretation_rating >= :min_iirs")
-    params["min_iirs"] = min_iirs
-
-  max_gsd = payload.get("max_gsd")
-  if max_gsd is not None:
-    where.append(
-      "ground_sample_distance_row <= :max_gsd AND ground_sample_distance_col <= :max_gsd"
-    )
-    params["max_gsd"] = max_gsd
-
-  date_start = payload.get("date_start")
-  date_end = payload.get("date_end")
-  if date_start is not None and date_end is not None:
-    where.append(
-      "datetime_collected >= :date_start AND datetime_collected <= :date_end"
-    )
-    params["date_start"] = date_start
-    params["date_end"] = date_end
-
-  base_where = " AND ".join(where) if where else None
-
-  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    kwargs: dict[str, Any] = dict(
-      columns="*",
-      where=base_where,
-      params=params,
-      geo_format="AsGeoJSON",
-      to_json=True,
-    )
-
-    if polygon_wkt is not None:
-      intersection_where = "ST_Intersects(footprint, poly.geom)"
-      if base_where is not None:
-        intersection_where += f" AND {base_where}"
-
-      kwargs.update(
-        where=intersection_where,
-        derived={
-          "coverage": "ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area"
-        },
-        with_clause="poly AS (SELECT geom, ST_Area(geom) AS area FROM (SELECT ST_GeomFromText(:polygon, 4326) AS geom) AS tmp)",
-        join=JoinClause(join_type="CROSS", expression="poly"),
-        params={**params, "polygon": polygon_wkt},
-      )
-
-    results = db.select_records(ImageIndexTable, **kwargs)
-
-    return {"wkt": polygon_wkt, "images": results}
-
-
-def get_images_by_intersection_(polygon_wkt: Optional[str], payload: ImageQuery):
+def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
   columns = ImageIndexTable.column_sql()
   query = Query().from_(ImageIndexTable._table_name).select(*columns)
 
@@ -612,23 +544,19 @@ def get_images_by_intersection_(polygon_wkt: Optional[str], payload: ImageQuery)
     ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    results = db.select_records_(ImageIndexTable, query, True)
+    results = db.select_records(ImageIndexTable, query, True)
 
   return {"wkt": polygon_wkt, "images": results}
 
 
 def get_image_info(id: bytes) -> dict:
-  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    where = "id = :id"
-    params = {"id": id}
+  query = (
+    Query()
+    .select("filename", "image_type")
+    .from_(ImageIndexTable._table_name)
+    .where("id = ?", id)
+  )
 
-    info = db.select_records(
-      ImageIndexTable,
-      columns=(
-        "filename",
-        "image_type",
-      ),
-      where=where,
-      params=params,
-    )
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
+    info = db.select_records(ImageIndexTable, query)
     return info[0]

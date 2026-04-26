@@ -13,6 +13,7 @@ from src.spatialite import (
   datetime_field,
   uuid_field,
 )
+from src.sql_builder import Query
 
 app_settings = get_settings()
 
@@ -158,9 +159,10 @@ def create_attribute_tables():
 
 
 def get_attribute_tables():
+  query = Query().select("table_name", "label").from_(DataGridSchemaTable._table_name)
+
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(DataGridSchemaTable, columns=("table_name", "label"))
-    return records
+    return db.select_records(DataGridSchemaTable, query)
 
 
 def validate_attribute_table(table: str):
@@ -180,30 +182,33 @@ def get_attribute_data(table: str, options: bool = False):
   else:
     raise ValueError(f"Invalid table name: {table}")
 
+  query = Query().from_(model._table_name)
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     if options:
-      derived_columns = {"label": "text", "value": "id"}
-      result = db.select_records(model, derived=derived_columns, to_json=True)
+      query = query.select("text AS label", "id AS value")
+
+      result = db.select_records(model, query, True)
       for option in result:
         option["value"] = str(uuid.UUID(bytes=option["value"]))
 
       return result
 
-    return db.select_records(model, columns="*", to_json=True)
+    query = query.select(*model.column_sql())
+    return db.select_records(model, query, True)
 
 
 def get_attribute_schema(table: str):
   validate_attribute_table(table)
 
+  query = (
+    Query()
+    .select("columns")
+    .from_(DataGridSchemaTable._table_name)
+    .where("table_name = ?", table)
+  )
+
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    where = "table_name = :table"
-    params = {"table": table}
-    records = db.select_records(
-      DataGridSchemaTable,
-      columns=("columns",),
-      where=where,
-      params=params,
-    )
+    records = db.select_records(DataGridSchemaTable, query)
 
   return records[0]
 
@@ -277,21 +282,14 @@ def update_attributes(table: str, payload: AttributeUpdate):
   return {"created": created}
 
 
-def search_equipment(query: str):
-  columns = {"value": "equipment.id", "label": "equipment.displayName"}
-  where = "equipment_fts MATCH :query"
-  params = {"query": f'"{query}"'}
-  join = JoinClause(
-    join_type="LEFT",
-    expression="equipment ON equipment.rowid = equipment_fts.rowid",
+def search_equipment(search_query: str):
+  query = (
+    Query()
+    .select("e.id AS value", "e.displayName AS label")
+    .from_(EquipmentSearch._table_name)
+    .inner_join("equipment e", "e.rowid = equipment_fts.rowid")
+    .where("equipment_fts MATCH ?", f'"{search_query}"')
   )
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(
-      EquipmentSearch,
-      derived=columns,
-      join=join,
-      where=where,
-      params=params,
-      to_json=True,
-    )
+    return db.select_records(EquipmentSearch, query, True)

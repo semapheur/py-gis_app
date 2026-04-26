@@ -55,7 +55,7 @@ class Query:
       if on is None:
         raise ValueError(f"{join_type} JOIN requires an ON clause")
 
-      self._joins.append(f"{join_type} JOIN '{table}' ON '{on}'")
+      self._joins.append(f"{join_type} JOIN {table} ON {on}")
 
     return self
 
