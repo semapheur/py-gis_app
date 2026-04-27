@@ -51,11 +51,6 @@ class OnConflict(TypedDict):
   action: str
 
 
-class JoinClause(TypedDict):
-  join_type: Literal["LEFT", "INNER", "CROSS"]
-  expression: str
-
-
 class ColumnType(Enum):
   INTEGER = int
   REAL = float

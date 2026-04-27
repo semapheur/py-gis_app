@@ -8,7 +8,7 @@ from typing import Any, Callable, TypedDict, TypeVar
 
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
-from src.index.catalog import get_catalogs
+from src.index.catalog import get_catalogs, validate_catalog_dir
 from src.index.images import ImageQuery, get_image_info, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
@@ -190,8 +190,8 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_delete_areas()
       return
 
-    if self.path == "/api/verify-dir":
-      self._post_verify_dir()
+    if self.path == "/api/validate-catalog-dir":
+      self._post_validate_catalog_dir()
       return
 
     self.send_error(404, "Unknown POST endpoint")
@@ -346,17 +346,21 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def _post_verify_dir(self):
+  def _post_validate_catalog_dir(self):
     class Payload(TypedDict):
       path: str
 
     def logic(payload: Payload):
       input_path = Path(payload["path"])
-      is_dir = verify_dir(input_path)
-      if not is_dir:
-        self.send_error(409, f"Invalid directory: {str(input_path)}")
 
-      return is_dir
+      try:
+        validate_catalog_dir(input_path)
+      except FileNotFoundError as e:
+        self._error_response(400, str(e))
+      except ValueError as e:
+        self.send_error(409, str(e))
+
+      return {"valid": True}
 
     self._handle_post(logic)
 

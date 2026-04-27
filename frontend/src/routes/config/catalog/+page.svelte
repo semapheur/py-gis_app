@@ -1,23 +1,21 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { error } from "@sveltejs/kit";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
 
-  async function verifyDir(path: string) {
-    const response = await fetch("/api/verify-dir", {
+  async function validateCatalogPath(path: string) {
+    const response = await fetch("/api/validate-catalog-dir", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({ path }),
     });
 
-    if (!response.ok) {
-      throw error(response.status, `Failed to fetch area for id ${id}`);
+    if (response.ok) {
+      return true;
     }
 
-    const isValid = await response.json();
-
-    return isValid;
+    const { detail } = await response.json();
+    throw new Error(detail);
   }
 
   const formatDatetime = (v: number) =>
@@ -30,7 +28,7 @@
       id: "path",
       header: "Folder path",
       editor: "text",
-      validate: verifyDir,
+      validate: validateCatalogPath,
       flexgrow: 1,
     },
     {
@@ -42,22 +40,8 @@
   ];
 
   let { data }: { data: PageData } = $props();
-  $inspect(data);
-
-  const addFill = {
-    id: () => crypto.randomUUID(),
-    createdByUserId: () => "",
-    createdAtTimestamp: () => Date.now(),
-    modifiedByUserId: () => null,
-    modifiedAtTimestamp: () => null,
-  };
-
-  const editFill = {
-    modifiedByUserId: () => "",
-    modifiedAtTimestamp: () => Date.now(),
-  };
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.catalogs} {addFill} {editFill} />
+  <DataGrid {columns} data={data.catalogs} />
 {/if}

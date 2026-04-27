@@ -169,9 +169,11 @@
             validationErrors[column.id] = `Invalid value for ${column.header}`;
             return;
           }
-        } catch (err) {
+        } catch (error) {
           validationErrors[column.id] =
-            `Validation failed for ${column.header}`;
+            error instanceof Error
+              ? error.message
+              : `Validation failed for ${column.header}`;
           return;
         }
       }

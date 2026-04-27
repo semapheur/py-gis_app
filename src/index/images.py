@@ -27,7 +27,6 @@ from src.sicd_model import SicdObject, sicd_polygon_wkt
 from src.spatialite import (
   ColumnType,
   Field,
-  JoinClause,
   Model,
   OnConflict,
   SqliteDatabase,

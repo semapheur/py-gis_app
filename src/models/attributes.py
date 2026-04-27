@@ -5,7 +5,6 @@ from typing import Optional, TypedDict, cast
 from src.bootstrap import get_settings
 from src.spatialite import (
   Field,
-  JoinClause,
   Model,
   OnConflict,
   SqliteDatabase,

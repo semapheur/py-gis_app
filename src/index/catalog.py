@@ -30,9 +30,14 @@ def validate_catalog_dir(path: Path):
   if not path.is_dir():
     raise FileNotFoundError(f"Invalid directory path: {path}")
 
+  query = (
+    Query().select("id").from_(CatalogTable._table_name).where("path = ?", str(path))
+  )
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    where = "WHERE path = ?"
-    db.select_records(CatalogTable, columns=("id",), to_json=True)
+    result = db.select_records(CatalogTable, query, True)
+
+  if result:
+    raise ValueError(f"Catalog path already exists: {str(path)}")
 
 
 def insert_catalog(
