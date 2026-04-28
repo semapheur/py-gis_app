@@ -1,15 +1,20 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { page } from "$app/state";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
   import { formatDatetime } from "$lib/utils/date";
 
   const columns = [
     { id: "id", header: "ID" },
-    { id: "text", header: "Text", editor: "text", unique: true },
+    { id: "identifier", header: "Identifier", editor: "text" },
+    { id: "displayName", header: "Display name", editor: "text", unique: true },
     { id: "description", header: "Description", editor: "textarea" },
-    { id: "createdByUserId", header: "Created by" },
+    { id: "descriptionShort", header: "Description (short)", editor: "text" },
+    { id: "natoName", header: "NATO name", editor: "text" },
+    { id: "nativeName", header: "Native name", editor: "text" },
+    { id: "alternativeNames", header: "Alternative names", editor: "text" },
+    { id: "source", header: "Source", editor: "text" },
+    { id: "sourceData", header: "Source data", editor: "textarea" },
     {
       id: "createdAtTimestamp",
       header: "Created at",
@@ -22,25 +27,9 @@
       template: formatDatetime,
     },
   ];
-
   let { data }: { data: PageData } = $props();
-  let table = $derived(page.params.table);
-
-  let saveApi = $derived(table ? `/api/update-attributes/${table}` : undefined);
-
-  const addFill = {
-    createdByUserId: () => "",
-    createdAtTimestamp: () => Date.now(),
-    modifiedByUserId: () => null,
-    modifiedAtTimestamp: () => null,
-  };
-
-  const editFill = {
-    modifiedByUserId: () => "",
-    modifiedAtTimestamp: () => Date.now(),
-  };
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.data} {addFill} {editFill} {saveApi} />
+  <DataGrid {columns} data={data.equipment} />
 {/if}

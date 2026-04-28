@@ -31,6 +31,7 @@
 
   interface Column extends IColumnConfig {
     validate?: (input: T) => Promise<boolean>;
+    unique?: boolean;
   }
 
   interface Props {
@@ -157,29 +158,57 @@
     }
   }
 
-  async function saveForm(event: PointerEvent) {
-    event.preventDefault();
-
-    for (const column of editColumns) {
-      const validateFn = column.validate;
-      if (validateFn && editRow[column.id] !== undefined) {
-        try {
-          const isValid = await validateFn(editRow[column.id]);
-          if (!isValid) {
-            validationErrors[column.id] = `Invalid value for ${column.header}`;
-            return;
-          }
-        } catch (error) {
-          validationErrors[column.id] =
-            error instanceof Error
-              ? error.message
-              : `Validation failed for ${column.header}`;
-          return;
+  async function validateColumn(
+    column: Column,
+    value: T,
+    rowId: string | null,
+  ): Promise<string | null> {
+    if (column.validate) {
+      try {
+        const isValid = await column.validate(value);
+        if (!isValid) {
+          return `Invalid value for ${column.header}`;
         }
+      } catch (error) {
+        return error instanceof Error
+          ? error.message
+          : `Validation failed for ${column.header}`;
+      }
+    }
+    if (column?.unique) {
+      const duplicate = api
+        .getState()
+        .data.some((row) => row.id !== rowId && row[column.id] === value);
+
+      if (duplicate) {
+        return "Value already exists in data grid";
       }
     }
 
-    validationErrors = {};
+    return null;
+  }
+
+  async function saveForm(event: PointerEvent) {
+    event.preventDefault();
+
+    const errors = await Promise.all(
+      editColumns.map((column) =>
+        validateColumn(column, editRow[column.id], form.rowId).then(
+          (error) => [column.id, error] as const,
+        ),
+      ),
+    );
+
+    const newErrors = Object.fromEntries(
+      errors.filter(([, error]) => error !== null),
+    );
+
+    for (const key in validationErrors) delete validationErrors[key];
+
+    if (Object.keys(newErrors).length > 0) {
+      Object.assign(validationErrors, newErrors);
+      return;
+    }
 
     if (form.mode === "add") {
       addRow();

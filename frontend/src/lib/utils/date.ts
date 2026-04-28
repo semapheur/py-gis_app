@@ -11,6 +11,10 @@ export function formatDate(date: Date | null) {
   return `${y}-${m}-${d}`;
 }
 
+export function formatDatetime(unix: number) {
+  return unix ? new Date(unix).toISOString() : undefined;
+}
+
 export function parseIsoDate(dateText: string | null): Date | null {
   if (!dateText) return null;
   const [y, m, d] = dateText.split("-").map(Number);

@@ -1,22 +1,20 @@
-import json
 import uuid
-from typing import Optional, TypedDict, cast
+from typing import TypedDict
 
 from src.bootstrap import get_settings
-from src.spatialite import (
+from src.models.update import TableUpdate, update_table
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import (
   Field,
-  Model,
-  OnConflict,
-  SqliteDatabase,
-  SqliteValue,
+  Table,
   datetime_field,
   uuid_field,
 )
-from src.sql_builder import Query
 
 app_settings = get_settings()
 
-BASE_ATTRIBUTE_TABLES = (
+ATTRIBUTE_TABLES = (
   "activity_categories",
   "equipment_status",
   "observation_confidence",
@@ -25,82 +23,20 @@ BASE_ATTRIBUTE_TABLES = (
   "releasability",
 )
 
-FTS_COLUMNS = (
-  "displayName",
-  "description",
-  "descriptionShort",
-  "natoName",
-  "nativeName",
-  "alternativeNames",
-)
 
-ATTRIBUTE_TABLES = {"equipment", *BASE_ATTRIBUTE_TABLES}
-
-META_COLUMNS = [
-  {"id": "id", "header": "ID"},
-  {"id": "createdByUserId", "header": "Created by"},
-  {"id": "createdAtTimestamp", "header": "Created at"},
-  {"id": "modifiedByUserId", "header": "Modified by"},
-  {"id": "modifiedAtTimestamp", "header": "Modified at"},
-]
-
-EQUIPMENT_COLUMNS = [
-  {"id": "identifier", "header": "Identifier", "editor": "text"},
-  {"id": "displayName", "header": "Display name", "editor": "text"},
-  {"id": "description", "header": "Description", "editor": "textarea"},
-  {"id": "descriptionShort", "header": "Description (short)", "editor": "text"},
-  {"id": "natoName", "header": "NATO name", "editor": "text"},
-  {"id": "nativeName", "header": "Native name", "editor": "text"},
-  {"id": "alternativeNames", "header": "Alternative names", "editor": "text"},
-  {"id": "source", "header": "Source", "editor": "text"},
-  {"id": "sourceData", "header": "Source data", "editor": "textarea"},
-]
-
-BASE_ATTRIBUTE_COLUMNS = [
-  {"id": "text", "header": "Text", "editor": "text"},
-  {"id": "description", "header": "Description", "editor": "textarea"},
-]
+class TableInfo(TypedDict):
+  name: str
+  label: str
 
 
-class DataGridSchemaTable(Model):
-  _table_name = "datagrid_schema"
-
-  table_name = Field(str, primary_key=True)
-  label = Field(str, nullable=False)
-  columns = Field(
-    str,
-    nullable=False,
-    to_sql=lambda x: json.dumps(x),
-    from_sql=lambda x: json.loads(x),
-  )
+class AttributeTableList(Table):
+  _table_name = "table_list"
+  name = Field(str, primary_key=True)
+  label = Field(str, nullable=False, unique=True)
 
 
-class EquipmentListTable(Model):
-  _table_name = "equipment"
-  id = uuid_field(True)
-  identifier = Field(str, nullable=False)
-  displayName = Field(str, nullable=False)
-  description = Field(str)
-  descriptionShort = Field(str)
-  natoName = Field(str)
-  nativeName = Field(str)
-  alternativeNames = Field(str)
-  source = Field(str)
-  sourceData = Field(str)
-  createdByUserId = Field(str)
-  modifiedByUserId = Field(str)
-  createdAtTimestamp = datetime_field(False)
-  modifiedAtTimestamp = datetime_field(True)
-
-
-class EquipmentSearch(Model):
-  _table_name = "equipment_fts"
-  value = uuid_field(True)
-  label = Field(str, nullable=False)
-
-
-def make_attribute_table(table_name: str) -> type[Model]:
-  class AttributeTable(Model):
+def make_attribute_table(table_name: str) -> type[Table]:
+  class AttributeTable(Table):
     _table_name = table_name
 
     id = uuid_field(True)
@@ -115,53 +51,25 @@ def make_attribute_table(table_name: str) -> type[Model]:
   return AttributeTable
 
 
-def schema_from_model(
-  model: type[Model],
-  columns: list[dict[str, str]],
-  label: str | None = None,
-) -> DataGridSchemaTable:
-  schema = {
-    "table_name": model._table_name,
-    "label": label or model._table_name.replace("_", " ").capitalize(),
-    "columns": columns,
-  }
-
-  return DataGridSchemaTable.from_dict(schema)
-
-
 def create_attribute_tables():
-  schema_data: list[DataGridSchemaTable] = []
-  equipment_schema = schema_from_model(
-    EquipmentListTable,
-    EQUIPMENT_COLUMNS,
-    "Equipment",
-  )
-  schema_data.append(equipment_schema)
-
+  table_list: list[AttributeTableList] = []
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    db.create_table(DataGridSchemaTable)
-    db.create_table(EquipmentListTable)
-    db.create_fts_table(EquipmentListTable, FTS_COLUMNS)
-
-    for table in BASE_ATTRIBUTE_TABLES:
+    for table in ATTRIBUTE_TABLES:
       model = make_attribute_table(table)
       db.create_table(model)
 
-      attribute_schema = schema_from_model(
-        model,
-        BASE_ATTRIBUTE_COLUMNS,
-        table.capitalize().replace("_", " "),
-      )
-      schema_data.append(attribute_schema)
+      row = {"name": table, "label": table.capitalize().replace("_", " ")}
+      table_list.append(AttributeTableList.from_dict(row))
 
-    db.insert_models(schema_data)
+    db.create_table(AttributeTableList)
+    db.insert_models(table_list)
 
 
 def get_attribute_tables():
-  query = Query().select("table_name", "label").from_(DataGridSchemaTable._table_name)
+  query = Query().select("name", "label").from_(AttributeTableList._table_name)
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(DataGridSchemaTable, query)
+    return db.select_records(AttributeTableList, query)
 
 
 def validate_attribute_table(table: str):
@@ -172,10 +80,7 @@ def validate_attribute_table(table: str):
 def get_attribute_data(table: str, options: bool = False):
   validate_attribute_table(table)
 
-  if table == "equipment":
-    model = EquipmentListTable
-
-  elif table in BASE_ATTRIBUTE_TABLES:
+  if table in ATTRIBUTE_TABLES:
     model = make_attribute_table(table)
 
   else:
@@ -212,83 +117,15 @@ def get_attribute_schema(table: str):
   return records[0]
 
 
-class AttributeUpdate(TypedDict):
-  upsert: list[dict[str, SqliteValue]]
-  delete: list[str]
-
-
-class CreatedAttribute(TypedDict):
-  client_id: str
-  server_id: str
-
-
-def update_attributes(table: str, payload: AttributeUpdate):
+def update_attributes(table: str, payload: TableUpdate):
   validate_attribute_table(table)
 
-  if table == "equipment":
-    model = EquipmentListTable
-    update_sql = """UPDATE SET
-      identifier = excluded.identifier,
-      displayName = excluded.displayName,
-      description = excluded.description,
-      descriptionShort = excluded.descriptionShort,
-      natoName = excluded.natoName,
-      nativeName = excluded.nativeName,
-      alternativeNames = excluded.alternativeNames,
-      source = excluded.source,
-      sourceData = excluded.sourceData,
-      modifiedByUserId = excluded.modifiedByUserId,
-      modifiedAtTimestamp = excluded.modifiedAtTimestamp
-    """
+  model = make_attribute_table(table)
+  update_sql = """UPDATE SET
+    text = excluded.text,
+    description = excluded.description,
+    modifiedByUserId = excluded.modifiedByUserId,
+    modifiedAtTimestamp = excluded.modifiedAtTimestamp
+  """
 
-  elif table in BASE_ATTRIBUTE_TABLES:
-    model = make_attribute_table(table)
-    update_sql = """UPDATE SET
-      text = excluded.text,
-      description = excluded.description,
-      modifiedByUserId = excluded.modifiedByUserId,
-      modifiedAtTimestamp = excluded.modifiedAtTimestamp
-    """
-
-  else:
-    raise ValueError(f"Invalid table name: {table}")
-
-  created: list[CreatedAttribute] = []
-
-  for record in payload["upsert"]:
-    record_id = cast(Optional[str], record.get("id"))
-    if record_id is None:
-      raise ValueError(f"Missing 'id' field in attribute upsert record: {record}")
-
-    if not record_id.startswith("temp://"):
-      continue
-
-    new_id = uuid.uuid4()
-    record["id"] = str(new_id)
-    created.append(CreatedAttribute(client_id=record_id, server_id=str(new_id)))
-
-  upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
-  delete_ids = [uuid.UUID(u) for u in payload["delete"]]
-
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    if upsert_models:
-      on_conflict = OnConflict(index="id", action=update_sql)
-      db.insert_models(upsert_models, on_conflict)
-
-    if delete_ids:
-      db.delete_by_ids(model, delete_ids)
-
-  return {"created": created}
-
-
-def search_equipment(search_query: str):
-  query = (
-    Query()
-    .select("e.id AS value", "e.displayName AS label")
-    .from_(EquipmentSearch._table_name)
-    .inner_join("equipment e", "e.rowid = equipment_fts.rowid")
-    .where("equipment_fts MATCH ?", f'"{search_query}"')
-  )
-
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(EquipmentSearch, query, True)
+  return update_table(app_settings.ATTRIBUTE_DB, model, payload, update_sql)

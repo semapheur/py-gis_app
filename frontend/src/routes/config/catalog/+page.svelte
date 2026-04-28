@@ -2,6 +2,7 @@
   import type { PageData } from "./$types";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
+  import { formatDatetime } from "$lib/utils/date";
 
   async function validateCatalogPath(path: string) {
     const response = await fetch("/api/validate-catalog-dir", {
@@ -10,26 +11,24 @@
       body: JSON.stringify({ path }),
     });
 
-    if (response.ok) {
-      return true;
-    }
+    if (response.ok) return true;
 
-    const { detail } = await response.json();
-    throw new Error(detail);
+    let message = `Validation failed (${response.status})`;
+    const body = await response.json().catch(() => null);
+    if (body.detail) message = body.detail;
+    throw new Error(message);
   }
-
-  const formatDatetime = (v: number) =>
-    v ? new Date(v).toISOString() : undefined;
 
   const columns = [
     { id: "id", header: "ID", flexgrow: 1 },
-    { id: "name", header: "Name", editor: "text", flexgrow: 1 },
+    { id: "name", header: "Name", editor: "text", flexgrow: 1, unique: true },
     {
       id: "path",
       header: "Folder path",
       editor: "text",
-      validate: validateCatalogPath,
       flexgrow: 1,
+      validate: validateCatalogPath,
+      unique: true,
     },
     {
       id: "last_indexed",

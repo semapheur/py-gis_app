@@ -6,16 +6,16 @@ from typing import Literal, TypedDict, Union
 
 from src.bootstrap import get_settings
 from src.hashing import uuid_bytes_to_str
-from src.spatialite import (
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import (
   Field,
-  Model,
   OnConflict,
-  SqliteDatabase,
+  Table,
   datetime_field,
   hash_field,
   uuid_field,
 )
-from src.sql_builder import Query
 
 EquipmentGeometry = Literal["POINT", "POLYGON"]
 
@@ -25,7 +25,7 @@ app_settings = get_settings()
 def equipment_annotation_model(geometry_type: EquipmentGeometry):
   table_name = f"equipment_{geometry_type.lower()}"
 
-  class EquipmentAnnotation(Model):
+  class EquipmentAnnotation(Table):
     _table_name = table_name
     id = uuid_field(True)
     image = hash_field(False)
@@ -58,7 +58,7 @@ class AnnotationUpdate(TypedDict):
 def update_annotations(payloads: list[AnnotationUpdate]):
   wkt_pattern = re.compile(r"^(?:SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
 
-  upsert_models: dict[str, list[type[Model]]] = {"equipment": [], "activity": []}
+  upsert_models: dict[str, list[type[Table]]] = {"equipment": [], "activity": []}
 
   update_sql = """UPDATE SET
     equipment = excluded.equipment,

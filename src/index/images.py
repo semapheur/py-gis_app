@@ -4,7 +4,7 @@ import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Any, Literal, Optional, TypedDict, Union, cast
+from typing import Literal, Optional, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
@@ -24,18 +24,18 @@ from src.index.radiometric import (
 )
 from src.models.areas import get_area_wkt
 from src.sicd_model import SicdObject, sicd_polygon_wkt
-from src.spatialite import (
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import (
   ColumnType,
   Field,
-  Model,
   OnConflict,
-  SqliteDatabase,
+  Table,
   datetime_field,
   enum_field,
   hash_field,
   path_field,
 )
-from src.sql_builder import Query
 
 app_settings = get_settings()
 
@@ -52,7 +52,7 @@ class ImageryType(str, Enum):
   SLC = "slc"
 
 
-class ImageIndexTable(Model):
+class ImageIndexTable(Table):
   _table_name = "images"
   id = hash_field(True)
   catalog = Field(int, nullable=False)

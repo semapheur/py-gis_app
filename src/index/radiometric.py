@@ -3,8 +3,9 @@ from pathlib import Path
 from typing import Literal, TypeAlias, TypedDict
 
 from src.bootstrap import get_settings
-from src.spatialite import ColumnType, Field, Model, SqliteDatabase, hash_field
-from src.sql_builder import Query
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import ColumnType, Field, Table, hash_field
 
 app_settings = get_settings()
 
@@ -24,7 +25,7 @@ polygon = Field(
 )
 
 
-class RadiometricParamsTable(Model):
+class RadiometricParamsTable(Table):
   _table_name = "radiometric_params"
   id = hash_field(True)
   noise = polygon

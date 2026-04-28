@@ -15,16 +15,20 @@ class Settings:
   PORT: int
 
   @property
-  def INDEX_DB(self) -> Path:
-    return self.DB_DIR / "index.db"
+  def ANNOTATION_DB(self) -> Path:
+    return self.DB_DIR / "annotation.db"
 
   @property
   def ATTRIBUTE_DB(self) -> Path:
     return self.DB_DIR / "attribute.db"
 
   @property
-  def ANNOTATION_DB(self) -> Path:
-    return self.DB_DIR / "annotation.db"
+  def EQUIPMENT_DB(self) -> Path:
+    return self.DB_DIR / "equipment.db"
+
+  @property
+  def INDEX_DB(self) -> Path:
+    return self.DB_DIR / "index.db"
 
   @property
   def LOCATION_DB(self) -> Path:

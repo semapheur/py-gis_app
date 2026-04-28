@@ -5,7 +5,6 @@
   import { type ImagePreviewInfo } from "$lib/utils/types";
   import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
   import Button from "$lib/components/Button.svelte";
-  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
   import MdiLayersOutline from "@iconify-svelte/mdi/layers-outline";
   import { parseBbox } from "$lib/utils/geo/bbox";
 

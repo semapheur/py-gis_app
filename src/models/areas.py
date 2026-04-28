@@ -2,20 +2,20 @@ import uuid
 from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
-from src.spatialite import (
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import (
   Field,
-  Model,
   OnConflict,
-  SqliteDatabase,
+  Table,
   datetime_field,
   uuid_field,
 )
-from src.sql_builder import Query
 
 app_settings = get_settings()
 
 
-class AreasTable(Model):
+class AreasTable(Table):
   _table_name = "areas"
   id = uuid_field(True)
   name = Field(str, nullable=False)

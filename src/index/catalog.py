@@ -4,20 +4,20 @@ from typing import Optional, Union
 
 from src.bootstrap import get_settings
 from src.path_utils import verify_dir
-from src.spatialite import (
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import Query
+from src.sqlite.table import (
   Field,
-  Model,
-  SqliteDatabase,
+  Table,
   datetime_field,
   path_field,
 )
-from src.sql_builder import Query
 from src.timeutils import datetime_to_unix
 
 app_settings = get_settings()
 
 
-class CatalogTable(Model):
+class CatalogTable(Table):
   _table_name = "catalog"
   id = Field(int, primary_key=True)
   path = path_field(False, True)
