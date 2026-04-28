@@ -38,11 +38,6 @@ Geometry = Literal[
 ]
 
 
-class OnConflict(TypedDict):
-  index: str
-  action: str
-
-
 class ColumnType(Enum):
   INTEGER = int
   REAL = float

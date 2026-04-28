@@ -14,7 +14,8 @@ from typing import (
   Union,
 )
 
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.table import SqliteValue, Table
 
 
 class SqliteDatabase:
@@ -82,7 +83,7 @@ class SqliteDatabase:
       cursor.execute("ROLLBACK")
       raise
 
-  def create_table(self, table: type[Model]):
+  def create_table(self, table: type[Table]):
     if self.conn is None:
       raise RuntimeError("Database not connected")
 
@@ -95,7 +96,7 @@ class SqliteDatabase:
     for sql in table.add_geometry_sql():
       cursor.execute(sql)
 
-  def create_fts_table(self, table: type[Model], columns: Sequence[str]):
+  def create_fts_table(self, table: type[Table], columns: Sequence[str]):
     self._check_connection()
 
     table_name = table._table_name
@@ -158,7 +159,7 @@ class SqliteDatabase:
 
   def insert_models(
     self,
-    models: Sequence[Model],
+    models: Sequence[Table],
     on_conflict: Optional[OnConflict] = None,
     returning: Optional[str] = None,
   ) -> Union[list[Any], None]:
@@ -219,7 +220,7 @@ class SqliteDatabase:
     return
 
   def select_records(
-    self, table: type[Model], query: Query, to_json: bool = False
+    self, table: type[Table], query: Query, to_json: bool = False
   ) -> list[dict[str, SqliteValue]]:
     columns = query.columns
     sql, params = query.build()
@@ -251,7 +252,7 @@ class SqliteDatabase:
 
     return results
 
-  def delete_by_ids(self, table: type[Model], ids: list[Any]) -> int:
+  def delete_by_ids(self, table: type[Table], ids: list[Any]) -> int:
     self._check_connection()
 
     table_name = table._table_name
@@ -300,8 +301,8 @@ class SqliteDatabase:
 
   def convert_geometry(
     self,
-    source_table: type[Model],
-    target_table: type[Model],
+    source_table: type[Table],
+    target_table: type[Table],
     id: Any,
     geometry_wkt: str,
     srid: int = 4326,
@@ -353,7 +354,7 @@ class SqliteDatabase:
     )
 
   def _validate_field_compatibility(
-    self, source_model: type[Model], target_model: type[Model], common_columns: set[str]
+    self, source_model: type[Table], target_model: type[Table], common_columns: set[str]
   ):
 
     issues: list[str] = []
@@ -384,7 +385,7 @@ class SqliteDatabase:
       )
 
 
-def table_exists(db: sqlite3.Connection, table: type[Model]) -> bool:
+def table_exists(db: sqlite3.Connection, table: type[Table]) -> bool:
   table_name = table._table_name
   cursor = db.cursor()
 

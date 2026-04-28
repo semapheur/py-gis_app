@@ -1,8 +1,13 @@
 import re
-from typing import Literal, Optional, TypeAlias
+from typing import Literal, Optional, TypeAlias, TypedDict
 
 WhereOp: TypeAlias = Literal["AND", "OR"]
 JoinOp: TypeAlias = Literal["INNER", "LEFT", "CROSS"]
+
+
+class OnConflict(TypedDict):
+  index: str
+  action: str
 
 
 class Query:
