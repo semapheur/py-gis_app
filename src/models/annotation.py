@@ -7,10 +7,9 @@ from typing import Literal, TypedDict, Union
 from src.bootstrap import get_settings
 from src.hashing import uuid_bytes_to_str
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
-  OnConflict,
   Table,
   datetime_field,
   hash_field,

@@ -34,6 +34,11 @@ class RadiometricParamsTable(Table):
   gamma0 = polygon
 
 
+def create_radiometric_table():
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    db.create_table(RadiometricParamsTable)
+
+
 def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors, ...]):
   query = (
     Query()

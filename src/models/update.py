@@ -4,7 +4,8 @@ from typing import Optional, TypedDict, cast
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.table import OnConflict, SqliteValue, Table
+from src.sqlite.query_builder import OnConflict
+from src.sqlite.table import SqliteValue, Table
 
 app_settings = get_settings()
 

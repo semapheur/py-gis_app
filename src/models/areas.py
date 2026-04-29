@@ -3,10 +3,9 @@ from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
-  OnConflict,
   Table,
   datetime_field,
   uuid_field,

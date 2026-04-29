@@ -25,11 +25,10 @@ from src.index.radiometric import (
 from src.models.areas import get_area_wkt
 from src.sicd_model import SicdObject, sicd_polygon_wkt
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   ColumnType,
   Field,
-  OnConflict,
   Table,
   datetime_field,
   enum_field,
@@ -70,6 +69,11 @@ class ImageIndexTable(Table):
   ground_sample_distance_row = Field(float)
   ground_sample_distance_col = Field(float)
   interpretation_rating = Field(float)
+
+
+def create_index_table():
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    db.create_table(ImageIndexTable)
 
 
 def detect_image_type(
@@ -392,9 +396,6 @@ def index_images(
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    db.create_table(ImageIndexTable)
-    db.create_table(RadiometricParamsTable)
-
     catalog_record = db.select_records(CatalogTable, query)
     if not catalog_record:
       from pprint import pformat

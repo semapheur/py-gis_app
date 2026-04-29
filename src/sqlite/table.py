@@ -271,7 +271,7 @@ class Table(metaclass=TableMeta):
     return obj
 
   @classmethod
-  def from_dict(cls, data: dict[str, S], json: bool = False):
+  def from_dict(cls, data: dict[str, Any], json: bool = False):
     obj = cls.__new__(cls)
 
     for name, field in cls._fields.items():

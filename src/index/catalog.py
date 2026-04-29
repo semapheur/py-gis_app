@@ -25,6 +25,11 @@ class CatalogTable(Table):
   last_indexed = datetime_field(True)
 
 
+def create_catalog_table():
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    db.create_table(CatalogTable)
+
+
 def validate_catalog_dir(path: Path):
 
   if not path.is_dir():
@@ -119,7 +124,6 @@ def add_calatog(path: Path, name: str):
   verify_dir(path)
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    db.create_table(CatalogTable)
     insert_catalog(db, path, name)
 
 
