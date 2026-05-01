@@ -6,6 +6,7 @@ from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
+  GeometryField,
   Table,
   datetime_field,
   uuid_field,
@@ -19,7 +20,7 @@ class AreasTable(Table):
   id = uuid_field(True)
   name = Field(str, nullable=False)
   description = Field(str)
-  geometry = Field(str, geometry_type="POLYGON")
+  geometry = GeometryField(str, geometry_type="POLYGON")
   createdByUserId = Field(str)
   modifiedByUserId = Field(str)
   createdAtTimestamp = datetime_field(False)

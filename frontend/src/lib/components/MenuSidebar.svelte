@@ -30,6 +30,7 @@
     flex-direction: column;
     justify-content: space-between;
     padding: var(--size-sm);
+    background-color: oklch(var(--color-accent));
   }
 
   .links {

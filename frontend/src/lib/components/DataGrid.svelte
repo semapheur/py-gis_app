@@ -257,7 +257,8 @@
     }
 
     const payload = {
-      upsert: [...Object.values(cud.create), ...Object.values(cud.update)],
+      create: Object.values(cud.create),
+      update: Object.values(cud.update),
       delete: Array.from(cud.delete),
     };
 

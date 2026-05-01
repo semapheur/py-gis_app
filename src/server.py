@@ -30,14 +30,13 @@ from src.models.areas import (
 )
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
-  AttributeUpdate,
   get_attribute_data,
   get_attribute_schema,
   get_attribute_tables,
-  search_equipment,
   update_attributes,
 )
-from src.path_utils import verify_dir
+from src.models.equipment import search_equipment
+from src.models.update import TableUpdate
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -296,7 +295,7 @@ class Handler(SimpleHTTPRequestHandler):
     self._handle_post(logic)
 
   def _post_update_attributes(self, table: str):
-    def logic(payload: AttributeUpdate):
+    def logic(payload: TableUpdate):
       return update_attributes(table, payload)
 
     if not table or table not in ATTRIBUTE_TABLES:

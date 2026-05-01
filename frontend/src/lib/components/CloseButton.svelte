@@ -12,6 +12,7 @@
   button {
     all: unset;
     cursor: pointer;
+    color: oklch(var(--color-text));
 
     &:hover {
       color: red;

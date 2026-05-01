@@ -10,6 +10,7 @@ from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
+  GeometryField,
   Table,
   datetime_field,
   hash_field,
@@ -31,7 +32,7 @@ def equipment_annotation_model(geometry_type: EquipmentGeometry):
     equipment = uuid_field(False)
     confidence = uuid_field(False)
     status = uuid_field(False)
-    geometry = Field(str, geometry_type=geometry_type)
+    geometry = GeometryField(str, geometry_type=geometry_type)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
     createdAtTimestamp = datetime_field(False)

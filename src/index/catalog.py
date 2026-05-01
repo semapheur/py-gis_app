@@ -3,6 +3,7 @@ from pathlib import Path
 from typing import Optional, Union
 
 from src.bootstrap import get_settings
+from src.models.update import TableUpdate, update_table
 from src.path_utils import verify_dir
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import Query
@@ -76,7 +77,7 @@ def insert_catalog(
   db.conn.commit()
 
 
-def update_catalog(
+def update_catalog_entry(
   db: SqliteDatabase,
   id: int,
   new_path: Optional[Path] = None,
@@ -118,6 +119,27 @@ def update_catalog(
   sql = f"UPDATE catalog SET {set_sql} WHERE id = :id"
   cursor.execute(sql, params)
   db.conn.commit()
+
+
+def update_catalogs(payload: TableUpdate):
+
+  records = [*payload["create"], *payload["update"]]
+  for record in records:
+    path = record.get("path")
+    if path is None:
+      raise ValueError(f"Catalog record is missing 'path' field: {record}")
+
+    if not isinstance(path, str):
+      raise ValueError(f"Catalog 'path' field must be string, got: {path}")
+
+    verify_dir(Path(path))
+
+  update_sql = """UPDATE SET
+    path = excluded.path,
+    name = excluded.name
+  """
+
+  return update_table(app_settings.INDEX_DB, CatalogTable, payload, update_sql)
 
 
 def add_calatog(path: Path, name: str):

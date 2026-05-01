@@ -83,12 +83,12 @@ class SqliteDatabase:
       cursor.execute("ROLLBACK")
       raise
 
-  def create_table(self, table: type[Table]):
+  def create_table(self, table: type[Table]) -> bool:
     if self.conn is None:
       raise RuntimeError("Database not connected")
 
-    if table_exists(self.conn, table):
-      return
+    if table_exists(self.conn, table._table_name):
+      return False
 
     cursor = self.conn.cursor()
     cursor.execute(table.create_table_sql())
@@ -96,11 +96,17 @@ class SqliteDatabase:
     for sql in table.add_geometry_sql():
       cursor.execute(sql)
 
+    return True
+
   def create_fts_table(self, table: type[Table], columns: Sequence[str]):
     self._check_connection()
 
     table_name = table._table_name
     fts_name = f"{table_name}_fts"
+
+    if table_exists(self.conn, fts_name):
+      return
+
     fts_columns = ",".join(columns)
     fts_options = f"{fts_columns},content='{table_name}'"
 
@@ -385,8 +391,7 @@ class SqliteDatabase:
       )
 
 
-def table_exists(db: sqlite3.Connection, table: type[Table]) -> bool:
-  table_name = table._table_name
+def table_exists(db: sqlite3.Connection, table_name: str) -> bool:
   cursor = db.cursor()
 
   cursor.execute(

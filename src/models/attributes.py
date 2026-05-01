@@ -35,7 +35,7 @@ class AttributeTableList(Table):
   label = Field(str, nullable=False, unique=True)
 
 
-def make_attribute_table(table_name: str) -> type[Table]:
+def make_attribute_model(table_name: str) -> type[Table]:
   class AttributeTable(Table):
     _table_name = table_name
 
@@ -55,14 +55,16 @@ def create_attribute_tables():
   table_list: list[AttributeTableList] = []
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     for table in ATTRIBUTE_TABLES:
-      model = make_attribute_table(table)
-      db.create_table(model)
+      model = make_attribute_model(table)
+      is_created = db.create_table(model)
 
-      row = {"name": table, "label": table.capitalize().replace("_", " ")}
-      table_list.append(AttributeTableList.from_dict(row))
+      if is_created:
+        row = {"name": table, "label": table.capitalize().replace("_", " ")}
+        table_list.append(AttributeTableList.from_dict(row))
 
-    db.create_table(AttributeTableList)
-    db.insert_models(table_list)
+    if table_list:
+      db.create_table(AttributeTableList)
+      db.insert_models(table_list)
 
 
 def get_attribute_tables():
@@ -81,7 +83,7 @@ def get_attribute_data(table: str, options: bool = False):
   validate_attribute_table(table)
 
   if table in ATTRIBUTE_TABLES:
-    model = make_attribute_table(table)
+    model = make_attribute_model(table)
 
   else:
     raise ValueError(f"Invalid table name: {table}")
@@ -101,26 +103,10 @@ def get_attribute_data(table: str, options: bool = False):
     return db.select_records(model, query, True)
 
 
-def get_attribute_schema(table: str):
-  validate_attribute_table(table)
-
-  query = (
-    Query()
-    .select("columns")
-    .from_(DataGridSchemaTable._table_name)
-    .where("table_name = ?", table)
-  )
-
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(DataGridSchemaTable, query)
-
-  return records[0]
-
-
 def update_attributes(table: str, payload: TableUpdate):
   validate_attribute_table(table)
 
-  model = make_attribute_table(table)
+  model = make_attribute_model(table)
   update_sql = """UPDATE SET
     text = excluded.text,
     description = excluded.description,

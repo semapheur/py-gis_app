@@ -11,7 +11,8 @@ app_settings = get_settings()
 
 
 class TableUpdate(TypedDict):
-  upsert: list[dict[str, SqliteValue]]
+  create: list[dict[str, SqliteValue]]
+  update: list[dict[str, SqliteValue]]
   delete: list[str]
 
 
@@ -45,15 +46,19 @@ def update_table(
   db_path: Path, model: type[Table], payload: TableUpdate, update_sql: str
 ) -> CreatedRows:
 
-  created = resolve_ids(payload["upsert"])
-  upsert_models = [model.from_dict(record, json=True) for record in payload["upsert"]]
+  created_ids = resolve_ids(payload["create"])
+  create_models = [model.from_dict(record, json=True) for record in payload["create"]]
+  update_models = [model.from_dict(record, json=True) for record in payload["update"]]
   delete_ids = [uuid.UUID(u) for u in payload["delete"]]
 
   with SqliteDatabase(db_path) as db:
-    if upsert_models:
-      db.insert_models(upsert_models, OnConflict(index="id", action=update_sql))
+    if update_models:
+      db.insert_models(create_models, OnConflict(index="id", action=update_sql))
 
     if delete_ids:
       db.delete_by_ids(model, delete_ids)
 
-  return CreatedRows(created=created)
+    if create_models:
+      db.insert_models(create_models)
+
+  return CreatedRows(created=created_ids)

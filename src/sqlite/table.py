@@ -11,7 +11,6 @@ from typing import (
   Generic,
   Literal,
   Optional,
-  TypedDict,
   TypeVar,
   Union,
 )
@@ -61,8 +60,6 @@ class Field(Generic[T, S, J]):
   nullable: bool = True
   unique: bool = False
   default: Optional[S] = None
-  geometry_type: Optional[Geometry] = None
-  srid: int = 4326
   to_sql: Optional[Callable[[T], S]] = None
   from_sql: Optional[Callable[[S], T]] = None
   to_json: Optional[Callable[[T], J]] = None
@@ -127,6 +124,17 @@ class Field(Generic[T, S, J]):
 
     return self.python_type(value)
 
+
+@dataclass(slots=True)
+class GeometryField(Field):
+  geometry_type: Optional[Geometry] = None
+  srid: int = 4326
+
+  def __post_init__(self):
+    super().__post_init_()
+    if self.geometry_type is None:
+      raise ValueError("GeometryField requires a geomtry_type")
+
   def to_wkt(self, value: Optional[str]) -> Optional[str]:
     if self.geometry_type is None:
       raise NotImplementedError("Attempted to convert a non-geometry value to WKT")
@@ -154,7 +162,7 @@ class TableMeta(type):
 
 class Table(metaclass=TableMeta):
   _table_name: Optional[str] = None
-  _fields: dict[str, Field] = {}
+  _fields: dict[str, Union[Field, GeometryField]] = {}
 
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
@@ -167,7 +175,7 @@ class Table(metaclass=TableMeta):
     for name, field in self._fields.items():
       value = getattr(self, name, None)
 
-      if field.geometry_type is not None:
+      if isinstance(field, GeometryField):
         data[name] = field.to_wkt(value)
       else:
         data[name] = field.serialize_to_json(value) if json else value
@@ -189,7 +197,7 @@ class Table(metaclass=TableMeta):
 
     columns: list[str] = []
     for name, field in cls._fields.items():
-      if field.geometry_type is not None:
+      if isinstance(field, GeometryField):
         continue
 
       col_def = [name, field.sql_column_type()]
@@ -231,28 +239,28 @@ class Table(metaclass=TableMeta):
     return [
       name
       for name, field in cls._fields.items()
-      if exclude_geometry_fields and field.geometry_type is None
+      if exclude_geometry_fields and isinstance(field, Field)
     ]
 
   @classmethod
   def geometry_names(cls) -> list[str]:
     return [
-      name for name, field in cls._fields.items() if field.geometry_type is not None
+      name for name, field in cls._fields.items() if isinstance(field, GeometryField)
     ]
 
   @classmethod
   def column_sql(cls, geo_format: GeoFormat = "AsGeoJSON") -> list[str]:
     return [
-      name if field.geometry_type is None else f"{geo_format}({name}) AS {name}"
+      name if isinstance(field, Field) else f"{geo_format}({name}) AS {name}"
       for name, field in cls._fields.items()
     ]
 
   @classmethod
-  def geometry_fields(cls) -> dict[str, Field]:
+  def geometry_fields(cls) -> dict[str, GeometryField]:
     return {
       name: field
       for name, field in cls._fields.items()
-      if field.geometry_type is not None
+      if isinstance(field, GeometryField)
     }
 
   @classmethod

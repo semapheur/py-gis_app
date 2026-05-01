@@ -29,6 +29,7 @@ from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   ColumnType,
   Field,
+  GeometryField,
   Table,
   datetime_field,
   enum_field,
@@ -63,7 +64,7 @@ class ImageIndexTable(Table):
   sensor_name = Field(str)
   sensor_type = enum_field(ImagerySensorType, ColumnType.TEXT)
   image_type = enum_field(ImageryType, ColumnType.TEXT)
-  footprint = Field(str, geometry_type="POLYGON")
+  footprint = GeometryField(str, geometry_type="POLYGON")
   look_angle = Field(float)
   azimuth_angle = Field(float)
   ground_sample_distance_row = Field(float)
@@ -72,7 +73,7 @@ class ImageIndexTable(Table):
 
 
 def create_index_table():
-  with SqliteDatabase(app_settings.INDEX_DB) as db:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     db.create_table(ImageIndexTable)
 
 

@@ -41,7 +41,7 @@ class EquipmentSearch(Table):
 
 
 def create_equipment_table():
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
     db.create_table(EquipmentList)
     db.create_fts_table(EquipmentList, FTS_COLUMNS)
 
