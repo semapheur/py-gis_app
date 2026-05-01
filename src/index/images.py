@@ -35,6 +35,7 @@ from src.sqlite.table import (
   enum_field,
   hash_field,
   path_field,
+  uuid_field,
 )
 
 app_settings = get_settings()
@@ -55,7 +56,7 @@ class ImageryType(str, Enum):
 class ImageIndexTable(Table):
   _table_name = "images"
   id = hash_field(True)
-  catalog = Field(int, nullable=False)
+  catalog = uuid_field(False, False)
   relative_path = path_field(False, False)
   filename = Field(str, nullable=False)
   filetype = Field(str, nullable=False)

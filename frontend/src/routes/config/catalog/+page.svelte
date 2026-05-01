@@ -42,5 +42,5 @@
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.catalogs} />
+  <DataGrid {columns} data={data.catalogs} saveApi="/api/update-catalogs" />
 {/if}

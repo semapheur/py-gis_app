@@ -131,7 +131,7 @@ class GeometryField(Field):
   srid: int = 4326
 
   def __post_init__(self):
-    super().__post_init_()
+    super().__post_init__()
     if self.geometry_type is None:
       raise ValueError("GeometryField requires a geomtry_type")
 
@@ -150,7 +150,7 @@ class GeometryField(Field):
 
 class TableMeta(type):
   def __new__(cls, name, bases, attributes):
-    fields: dict[str, Field] = {}
+    fields: dict[str, Union[Field, GeometryField]] = {}
     for k, v in list(attributes.items()):
       if isinstance(v, Field):
         fields[k] = v
@@ -239,7 +239,7 @@ class Table(metaclass=TableMeta):
     return [
       name
       for name, field in cls._fields.items()
-      if exclude_geometry_fields and isinstance(field, Field)
+      if not exclude_geometry_fields or not isinstance(field, GeometryField)
     ]
 
   @classmethod
@@ -251,7 +251,9 @@ class Table(metaclass=TableMeta):
   @classmethod
   def column_sql(cls, geo_format: GeoFormat = "AsGeoJSON") -> list[str]:
     return [
-      name if isinstance(field, Field) else f"{geo_format}({name}) AS {name}"
+      name
+      if not isinstance(field, GeometryField)
+      else f"{geo_format}({name}) AS {name}"
       for name, field in cls._fields.items()
     ]
 
@@ -307,11 +309,12 @@ def hash_field(primary: bool):
   )
 
 
-def uuid_field(primary: bool):
+def uuid_field(primary: bool, nullable: bool):
   return Field(
     uuid.UUID,
     sql_type=ColumnType.BLOB,
     primary_key=primary,
+    nullable=False if primary else nullable,
     to_sql=lambda u: u.bytes,
     from_sql=lambda b: uuid.UUID(bytes=b),
     to_json=lambda u: str(u),

@@ -18,7 +18,7 @@ FTS_COLUMNS = (
 
 class EquipmentList(Table):
   _table_name = "equipment"
-  id = uuid_field(True)
+  id = uuid_field(True, False)
   identifier = Field(str, nullable=False)
   displayName = Field(str, nullable=False)
   description = Field(str)
@@ -36,7 +36,7 @@ class EquipmentList(Table):
 
 class EquipmentSearch(Table):
   _table_name = "equipment_fts"
-  value = uuid_field(True)
+  value = uuid_field(True, False)
   label = Field(str, nullable=False)
 
 

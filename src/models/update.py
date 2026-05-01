@@ -31,7 +31,7 @@ def resolve_ids(records: list[dict]) -> list[IdMap]:
   for record in records:
     record_id = cast(Optional[str], record.get("id"))
     if record_id is None:
-      raise ValueError(f"Missing 'id' field in attribute upsert record: {record}")
+      raise ValueError(f"Missing 'id' field in create record: {record}")
     if not record_id.startswith("temp://"):
       continue
 
@@ -53,7 +53,7 @@ def update_table(
 
   with SqliteDatabase(db_path) as db:
     if update_models:
-      db.insert_models(create_models, OnConflict(index="id", action=update_sql))
+      db.insert_models(update_models, OnConflict(index="id", action=update_sql))
 
     if delete_ids:
       db.delete_by_ids(model, delete_ids)

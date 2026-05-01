@@ -39,7 +39,7 @@ def make_attribute_model(table_name: str) -> type[Table]:
   class AttributeTable(Table):
     _table_name = table_name
 
-    id = uuid_field(True)
+    id = uuid_field(True, False)
     text = Field(str, nullable=False, unique=True)
     description = Field(str)
     createdByUserId = Field(str)

@@ -8,7 +8,7 @@ from typing import Any, Callable, TypedDict, TypeVar
 
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
-from src.index.catalog import get_catalogs, validate_catalog_dir
+from src.index.catalog import get_catalogs, update_catalogs, validate_catalog_dir
 from src.index.images import ImageQuery, get_image_info, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
@@ -31,7 +31,6 @@ from src.models.areas import (
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
   get_attribute_data,
-  get_attribute_schema,
   get_attribute_tables,
   update_attributes,
 )
@@ -63,12 +62,6 @@ class Handler(SimpleHTTPRequestHandler):
   def do_GET(self):
     if self.path == "/api/attribute-tables":
       self._get_attribute_tables()
-      return
-
-    prefix = "/api/attribute-schema/"
-    if self.path.startswith(prefix):
-      table = self.path[len(prefix) :]
-      self._get_attribute_schema(table)
       return
 
     prefix = "/api/attribute-data/"
@@ -187,6 +180,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/delete-areas":
       self._post_delete_areas()
+      return
+
+    if self.path == "/api/update-catalogs":
+      self._post_update_catalogs()
       return
 
     if self.path == "/api/validate-catalog-dir":
@@ -345,6 +342,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
+  def _post_update_catalogs(self):
+    def logic(payload: TableUpdate):
+      return update_catalogs(payload)
+
+    self._handle_post(logic)
+
   def _post_validate_catalog_dir(self):
     class Payload(TypedDict):
       path: str
@@ -368,18 +371,6 @@ class Handler(SimpleHTTPRequestHandler):
       tables = get_attribute_tables()
       result = {"tables": tables}
       self._json_response(result)
-
-    except Exception as e:
-      self.send_error(500, f"Server error: {str(e)}")
-
-  def _get_attribute_schema(self, table: str):
-    if not table or table not in ATTRIBUTE_TABLES:
-      self.send_error(404, "Invalid POST endpoint")
-      return
-
-    try:
-      attribute_schema = get_attribute_schema(table)
-      self._json_response(attribute_schema)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")

@@ -12,6 +12,7 @@ from src.sqlite.table import (
   Table,
   datetime_field,
   path_field,
+  uuid_field,
 )
 from src.timeutils import datetime_to_unix
 
@@ -20,7 +21,7 @@ app_settings = get_settings()
 
 class CatalogTable(Table):
   _table_name = "catalog"
-  id = Field(int, primary_key=True)
+  id = uuid_field(True, False)
   path = path_field(False, True)
   name = Field(str, nullable=False, unique=True)
   last_indexed = datetime_field(True)
@@ -122,7 +123,6 @@ def update_catalog_entry(
 
 
 def update_catalogs(payload: TableUpdate):
-
   records = [*payload["create"], *payload["update"]]
   for record in records:
     path = record.get("path")

@@ -27,11 +27,11 @@ def equipment_annotation_model(geometry_type: EquipmentGeometry):
 
   class EquipmentAnnotation(Table):
     _table_name = table_name
-    id = uuid_field(True)
+    id = uuid_field(True, False)
     image = hash_field(False)
-    equipment = uuid_field(False)
-    confidence = uuid_field(False)
-    status = uuid_field(False)
+    equipment = uuid_field(False, False)
+    confidence = uuid_field(False, False)
+    status = uuid_field(False, False)
     geometry = GeometryField(str, geometry_type=geometry_type)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)

@@ -567,7 +567,7 @@
   .grid-form {
     display: flex;
     flex-direction: column;
-    gap: var(--size-sm);
+    gap: var(--size-md);
   }
 
   .grid-footer {

@@ -15,7 +15,7 @@ from typing import (
 )
 
 from src.sqlite.query_builder import OnConflict, Query
-from src.sqlite.table import SqliteValue, Table
+from src.sqlite.table import GeometryField, SqliteValue, Table
 
 
 class SqliteDatabase:
@@ -183,7 +183,7 @@ class SqliteDatabase:
       row = {}
       for name, field in obj._fields.items():
         value = getattr(obj, name, None)
-        if name in geometry_fields:
+        if isinstance(field, GeometryField):
           row[name] = field.to_wkt(value)
         else:
           row[name] = field.serialize_to_sql(value)
@@ -243,14 +243,14 @@ class SqliteDatabase:
           result_row[col] = row[i]
           continue
 
-        if field.geometry_type is None:
-          value = field.deserialize_from_sql(row[i])
-        else:
+        if isinstance(field, GeometryField):
           geo_regex = re.compile("^As(GeoJSON|Text)")
           match = geo_regex.search(name)
           geo_format = "" if match is None else match.group()
 
           value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
+        else:
+          value = field.deserialize_from_sql(row[i])
 
         result_row[col] = field.serialize_to_json(value) if to_json else value
 

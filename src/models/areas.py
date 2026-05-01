@@ -17,7 +17,7 @@ app_settings = get_settings()
 
 class AreasTable(Table):
   _table_name = "areas"
-  id = uuid_field(True)
+  id = uuid_field(True, False)
   name = Field(str, nullable=False)
   description = Field(str)
   geometry = GeometryField(str, geometry_type="POLYGON")
