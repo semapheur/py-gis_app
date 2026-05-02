@@ -17,6 +17,8 @@ class Query:
     self._table: Optional[str] = None
     self._joins: list[str] = []
     self._where: list[tuple[str, WhereOp]] = []
+    self._group_by: list[str] = []
+    self._having: list[tuple[str, WhereOp]] = []
     self._order: Optional[str] = None
     self._limit: Optional[int] = None
     self._offset: Optional[int] = None
@@ -92,6 +94,15 @@ class Query:
     grouped = "(" + f" {op_inner} ".join(parts) + ")"
     self._where.append((grouped, op_outer))
 
+  def group_by(self, *cols: str):
+    self._group_by.extend(cols)
+    return self
+
+  def having(self, condition: str, *values, op: WhereOp = "AND"):
+    self._having.append((condition, op))
+    self._params.extend(values)
+    return self
+
   def order_by(self, col: str):
     self._order = col
     return self
@@ -132,6 +143,16 @@ class Query:
       for condition, op in self._where[1:]:
         clauses.append(f"{op} {condition}")
       sql.append("WHERE " + " ".join(clauses))
+
+    if self._group_by:
+      sql.append("GROUP BY " + ", ".join(self._group_by))
+
+    if self._having:
+      clauses = [self._having[0][0]]
+      for condition, op in self._having[1:]:
+        clauses.append(f"{op} {condition}")
+
+      sql.append("HAVING " + " ".join(clauses))
 
     if self._order:
       sql.append("ORDER BY " + self._order)

@@ -11,7 +11,7 @@
   }
 
   let {
-    value = $bindable(null as T),
+    value = $bindable(),
     placeholder,
     required = false,
     invalid = false,

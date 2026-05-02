@@ -1,6 +1,7 @@
 import json
 import mimetypes
 import os
+import uuid
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from pathlib import Path
@@ -8,8 +9,13 @@ from typing import Any, Callable, TypedDict, TypeVar
 
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
-from src.index.catalog import get_catalogs, update_catalogs, validate_catalog_dir
-from src.index.images import ImageQuery, get_image_info, search_images
+from src.index.catalog import (
+  get_catalog_edit_data,
+  get_catalog_index_data,
+  update_catalogs,
+  validate_catalog_dir,
+)
+from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
   AnnotationUpdate,
@@ -86,8 +92,12 @@ class Handler(SimpleHTTPRequestHandler):
       self._get_areas()
       return
 
-    if self.path == "/api/get-catalogs":
-      self._get_catalogs()
+    if self.path == "/api/get-catalogs-index":
+      self._get_catalogs_index()
+      return
+
+    if self.path == "/api/get-catalogs-edit":
+      self._get_catalogs_edit()
       return
 
     if self.path.startswith("/api"):
@@ -190,6 +200,10 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_validate_catalog_dir()
       return
 
+    if self.path == "/api/index-catalog":
+      self._post_index_catalog()
+      return
+
     self.send_error(404, "Unknown POST endpoint")
 
   def do_OPTIONS(self):
@@ -254,6 +268,32 @@ class Handler(SimpleHTTPRequestHandler):
 
     except Exception as e:
       self._error_response(500, f"Server error: {str(e)}")
+
+  def _handle_post_stream(self, fn: Callable[[P], None]):
+    try:
+      content_length = int(self.headers.get("Content-Length", 0))
+      body = self.rfile.read(content_length).decode("utf-8")
+      payload_in = json.loads(body)
+    except Exception as e:
+      self._error_response(400, f"Bad request: {str(e)}")
+      return
+
+    self.send_response(200)
+    self.send_header("Content-Type", "text/event-stream")
+    self.send_header("Cache-Control", "no-cache")
+    self.send_header("X-Accel-Buffering", "no")
+    self.end_headers()
+
+    def send_event(event: str, data: dict):
+      payload = f"event: {event}\ndata: {json.dumps(data)}\n\n"
+      self.wfile.write(payload.encode("utsf"))
+      self.wfile.flush()
+
+    try:
+      fn(payload_in, send_event)
+      send_event("done", {"message": "OK"})
+    except Exception as e:
+      send_event("error", {"message": str(e)})
 
   def _post_query_images(self):
     def logic(payload: ImageQuery) -> list[dict[str, Any]]:
@@ -366,6 +406,28 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
+  def _post_index_catalog(self):
+    class Payload(TypedDict):
+      id: str
+
+    def logic(payload: Payload, send_event: Callable[[str, dict], None]):
+      catalog_id = uuid.UUID(payload["id"]).bytes
+
+      def on_progress(current: int, total: int, filename: str):
+        send_event(
+          "progress",
+          {
+            "current": current,
+            "total": total,
+            "filename": filename,
+            "percent": round(current / total * 100) if total else 0,
+          },
+        )
+
+      index_images(catalog_id, progress_callback=on_progress)
+
+    self._handle_post_stream(logic)
+
   def _get_attribute_tables(self):
     try:
       tables = get_attribute_tables()
@@ -410,7 +472,12 @@ class Handler(SimpleHTTPRequestHandler):
     areas = get_areas()
     self._json_response(areas)
 
-  def _get_catalogs(self):
-    catalogs = get_catalogs()
+  def _get_catalogs_index(self):
+    catalogs = get_catalog_index_data()
+    result = {"catalogs": catalogs}
+    self._json_response(result)
+
+  def _get_catalogs_edit(self):
+    catalogs = get_catalog_edit_data()
     result = {"catalogs": catalogs}
     self._json_response(result)

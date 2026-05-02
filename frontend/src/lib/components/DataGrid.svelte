@@ -26,7 +26,6 @@
     open: boolean;
     mode: FormMode;
     rowId: string | null;
-    initial: Record<string, string | number>;
   }
 
   interface Column extends IColumnConfig {
@@ -53,7 +52,6 @@
     open: false,
     mode: "add",
     rowId: null,
-    initial: {},
   });
 
   let selectedRows = $state([]);
@@ -92,7 +90,6 @@
     form.open = true;
     form.mode = "edit";
     form.rowId = id;
-    form.initial = row;
     editRow = row;
   }
 
@@ -100,19 +97,16 @@
     form.open = true;
     form.mode = "add";
     form.rowId = null;
-    form.initial = {};
     editRow = {};
   }
 
   function resetAddForm() {
-    form.initial = {};
     editRow = {};
   }
 
   function closeForm() {
     form.open = false;
     form.rowId = null;
-    form.initial = {};
     editRow = {};
     validationErrors = {};
   }
@@ -494,17 +488,9 @@
   <form class="grid-form" onsubmit={saveForm}>
     {#each editColumns as column}
       {#if column.editor === "text"}
-        <Input
-          value={form.initial[column.id]}
-          placeholder={column.header}
-          oninput={(e) => (editRow[column.id] = e.currentTarget.value)}
-        />
+        <Input bind:value={editRow[column.id]} placeholder={column.header} />
       {:else if column.editor === "textarea"}
-        <TextArea
-          value={form.initial[column.id]}
-          placeholder={column.header}
-          oninput={(e) => (editRow[column.id] = e.currentTarget.value)}
-        />
+        <TextArea bind:value={editRow[column.id]} placeholder={column.header} />
       {/if}
       {#if validationErrors[column.id]}
         <span class="error">

@@ -4,7 +4,8 @@ import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Literal, Optional, TypedDict, Union, cast
+from typing import Callable, Literal, Optional, TypedDict, Union, cast
+from uuid import UUID
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
@@ -16,7 +17,7 @@ from src.gdal_utils import (
   gdalwarp,
 )
 from src.hashing import hash_geotiff
-from src.index.catalog import CatalogTable, get_catalogs, update_index_time
+from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_time
 from src.index.radiometric import (
   NoiseParameters,
   RadiometricParamsTable,
@@ -218,7 +219,7 @@ def parse_sicd_metadata(gdal_info: dict, sicd_obj: SicdObject):
 def parse_image_metadata(
   gdal_info: dict,
   hash: bytes,
-  catalog_id: int,
+  catalog_id: UUID,
   file_path: Path,
   relative_directory: Path,
 ) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
@@ -381,20 +382,67 @@ def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, 
   return (IndexAction.DUPLICATE, None)
 
 
+def process_thumbnail(
+  image_file: Path,
+  image_info: dict,
+  index_row: ImageIndexTable,
+  action: IndexAction,
+  old_stem: Optional[str],
+  minsize: tuple[int, int],
+):
+  thumbnail_dir = app_settings.STATIC_DIR / "thumbnails"
+
+  thumbnail_path = thumbnail_dir / f"{image_file.stem}.png"
+  make_thumbnail = not thumbnail_path.exists()
+
+  if action == IndexAction.REINDEX_FILENAME and old_stem is not None:
+    old_thumbnail = thumbnail_dir / f"{old_stem}.png"
+    if old_thumbnail.exists():
+      old_thumbnail.rename(thumbnail_path)
+      make_thumbnail = False
+
+  if make_thumbnail:
+    image_size = image_info["size"]
+    gsd = (
+      getattr(index_row, "ground_sample_distance_row"),
+      getattr(index_row, "ground_sample_distance_col"),
+    )
+    generate_thumbnail(image_file, thumbnail_path, gsd, image_size, minsize)
+
+
+def process_cog(
+  image_file: Path,
+  image_info: dict,
+  index_row: ImageIndexTable,
+  action: IndexAction,
+  old_stem: Optional[str],
+):
+  cog_dir = app_settings.STATIC_DIR / "cog"
+  cog_path = cog_dir / f"{image_file.stem}.cog.tif"
+  make_cog = True if not cog_path.exists() else False
+
+  if action == IndexAction.REINDEX_FILENAME and old_stem is not None:
+    old_cog = cog_dir / f"{old_stem}.cog.tif"
+    if old_cog.exists():
+      old_cog.rename(cog_path)
+      make_cog = False
+
+  if make_cog:
+    image_type = ImageryType(getattr(index_row, "image_type"))
+    generate_cog(image_file, cog_path, image_info, image_type)
+
+
 def index_images(
-  catalog_id: int,
+  catalog_id: UUID,
   thumbnail_minsize: tuple[int, int] = (600, 400),
+  progress_callback: Optional[Callable[[int, int, str], None]] = None,
 ):
   extensions = {".tif", ".tiff"}
-
-  cog_dir = app_settings.STATIC_DIR / "cog"
-  cog_dir.mkdir(exist_ok=True)
-
-  thumbnail_dir = app_settings.STATIC_DIR / "thumbnails"
-  thumbnail_dir.mkdir(exist_ok=True)
-
   query = (
-    Query().select("path").from_(CatalogTable._table_name).where("id = ?", catalog_id)
+    Query()
+    .select("path")
+    .from_(CatalogTable._table_name)
+    .where("id = ?", catalog_id.bytes)
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
@@ -402,7 +450,7 @@ def index_images(
     if not catalog_record:
       from pprint import pformat
 
-      catalogs = get_catalogs()
+      catalogs = get_catalog_edit_data()
       raise ValueError(
         f"Failed to get path for catalog id {id}. Registered catalogs\n",
         f"{pformat(catalogs, indent=2)}",
@@ -410,11 +458,15 @@ def index_images(
 
     image_dir = cast(Path, catalog_record[0]["path"])
 
+    files = [f for f in image_dir.rglob("*") if f.suffix.lower() in extensions]
+    total = len(files)
+
     image_index: list[ImageIndexTable] = []
     radiometric_index: list[RadiometricParamsTable] = []
-    for file in image_dir.rglob("*"):
-      if file.suffix.lower() not in extensions:
-        continue
+
+    for i, file in enumerate(files, start=1):
+      if progress_callback:
+        progress_callback(i, total, str(file.relative_to(image_dir)))
 
       image_hash = hash_geotiff(file)
       action, old_stem = check_image(file, image_hash)
@@ -439,35 +491,8 @@ def index_images(
       if action == IndexAction.REINDEX_PARENT:
         continue
 
-      # Create thumbnail
-      thumbnail_path = thumbnail_dir / f"{file.stem}.png"
-      make_thumbnail = True if not thumbnail_path.exists() else False
-      if action == IndexAction.REINDEX_FILENAME:
-        old_thumbnail = thumbnail_dir / f"{old_stem}.png"
-        if old_thumbnail.exists():
-          old_thumbnail.rename(thumbnail_path)
-          make_thumbnail = False
-
-      if make_thumbnail:
-        image_size = info["size"]
-        gsd = (
-          getattr(index_row, "ground_sample_distance_row"),
-          getattr(index_row, "ground_sample_distance_col"),
-        )
-        generate_thumbnail(file, thumbnail_path, gsd, image_size, thumbnail_minsize)
-
-      # create cloud-optimized geotif (COG)
-      cog_path = cog_dir / f"{file.stem}.cog.tif"
-      make_cog = True if not cog_path.exists() else False
-      if action == IndexAction.REINDEX_FILENAME:
-        old_cog = cog_dir / f"{old_stem}.cog.tif"
-        if old_cog.exists():
-          old_cog.rename(cog_path)
-          make_cog = False
-
-      if make_cog:
-        image_type = ImageryType(getattr(index_row, "image_type"))
-        generate_cog(file, cog_path, info, image_type)
+      process_thumbnail(file, info, index_row, action, old_stem, thumbnail_minsize)
+      process_cog(file, info, index_row, action, old_stem)
 
     # Upsert index
     update_sql = """

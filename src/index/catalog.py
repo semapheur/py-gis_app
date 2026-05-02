@@ -1,6 +1,7 @@
 from datetime import datetime
 from pathlib import Path
 from typing import Optional, Union
+from uuid import UUID
 
 from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
@@ -32,10 +33,13 @@ def create_catalog_table():
     db.create_table(CatalogTable)
 
 
-def validate_catalog_dir(path: Path):
+def validate_catalog_dir(path: Path, check_db_presence: bool = False):
 
   if not path.is_dir():
     raise FileNotFoundError(f"Invalid directory path: {path}")
+
+  if not check_db_presence:
+    return
 
   query = (
     Query().select("id").from_(CatalogTable._table_name).where("path = ?", str(path))
@@ -149,9 +153,40 @@ def add_calatog(path: Path, name: str):
     insert_catalog(db, path, name)
 
 
-def get_catalogs():
-  columns = CatalogTable.column_sql()
+def get_catalog_edit_data():
+  columns = ("id", "path", "name")
   query = Query().select(*columns).from_(CatalogTable._table_name)
+
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    return db.select_records(CatalogTable, query, True)
+
+
+def get_catalog_index_data():
+  from src.index.images import ImageIndexTable
+
+  table_c = CatalogTable._table_name
+  table_c_as = table_c[0]
+  table_i = ImageIndexTable._table_name
+  table_i_as = table_i[0]
+  columns = (
+    f"{table_c_as}.id AS id",
+    f"{table_c_as}.path AS path",
+    f"{table_c_as}.name AS name",
+    f"COUNT({table_i_as}.catalog) AS indexed_images",
+    f"{table_c_as}.last_indexed AS last_indexed",
+  )
+
+  query = (
+    Query()
+    .select(*columns)
+    .from_(f"{table_c} {table_c_as}")
+    .join(
+      f"{table_i} {table_i_as}",
+      on=f"{table_i_as}.catalog = {table_c_as}.id",
+      join_type="LEFT",
+    )
+    .group_by(f"{table_c_as}.id")
+  )
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
     return db.select_records(CatalogTable, query, True)
@@ -172,10 +207,10 @@ def edit_catalog(
     verify_dir(new_path)
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    update_catalog(db, id, new_path, new_name)
+    update_catalog_entry(db, id, new_path, new_name)
 
 
-def update_index_time(db: SqliteDatabase, id: int, index_time: datetime):
+def update_index_time(db: SqliteDatabase, id: UUID, index_time: datetime):
   timestamp = datetime_to_unix(index_time)
 
   if db.conn is None:
@@ -189,6 +224,6 @@ def update_index_time(db: SqliteDatabase, id: int, index_time: datetime):
     SET last_indexed = ?
     WHERE id = ?
   """,
-    (timestamp, id),
+    (timestamp, id.bytes),
   )
   db.conn.commit()

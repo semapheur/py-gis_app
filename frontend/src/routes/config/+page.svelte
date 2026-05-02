@@ -3,7 +3,8 @@
 </script>
 
 <nav>
-  <Link href="config/catalog">Edit catalog</Link>
-  <Link href="config/attributes">Edit attributes</Link>
-  <Link href="config/equipment">Edit equipment</Link>
+  <Link href="config/index-images">Index images</Link>
+  <Link href="config/edit-catalogs">Edit catalogs</Link>
+  <Link href="config/edit-attributes">Edit attributes</Link>
+  <Link href="config/edit-equipment">Edit equipment</Link>
 </nav>
