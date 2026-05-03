@@ -102,7 +102,11 @@
       {@const progress = progressMap[c.id]}
       {@const indexing = indexingMap[c.id]}
       <tr>
-        <td><Button onclick={() => indexCatalog(c.id)}>Index</Button></td>
+        <td
+          ><Button onclick={() => indexCatalog(c.id)} disabled={indexing}
+            >{indexing ? "Indexing..." : "Index"}</Button
+          ></td
+        >
         <td>{c.name}</td>
         <td>{c.path}</td>
         <td>

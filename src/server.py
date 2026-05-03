@@ -286,7 +286,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     def send_event(event: str, data: dict):
       payload = f"event: {event}\ndata: {json.dumps(data)}\n\n"
-      self.wfile.write(payload.encode("utsf"))
+      self.wfile.write(payload.encode("utf-8"))
       self.wfile.flush()
 
     try:
@@ -411,7 +411,7 @@ class Handler(SimpleHTTPRequestHandler):
       id: str
 
     def logic(payload: Payload, send_event: Callable[[str, dict], None]):
-      catalog_id = uuid.UUID(payload["id"]).bytes
+      catalog_id = uuid.UUID(payload["id"])
 
       def on_progress(current: int, total: int, filename: str):
         send_event(

@@ -432,6 +432,34 @@ def process_cog(
     generate_cog(image_file, cog_path, image_info, image_type)
 
 
+def index_image(
+  catalog_id: UUID, image_dir: Path, file: Path, thumbnail_minsize: tuple[int, int]
+):
+  image_hash = hash_geotiff(file)
+  action, old_stem = check_image(file, image_hash)
+
+  if action == IndexAction.INDEXED:
+    return None, None
+
+  if action == IndexAction.DUPLICATE:
+    # TODO: handle duplicates
+    return None, None
+
+  info = gdalinfo(file)
+  relative_directory = file.parent.relative_to(image_dir)
+  index_row, radiometric_row = parse_image_metadata(
+    info, image_hash, catalog_id, file, relative_directory
+  )
+
+  if action == IndexAction.REINDEX_PARENT:
+    return index_row, radiometric_row
+
+  process_thumbnail(file, info, index_row, action, old_stem, thumbnail_minsize)
+  process_cog(file, info, index_row, action, old_stem)
+
+  return index_row, radiometric_row
+
+
 def index_images(
   catalog_id: UUID,
   thumbnail_minsize: tuple[int, int] = (600, 400),
@@ -468,31 +496,15 @@ def index_images(
       if progress_callback:
         progress_callback(i, total, str(file.relative_to(image_dir)))
 
-      image_hash = hash_geotiff(file)
-      action, old_stem = check_image(file, image_hash)
-
-      if action == IndexAction.INDEXED:
-        continue
-
-      if action == IndexAction.DUPLICATE:
-        # TODO: handle duplicates
-        continue
-
-      info = gdalinfo(file)
-      relative_directory = file.parent.relative_to(image_dir)
-      index_row, radiometric_row = parse_image_metadata(
-        info, image_hash, catalog_id, file, relative_directory
+      index_row, radiometric_row = index_image(
+        catalog_id, image_dir, file, thumbnail_minsize
       )
-      image_index.append(index_row)
+
+      if index_row is not None:
+        image_index.append(index_row)
 
       if radiometric_row is not None:
         radiometric_index.append(radiometric_row)
-
-      if action == IndexAction.REINDEX_PARENT:
-        continue
-
-      process_thumbnail(file, info, index_row, action, old_stem, thumbnail_minsize)
-      process_cog(file, info, index_row, action, old_stem)
 
     # Upsert index
     update_sql = """

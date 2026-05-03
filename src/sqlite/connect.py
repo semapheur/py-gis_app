@@ -19,9 +19,10 @@ from src.sqlite.table import GeometryField, SqliteValue, Table
 
 
 class SqliteDatabase:
-  def __init__(self, db_path: Path, spatial: bool = False):
+  def __init__(self, db_path: Path, spatial: bool = False, wal: bool = True):
     self.db_path = db_path
     self.spatial = spatial
+    self.wal = wal
     self.conn = None
 
   def __enter__(self):
@@ -31,7 +32,12 @@ class SqliteDatabase:
     if self.db_path.suffix.lower() not in {".db", ".sqlite"}:
       raise ValueError(f"Invalid db path: {self.db_path}")
 
-    self.conn = sqlite3.connect(self.db_path)
+    self.conn = sqlite3.connect(self.db_path, timeout=10)
+    if self.wal:
+      self.conn.execute("PRAGMA journal_mode=WAL")
+      self.conn.execute("PRAGMA synchronous=NORMAL")
+    else:
+      self.conn.execute("PRAGMA journal_mode=DELETE")
 
     if self.spatial:
       self.conn.enable_load_extension(True)

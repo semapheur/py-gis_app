@@ -34,6 +34,10 @@ class Settings:
   def LOCATION_DB(self) -> Path:
     return self.DB_DIR / "location.db"
 
+  @property
+  def LOG_DB(self) -> Path:
+    return self.DB_DIR / "log.db"
+
 
 def load_settings() -> Settings:
   return Settings(
