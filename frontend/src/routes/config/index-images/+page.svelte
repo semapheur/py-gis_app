@@ -3,6 +3,7 @@
   import type { PageData } from "./$types";
   import { toast } from "$lib/stores/toast.svelte";
   import { formatDatetime } from "$lib/utils/date";
+  import LinkButton from "$lib/components/LinkButton.svelte";
 
   interface CatalogData {
     id: string;
@@ -21,10 +22,12 @@
 
   let { data }: { data: PageData } = $props();
 
+  let indexingCatalogs = $state<Record<string, string>>({});
   let progressMap = $state<Record<string, IndexProgress | null>>({});
   let indexingMap = $state<Record<string, boolean>>({});
 
-  async function indexCatalog(id: string) {
+  async function indexCatalog(id: string, name: string) {
+    indexingCatalogs[id] = name;
     indexingMap[id] = true;
     progressMap[id] = null;
 
@@ -78,6 +81,7 @@
     } finally {
       reader?.releaseLock();
       indexingMap[id] = false;
+      delete indexingCatalogs.id;
     }
   }
 
@@ -86,46 +90,63 @@
   }
 </script>
 
-<table>
-  <thead>
-    <tr>
-      <th>Index</th>
-      <th>Catalog</th>
-      <th>Path</th>
-      <th>Indexed images</th>
-      <th>Last indexed</th>
-    </tr>
-  </thead>
-  <tbody
-    >{#each data.catalogs as catalog}
-      {@const c = catalog as CatalogData}
-      {@const progress = progressMap[c.id]}
-      {@const indexing = indexingMap[c.id]}
+<div class="container">
+  <div class="toolbar">
+    <Button>Index all</Button>
+    <LinkButton href="edit-catalogs">Edit catalog</LinkButton>
+  </div>
+  <table>
+    <thead>
       <tr>
-        <td
-          ><Button onclick={() => indexCatalog(c.id)} disabled={indexing}
-            >{indexing ? "Indexing..." : "Index"}</Button
-          ></td
-        >
-        <td>{c.name}</td>
-        <td>{c.path}</td>
-        <td>
-          {#if progress}
-            <div>{progress.current} / {progress.total}</div>
-            <progress value={progress.percent} max="100"></progress>
-            <div class="filename">{progress.filename}</div>
-          {:else}
-            {c.indexed_images}{/if}</td
-        >
-        <td>{formatOptionalDatetime(c.last_indexed)}</td>
+        <th>Index</th>
+        <th>Catalog</th>
+        <th>Path</th>
+        <th>Indexed images</th>
+        <th>Last indexed</th>
       </tr>
+    </thead>
+    <tbody
+      >{#each data.catalogs as catalog}
+        {@const c = catalog as CatalogData}
+        {@const indexing = indexingMap[c.id]}
+        <tr>
+          <td
+            ><Button
+              onclick={() => indexCatalog(c.id, c.name)}
+              disabled={indexing}>{indexing ? "Indexing..." : "Index"}</Button
+            ></td
+          >
+          <td>{c.name}</td>
+          <td>{c.path}</td>
+          <td> {c.indexed_images}</td>
+          <td>{formatOptionalDatetime(c.last_indexed)}</td>
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+  <div class="footer">
+    {#each Object.entries(indexingCatalogs) as [id, name]}
+      {@const progress = progressMap[id]}
+
+      {#if progress}
+        <span>{`Indexing ${name}`}</span>
+        <progress value={progress.percent} max="100"></progress>
+        <div>{progress.current} / {progress.total}</div>
+        <span class="filename">{progress.filename}</span>
+      {/if}
     {/each}
-  </tbody>
-</table>
+  </div>
+</div>
 
 <style>
+  .toolbar {
+    display: flex;
+    gap: var(--size-md);
+  }
+
   table {
     height: fit-content;
+    width: 100%;
     text-align: center;
   }
 

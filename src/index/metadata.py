@@ -22,8 +22,9 @@ def _int(element: ET.Element, tag: str) -> int:
 
 def find_isd_xml(tif_path: Path) -> Optional[Path]:
 
+  aux_suffixes = {".aux", ".xml"}
   for f in tif_path.parent.glob("*.XML"):
-    if f.suffixes == [".aux", ".xml"]:
+    if aux_suffixes.issubset(f.suffixes):
       continue
 
     if not re.search(r"R\d+C\d+", f.name):

@@ -1,4 +1,6 @@
 <script lang="ts">
+  import Input from "$lib/components/Input.svelte";
+
   interface Props {
     min: number;
     max: number;
@@ -9,6 +11,8 @@
 
   let { min, max, step, value = $bindable(), label }: Props = $props();
   let current = $state<number>(value);
+  let hovered = $state<boolean>(false);
+  let slider = $state<HTMLInputElement | null>(null);
 
   const clamp = (v: number) => Math.min(max, Math.max(min, v));
 
@@ -17,6 +21,12 @@
   });
 
   const percent = $derived(((current - min) / (max - min)) * 100);
+  const correctedPercent = $derived.by(() => {
+    if (!slider) return percent;
+    const thumbR = slider.offsetHeight / 2;
+    const w = slider.offsetWidth;
+    return (((percent / 100) * (w - 2 * thumbR) + thumbR) / w) * 100;
+  });
 
   function update(v: number) {
     current = clamp(v);
@@ -30,16 +40,33 @@
   {/if}
 
   <div class="controls">
-    <input
-      type="range"
-      {min}
-      {max}
-      {step}
-      value={current}
-      oninput={(e) => update(e.target.value)}
-      style="--percent: {percent}%"
-    />
-    <input
+    <div
+      class="slider"
+      role="slider"
+      tabindex="0"
+      aria-valuenow={value}
+      aria-valuemin={min}
+      aria-valuemax={max}
+      onmouseenter={() => (hovered = true)}
+      onmouseleave={() => (hovered = false)}
+    >
+      {#if hovered}
+        <div class="slider-tooltip" style="left: {correctedPercent}%">
+          {current}
+        </div>
+      {/if}
+      <input
+        bind:this={slider}
+        type="range"
+        {min}
+        {max}
+        {step}
+        value={current}
+        oninput={(e) => update(e.target.value)}
+        style="--percent: {percent}%"
+      />
+    </div>
+    <Input
       type="number"
       {min}
       {max}
@@ -63,12 +90,21 @@
     gap: 0.75rem;
   }
 
-  input[type="range"] {
-    flex: 1;
+  .slider {
+    position: relative;
   }
 
-  input[type="number"] {
-    width: 5rem;
+  .slider-tooltip {
+    position: absolute;
+    top: -2rem;
+    transform: translateX(-50%);
+    padding: 0 var(--size-sm);
+    background-color: oklch(var(--color-accent));
+    border-radius: var(--size-sm);
+  }
+
+  input[type="range"] {
+    flex: 1;
   }
 
   label {

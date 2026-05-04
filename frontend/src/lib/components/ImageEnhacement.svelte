@@ -4,6 +4,7 @@
     getImageViewerController,
     type Enhancement,
   } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import Button from "$lib/components/Button.svelte";
 
   interface SliderConfig {
     key: keyof Enhancement;
@@ -21,20 +22,30 @@
     { key: "gamma", label: "Gamma", min: 1, max: 10, step: 0.1 },
   ];
 
-  let enhancement = $state<Enhancement>({
-    brightness: 0,
-    contrast: 0,
-    exposure: 0,
-    saturation: 0,
-    gamma: 1,
-  });
-
   const viewer = getImageViewerController();
+
   $effect(() => {
-    viewer.updateEnhancement(enhancement);
+    viewer.applyEnhancement();
   });
 </script>
 
-{#each sliders as { key, label, min, max, step }}
-  <RangeSlider {min} {max} {step} {label} bind:value={enhancement[key]} />
-{/each}
+<div class="image-enhancement">
+  {#each sliders as { key, label, min, max, step }}
+    <RangeSlider
+      {min}
+      {max}
+      {step}
+      {label}
+      bind:value={viewer.enhancement[key]}
+    />
+  {/each}
+  <Button onclick={() => viewer.resetEnhancement()}>Reset</Button>
+</div>
+
+<style>
+  .image-enhancement {
+    padding: var(--size-md);
+    background-color: oklch(var(--color-primary));
+    border-radius: var(--size-sm);
+  }
+</style>

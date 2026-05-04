@@ -298,18 +298,12 @@ def generate_cog(
     ),
   )
 
-  if image_type == ImageryType.SLC:
-    gdalwarp(
-      image_path,
-      cog_path,
-      options,
-    )
-    return
-
-  with tempfile.TemporaryDirectory() as tmpdir:
-    tmp_intensity = Path(tmpdir) / f"{image_path.stem}_intensity.tif"
-    generate_intensity_vrt(image_path, tmp_intensity, gdal_info)
-    gdalwarp(tmp_intensity, cog_path, options)
+  gdalwarp(
+    image_path,
+    cog_path,
+    options,
+  )
+  return
 
 
 def generate_thumbnail(

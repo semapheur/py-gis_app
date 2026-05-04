@@ -28,6 +28,7 @@ import {
   styleMeasurement,
   styleAnnotationLabel,
   equipmentStyle,
+  stretchStyle,
 } from "$lib/contexts/ol_image_viewer/styling";
 import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
@@ -38,6 +39,7 @@ import type {
   EquipmentData,
   ActivityData,
 } from "$lib/contexts/annotate.svelte";
+import { getCogStats, buildStretchStyle } from "$lib/utils/raster_utils";
 
 import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
 
@@ -63,9 +65,18 @@ interface Options {
   annotations?: AnnotationInfo[];
 }
 
+const defaultEnhancement: Enhancement = {
+  brightness: 0,
+  contrast: 0,
+  exposure: 0,
+  saturation: 0,
+  gamma: 1,
+};
+
 export class ImageViewerController {
   #image: string | null = null;
   #map: Map | null = null;
+  #stretchAbortController: AbortController | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
@@ -77,6 +88,7 @@ export class ImageViewerController {
 
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
+  enhancement = $state<Enhancement>({ ...defaultEnhancement });
 
   constructor() {
     this.#interactions = {
@@ -158,6 +170,9 @@ export class ImageViewerController {
     if (this.#map) return;
 
     this.setupMap(target, options);
+    const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
+    this.applyDynamicStretch(url);
+    this.setupZoomStretch(url);
 
     return () => {
       this.destroy();
@@ -186,6 +201,7 @@ export class ImageViewerController {
 
     this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
+      style: stretchStyle,
     });
     this.#equipmentLayer = new WebGLVectorLayer({
       source: this.#annotationSources.equipment,
@@ -194,19 +210,19 @@ export class ImageViewerController {
         hoverId: "",
       },
     });
-    //this.#activityLayer = new VectorLayer({
-    //  source: this.#annotationSources.activity,
-    //  style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
-    //});
+    this.#activityLayer = new VectorLayer({
+      source: this.#annotationSources.activity,
+      style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
+    });
     this.#labelLayer = new VectorLayer({
       source: this.#annotationSources.equipment,
       style: (feature) => styleAnnotationLabel(feature),
     });
 
-    //this.#measurementLayer = new VectorLayer({
-    //  source: this.#measurementSource,
-    //  style: (feature) => styleMeasurement(this.projection, feature, true),
-    //});
+    this.#measurementLayer = new VectorLayer({
+      source: this.#measurementSource,
+      style: (feature) => styleMeasurement(this.projection, feature, true),
+    });
 
     this.#map = new Map({
       target: target,
@@ -214,15 +230,15 @@ export class ImageViewerController {
       layers: [
         this.#rasterLayer,
         this.#equipmentLayer,
-        //this.#activityLayer,
+        this.#activityLayer,
         this.#labelLayer,
-        //this.#measurementLayer,
+        this.#measurementLayer,
       ],
       view: rasterSource.getView(),
     });
 
     this.setupAnnotationInteractions();
-    //this.setupMeasurementInteractions();
+    this.setupMeasurementInteractions();
 
     if (options.annotations?.length) {
       this.loadAnnotations(options.annotations);
@@ -559,17 +575,23 @@ export class ImageViewerController {
     }
   }
 
-  public updateEnhancement(enhancement: Enhancement) {
+  public applyEnhancement() {
     if (!this.#rasterLayer) return;
 
     this.#rasterLayer.setStyle({
       color: ["array", ["band", 1], ["band", 2], ["band", 3], 1],
-      brightness: enhancement.brightness,
-      contrast: enhancement.contrast,
-      exposure: enhancement.exposure,
-      saturation: enhancement.saturation,
-      gamma: enhancement.gamma,
+      brightness: this.enhancement.brightness,
+      contrast: this.enhancement.contrast,
+      exposure: this.enhancement.exposure,
+      saturation: this.enhancement.saturation,
+      gamma: this.enhancement.gamma,
     });
+  }
+
+  public resetEnhancement() {
+    if (!this.#rasterLayer) return;
+
+    this.enhancement = { ...defaultEnhancement };
   }
 
   public updateFeatureData(
@@ -689,6 +711,48 @@ export class ImageViewerController {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
+    });
+  }
+
+  private async applyDynamicStretch(url: string, nodata = 0) {
+    this.#stretchAbortController?.abort();
+    this.#stretchAbortController = new AbortController();
+
+    try {
+      const stats = await getCogStats(url, nodata);
+      if (!this.#rasterLayer) return;
+
+      // Fallback logic for single band/grayscale
+      const r = stats[0];
+      const g = stats[1] || r;
+      const b = stats[2] || r;
+
+      // Update variables without re-setting the whole style
+      this.#rasterLayer.updateStyleVariables({
+        rMin: r.min,
+        rMax: r.max,
+        gMin: g.min,
+        gMax: g.max,
+        bMin: b.min,
+        bMax: b.max,
+      });
+
+      console.debug("[stretch] Updated variables:", stats);
+    } catch (e) {
+      console.warn("[stretch] Failed", e);
+    }
+  }
+
+  private setupZoomStretch(url: string, nodata = 0) {
+    if (!this.#map) return;
+
+    let lastZoom = -1;
+
+    this.#map.on("moveend", () => {
+      const zoom = Math.round(this.#map.getView().getZoom() ?? 0);
+      if (zoom === lastZoom) return;
+      lastZoom = zoom;
+      this.applyDynamicStretch(url, nodata);
     });
   }
 }

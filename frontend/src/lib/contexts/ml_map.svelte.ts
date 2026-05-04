@@ -332,16 +332,14 @@ export class MapLibreState {
 
     const url = `/thumbnails/${preview.filename}.png`;
 
-    this.upsertImageSource("image-preview", url, ordered, "search-extent-line");
+    const beforeId = this.#map.getLayer("search-extent-line")
+      ? "search-extent-line"
+      : undefined;
+    this.upsertImageSource("image-preview", url, ordered, beforeId);
     const style = {
       lineColor: "#f5bb27",
     };
-    this.setPolygons(
-      "footprint",
-      [preview.polygon],
-      style,
-      "search-extent-line",
-    );
+    this.setPolygons("footprint", [preview.polygon], style, beforeId);
 
     this.fitToPolygon(coords, {
       bearing: preview.azimuth_angle,

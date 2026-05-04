@@ -35,6 +35,9 @@ importers:
       '@svar-ui/svelte-grid':
         specifier: ^2.6.1
         version: 2.6.1
+      geotiff:
+        specifier: ^3.0.5
+        version: 3.0.5
       maplibre-gl:
         specifier: ^5.24.0
         version: 5.24.0

@@ -179,31 +179,34 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
       },
     }
 
-  attach_sql = f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a"
-  detach_sql = "DETACH DATABASE a"
+  attach_sql = (
+    f"ATTACH DATABASE '{app_settings.EQUIPMENT_DB}' AS ed",
+    f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a",
+  )
+  detach_sql = ("DETACH DATABASE ed", "DETACH DATABASE a")
   select_sql, params = (
     Query()
     .select(
-      "ep.id AS id",
-      "AsGeoJSON(ep.geometry) AS geometry",
-      "ep.equipment AS equipment_id",
-      "a.equipment.displayName AS equipment_label",
-      "ep.confidence AS confidence_id",
+      "ea.id AS id",
+      "AsGeoJSON(ea.geometry) AS geometry",
+      "ea.equipment AS equipment_id",
+      "ed.equipment.displayName AS equipment_label",
+      "ea.confidence AS confidence_id",
       "a.observation_confidence.text AS confidence_label",
-      "ep.status AS status_id",
+      "ea.status AS status_id",
       "a.equipment_status.text AS status_label",
-      "ep.createdByUserId AS createdByUserId",
-      "ep.modifiedByUserId AS modifiedByUserId",
-      "ep.createdAtTimestamp AS createdAtTimestamp",
-      "ep.modifiedAtTimestamp AS modifiedAtTimestamp",
+      "ea.createdByUserId AS createdByUserId",
+      "ea.modifiedByUserId AS modifiedByUserId",
+      "ea.createdAtTimestamp AS createdAtTimestamp",
+      "ea.modifiedAtTimestamp AS modifiedAtTimestamp",
     )
-    .from_(f"equipment_{geometry.lower()} ep")
-    .inner_join("a.equipment", "a.equipment.id = ep.equipment")
+    .from_(f"equipment_{geometry.lower()} ea")
+    .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
     .inner_join(
-      "a.observation_confidence", "a.observation_confidence.id = ep.confidence"
+      "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
     )
-    .inner_join("a.equipment_status", "a.equipment_status.id = ep.status")
-    .where("ep.image = ?", image_id)
+    .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
+    .where("ea.image = ?", image_id)
     .build()
   )
 
@@ -211,13 +214,15 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
     db.conn.row_factory = Row
     cursor = db.conn.cursor()
 
-    cursor.execute(attach_sql)
+    for statement in attach_sql:
+      cursor.execute(statement)
 
     try:
       return [map_row(r) for r in cursor.execute(select_sql, params)]
 
     finally:
-      cursor.execute(detach_sql)
+      for statement in detach_sql:
+        cursor.execute(statement)
 
 
 class ConvertAnnotation(TypedDict):

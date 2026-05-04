@@ -4,6 +4,51 @@ import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
 
+export const stretchStyle = {
+  variables: {
+    rMin: 0,
+    rMax: 255,
+    gMin: 0,
+    gMax: 255,
+    bMin: 0,
+    bMax: 255,
+  },
+  color: [
+    "array",
+    [
+      "clamp",
+      [
+        "/",
+        ["-", ["band", 1], ["var", "rMin"]],
+        ["-", ["var", "rMax"], ["var", "rMin"]],
+      ],
+      0,
+      1,
+    ],
+    [
+      "clamp",
+      [
+        "/",
+        ["-", ["band", 2], ["var", "gMin"]],
+        ["-", ["var", "gMax"], ["var", "gMin"]],
+      ],
+      0,
+      1,
+    ],
+    [
+      "clamp",
+      [
+        "/",
+        ["-", ["band", 3], ["var", "bMin"]],
+        ["-", ["var", "bMax"], ["var", "bMin"]],
+      ],
+      0,
+      1,
+    ],
+    1,
+  ],
+};
+
 const equipmentPointStyle = {
   base: {
     "circle-radius": 5,

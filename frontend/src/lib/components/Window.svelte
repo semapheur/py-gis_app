@@ -84,7 +84,12 @@
     height: {size.height}px;
   "
 >
-  <header class="window-header" onpointerdown={startDrag}>
+  <header
+    class="window-header"
+    role="dialog"
+    tabindex="0"
+    onpointerdown={startDrag}
+  >
     <div class="header-title">{title}</div>
     <div class="header-buttons">
       <CloseButton onclick={() => (open = false)} />
@@ -95,7 +100,7 @@
     {@render children()}
   </main>
 
-  <div class="resize-handle" onpointerdown={startResize}></div>
+  <div class="resize-handle" role="none" onpointerdown={startResize}></div>
 </div>
 
 <style>
