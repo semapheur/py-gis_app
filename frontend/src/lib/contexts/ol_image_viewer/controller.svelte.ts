@@ -2,7 +2,7 @@ import { getContext, setContext } from "svelte";
 import Map from "ol/Map";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
-import WebGLTileLayer, { type Style as RasterStyle } from "ol/layer/WebGLTile";
+import WebGLTileLayer from "ol/layer/WebGLTile";
 import WebGLVectorLayer from "ol/layer/WebGLVector";
 import GeoTIFF from "ol/source/GeoTIFF";
 import { Draw, Modify, Select, Translate } from "ol/interaction";
@@ -28,8 +28,10 @@ import {
   styleMeasurement,
   styleAnnotationLabel,
   equipmentStyle,
-  stretchStyle,
+  defaultEnhancement,
+  type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
+import { BandStretchManager } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
 import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
@@ -39,17 +41,6 @@ import type {
   EquipmentData,
   ActivityData,
 } from "$lib/contexts/annotate.svelte";
-import { getCogStats, buildStretchStyle } from "$lib/utils/raster_utils";
-
-import frag from "$lib/shaders/slc_radiometric_correction_ol.frag.glsl?raw";
-
-export interface Enhancement {
-  brightness: number;
-  contrast: number;
-  exposure: number;
-  saturation: number;
-  gamma: number;
-}
 
 interface ViewerInteractions {
   hover: Select;
@@ -65,18 +56,10 @@ interface Options {
   annotations?: AnnotationInfo[];
 }
 
-const defaultEnhancement: Enhancement = {
-  brightness: 0,
-  contrast: 0,
-  exposure: 0,
-  saturation: 0,
-  gamma: 1,
-};
-
 export class ImageViewerController {
   #image: string | null = null;
   #map: Map | null = null;
-  #stretchAbortController: AbortController | null = null;
+  #bandStretch: BandStretchManager | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
@@ -129,6 +112,9 @@ export class ImageViewerController {
   private destroy() {
     if (!this.#map) return;
 
+    this.#bandStretch?.stop();
+    this.#bandStretch = null;
+
     const interactions = this.#map.getInteractions().getArray();
     interactions.forEach((i) => {
       this.#map!.removeInteraction(i);
@@ -170,9 +156,6 @@ export class ImageViewerController {
     if (this.#map) return;
 
     this.setupMap(target, options);
-    const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
-    this.applyDynamicStretch(url);
-    this.setupZoomStretch(url);
 
     return () => {
       this.destroy();
@@ -182,26 +165,18 @@ export class ImageViewerController {
   private setupMap(target: HTMLElement, options: Options) {
     this.#image = options.imageInfo.id!;
 
+    const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
+
     const rasterSource = new GeoTIFF({
       sources: [
         {
-          url: `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`, //"https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //
+          url, //"https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //
         },
       ],
     });
-    const rasterStyle = options.radiometricParams
-      ? ({
-          fragmentShader: frag,
-          uniforms: {
-            u_noiseCoefs: options.radiometricParams.noise.poly.flat(),
-            u_sigmaZeroCoefs: options.radiometricParams.sigma0.flat(),
-          },
-        } as RasterStyle)
-      : undefined;
 
     this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
-      style: stretchStyle,
     });
     this.#equipmentLayer = new WebGLVectorLayer({
       source: this.#annotationSources.equipment,
@@ -236,6 +211,19 @@ export class ImageViewerController {
       ],
       view: rasterSource.getView(),
     });
+
+    this.#bandStretch = new BandStretchManager(
+      this.#rasterLayer,
+      this.#map,
+      url,
+      {
+        debounceMs: 400,
+        lowPercentile: 2,
+        highPercentile: 98,
+        sampleSize: 256,
+      },
+    );
+    this.#bandStretch.start();
 
     this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();
@@ -578,8 +566,7 @@ export class ImageViewerController {
   public applyEnhancement() {
     if (!this.#rasterLayer) return;
 
-    this.#rasterLayer.setStyle({
-      color: ["array", ["band", 1], ["band", 2], ["band", 3], 1],
+    this.#rasterLayer.updateStyleVariables({
       brightness: this.enhancement.brightness,
       contrast: this.enhancement.contrast,
       exposure: this.enhancement.exposure,
@@ -711,48 +698,6 @@ export class ImageViewerController {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
-    });
-  }
-
-  private async applyDynamicStretch(url: string, nodata = 0) {
-    this.#stretchAbortController?.abort();
-    this.#stretchAbortController = new AbortController();
-
-    try {
-      const stats = await getCogStats(url, nodata);
-      if (!this.#rasterLayer) return;
-
-      // Fallback logic for single band/grayscale
-      const r = stats[0];
-      const g = stats[1] || r;
-      const b = stats[2] || r;
-
-      // Update variables without re-setting the whole style
-      this.#rasterLayer.updateStyleVariables({
-        rMin: r.min,
-        rMax: r.max,
-        gMin: g.min,
-        gMax: g.max,
-        bMin: b.min,
-        bMax: b.max,
-      });
-
-      console.debug("[stretch] Updated variables:", stats);
-    } catch (e) {
-      console.warn("[stretch] Failed", e);
-    }
-  }
-
-  private setupZoomStretch(url: string, nodata = 0) {
-    if (!this.#map) return;
-
-    let lastZoom = -1;
-
-    this.#map.on("moveend", () => {
-      const zoom = Math.round(this.#map.getView().getZoom() ?? 0);
-      if (zoom === lastZoom) return;
-      lastZoom = zoom;
-      this.applyDynamicStretch(url, nodata);
     });
   }
 }

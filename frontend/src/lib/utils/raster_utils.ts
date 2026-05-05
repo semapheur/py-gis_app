@@ -1,23 +1,26 @@
-import { fromUrl } from "geotiff";
+import { fromUrl, GeoTIFFImage } from "geotiff";
 
 interface BandStats {
   min: number;
   max: number;
 }
 
-export async function getCogStats(
-  url: string,
-  nodata = 0,
-): Promise<BandStats[]> {
+export async function getCogOverview(url: string) {
   const tiff = await fromUrl(url);
   const imageCount = await tiff.getImageCount();
   const overview = await tiff.getImage(imageCount - 1);
+  return overview;
+}
 
-  const samplesPerPixel = overview.getSamplesPerPixel();
+export async function getCogStats(
+  image: GeoTIFFImage,
+  nodata = 0,
+): Promise<BandStats[]> {
+  const samplesPerPixel = image.getSamplesPerPixel();
   const embeddedStats: BandStats[] = [];
 
   for (let band = 0; band < samplesPerPixel; band++) {
-    const meta = overview.getGDALMetadata(band) ?? overview.getGDALMetadata();
+    const meta = image.getGDALMetadata(band) ?? image.getGDALMetadata();
     if (meta?.STATISTICS_MINIMUM && meta?.STATISTICS_MAXIMUM) {
       embeddedStats.push({
         min: parseFloat(meta.STATISTICS_MINIMUM),
@@ -31,7 +34,7 @@ export async function getCogStats(
   }
 
   console.debug("[stretch] Computing stats from overview pixels");
-  const data = await overview.readRasters();
+  const data = await image.readRasters();
   const bandData = Array.isArray(data) ? data : [data];
 
   return bandData.map((band) => {
@@ -39,7 +42,7 @@ export async function getCogStats(
     const validPixels = (band as any).filter(
       (v: number) => v !== nodata && !isNaN(v),
     );
-    validPixels.sort(); // TypedArray sort is much faster than Array.sort
+    validPixels.sort();
 
     return {
       min: validPixels[Math.floor(0.02 * (validPixels.length - 1))] || 0,

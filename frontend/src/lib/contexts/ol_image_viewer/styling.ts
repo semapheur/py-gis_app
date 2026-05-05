@@ -4,22 +4,40 @@ import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
 
-export const stretchStyle = {
-  variables: {
-    rMin: 0,
-    rMax: 255,
-    gMin: 0,
-    gMax: 255,
-    bMin: 0,
-    bMax: 255,
-  },
+export interface Enhancement {
+  brightness: number;
+  contrast: number;
+  exposure: number;
+  saturation: number;
+  gamma: number;
+}
+
+export const defaultEnhancement: Enhancement = {
+  brightness: 0,
+  contrast: 0,
+  exposure: 0,
+  saturation: 0,
+  gamma: 1,
+};
+
+const rgbVariables = {
+  rMin: 0,
+  rMax: 255,
+  gMin: 0,
+  gMax: 255,
+  bMin: 0,
+  bMax: 255,
+};
+
+const stretchExpression = (bandR: number, bandG: number, bandB: number) => ({
+  variables: { ...rgbVariables, ...defaultEnhancement },
   color: [
     "array",
     [
       "clamp",
       [
         "/",
-        ["-", ["band", 1], ["var", "rMin"]],
+        ["-", ["band", bandR], ["var", "rMin"]],
         ["-", ["var", "rMax"], ["var", "rMin"]],
       ],
       0,
@@ -29,7 +47,7 @@ export const stretchStyle = {
       "clamp",
       [
         "/",
-        ["-", ["band", 2], ["var", "gMin"]],
+        ["-", ["band", bandG], ["var", "gMin"]],
         ["-", ["var", "gMax"], ["var", "gMin"]],
       ],
       0,
@@ -39,7 +57,7 @@ export const stretchStyle = {
       "clamp",
       [
         "/",
-        ["-", ["band", 3], ["var", "bMin"]],
+        ["-", ["band", bandB], ["var", "bMin"]],
         ["-", ["var", "bMax"], ["var", "bMin"]],
       ],
       0,
@@ -47,7 +65,15 @@ export const stretchStyle = {
     ],
     1,
   ],
-};
+  brightness: ["var", "brightness"],
+  contrast: ["var", "contrast"],
+  exposure: ["var", "exposure"],
+  saturation: ["var", "saturation"],
+  gamma: ["var", "gamma"],
+});
+
+export const multibandStyle = stretchExpression(1, 2, 3);
+export const panchromaticStyle = stretchExpression(1, 1, 1);
 
 const equipmentPointStyle = {
   base: {
