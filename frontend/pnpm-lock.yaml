@@ -12,14 +12,14 @@ importers:
         specifier: ^6.10.3
         version: 6.10.3
       '@codemirror/search':
-        specifier: ^6.6.0
-        version: 6.6.0
+        specifier: ^6.7.0
+        version: 6.7.0
       '@codemirror/state':
         specifier: ^6.6.0
         version: 6.6.0
       '@codemirror/view':
-        specifier: ^6.41.0
-        version: 6.41.0
+        specifier: ^6.42.0
+        version: 6.42.0
       '@iconify-svelte/mdi':
         specifier: ^1.0.0
         version: 1.0.0(svelte@5.55.5)
@@ -28,7 +28,7 @@ importers:
         version: 0.31.0
       '@replit/codemirror-vim':
         specifier: ^6.3.0
-        version: 6.3.0(@codemirror/commands@6.10.3)(@codemirror/language@6.12.1)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)
+        version: 6.3.0(@codemirror/commands@6.10.3)(@codemirror/language@6.12.1)(@codemirror/search@6.7.0)(@codemirror/state@6.6.0)(@codemirror/view@6.42.0)
       '@svar-ui/svelte-core':
         specifier: ^2.5.1
         version: 2.5.1
@@ -51,15 +51,18 @@ importers:
         specifier: ^8.0.12
         version: 8.0.12(svelte@5.55.5)
       valibot:
-        specifier: ^1.3.1
-        version: 1.3.1(typescript@6.0.3)
+        specifier: ^1.4.0
+        version: 1.4.0(typescript@6.0.3)
     devDependencies:
       '@sveltejs/adapter-auto':
         specifier: ^7.0.1
-        version: 7.0.1(@sveltejs/kit@2.58.0(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))
+        version: 7.0.1(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))
+      '@sveltejs/adapter-static':
+        specifier: ^3.0.10
+        version: 3.0.10(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))
       '@sveltejs/kit':
-        specifier: ^2.58.0
-        version: 2.58.0(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))
+        specifier: ^2.59.1
+        version: 2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))
       '@sveltejs/vite-plugin-svelte':
         specifier: ^7.0.0
         version: 7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2))
@@ -90,14 +93,14 @@ packages:
   '@codemirror/language@6.12.1':
     resolution: {integrity: sha512-Fa6xkSiuGKc8XC8Cn96T+TQHYj4ZZ7RdFmXA3i9xe/3hLHfwPZdM+dqfX0Cp0zQklBKhVD8Yzc8LS45rkqcwpQ==}
 
-  '@codemirror/search@6.6.0':
-    resolution: {integrity: sha512-koFuNXcDvyyotWcgOnZGmY7LZqEOXZaaxD/j6n18TCLx2/9HieZJ5H6hs1g8FiRxBD0DNfs0nXn17g872RmYdw==}
+  '@codemirror/search@6.7.0':
+    resolution: {integrity: sha512-ZvGm99wc/s2cITtMT15LFdn8aH/aS+V+DqyGq/N5ZlV5vWtH+nILvC2nw0zX7ByNoHHDZ2IxxdW38O0tc5nVHg==}
 
   '@codemirror/state@6.6.0':
     resolution: {integrity: sha512-4nbvra5R5EtiCzr9BTHiTLc+MLXK2QGiAVYMyi8PkQd3SR+6ixar/Q/01Fa21TBIDOZXgeWV4WppsQolSreAPQ==}
 
-  '@codemirror/view@6.41.0':
-    resolution: {integrity: sha512-6H/qadXsVuDY219Yljhohglve8xf4B8xJkVOEWfA5uiYKiTFppjqsvsfR5iPA0RbvRBoOyTZpbLIxe9+0UR8xA==}
+  '@codemirror/view@6.42.0':
+    resolution: {integrity: sha512-+PJEyndSCrsS2oLH3DfWoLBcF3xfeyGXtLnpXqHY01kL3TogyCLD12hNvSu73ww2KFftrx3Rd0nGOigbSkU3Hw==}
 
   '@emnapi/core@1.10.0':
     resolution: {integrity: sha512-yq6OkJ4p82CAfPl0u9mQebQHKPJkY7WrIuk205cTYnYe+k2Z8YBh11FrbRG/H6ihirqcacOgl2BIO8oyMQLeXw==}
@@ -514,8 +517,13 @@ packages:
     peerDependencies:
       '@sveltejs/kit': ^2.0.0
 
-  '@sveltejs/kit@2.58.0':
-    resolution: {integrity: sha512-kT9GCN8yJTkCK1W+Gi/bvGooWAM7y7WXP+yd+rf6QOIjyoK1ERPrMwSufXJUNu2pMWIqruhFvmz+LbOqsEmKmA==}
+  '@sveltejs/adapter-static@3.0.10':
+    resolution: {integrity: sha512-7D9lYFWJmB7zxZyTE/qxjksvMqzMuYrrsyh1f4AlZqeZeACPRySjbC3aFiY55wb1tWUaKOQG9PVbm74JcN2Iew==}
+    peerDependencies:
+      '@sveltejs/kit': ^2.0.0
+
+  '@sveltejs/kit@2.59.1':
+    resolution: {integrity: sha512-d8OON70AphLdDesuTIl//M2O6fRTIicX8aYv8vhCiYEhTTI2OboKqey0Hu1A4VFhqwgqtq0vKDmPFGkw8kKmgw==}
     engines: {node: '>=18.13'}
     hasBin: true
     peerDependencies:
@@ -898,8 +906,8 @@ packages:
     resolution: {integrity: sha512-DVeVIWUZCAQPNzm5sB0hpsG1GygTTdBnzNtYYEpInkttx5evkyqRgZi6rTczoySqp8hO5jHVKzrH0f23X8FZLg==}
     engines: {node: '>=18'}
 
-  valibot@1.3.1:
-    resolution: {integrity: sha512-sfdRir/QFM0JaF22hqTroPc5xy4DimuGQVKFrzF1YfGwaS1nJot3Y8VqMdLO2Lg27fMzat2yD3pY5PbAYO39Gg==}
+  valibot@1.4.0:
+    resolution: {integrity: sha512-iC/x7fVcSyOwlm/VSt7RlHnzNGLGvR9GnxdifUeWoCJo0q4ZZvrVkIHC6faTlkxG47I2Y4UrFquPuVHCrOnrLg==}
     peerDependencies:
       typescript: '>=5'
     peerDependenciesMeta:
@@ -1000,29 +1008,29 @@ snapshots:
     dependencies:
       '@codemirror/language': 6.12.1
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.42.0
       '@lezer/common': 1.5.0
 
   '@codemirror/language@6.12.1':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.42.0
       '@lezer/common': 1.5.0
       '@lezer/highlight': 1.2.3
       '@lezer/lr': 1.4.5
       style-mod: 4.1.3
 
-  '@codemirror/search@6.6.0':
+  '@codemirror/search@6.7.0':
     dependencies:
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.42.0
       crelt: 1.0.6
 
   '@codemirror/state@6.6.0':
     dependencies:
       '@marijn/find-cluster-break': 1.0.2
 
-  '@codemirror/view@6.41.0':
+  '@codemirror/view@6.42.0':
     dependencies:
       '@codemirror/state': 6.6.0
       crelt: 1.0.6
@@ -1230,13 +1238,13 @@ snapshots:
 
   '@polka/url@1.0.0-next.29': {}
 
-  '@replit/codemirror-vim@6.3.0(@codemirror/commands@6.10.3)(@codemirror/language@6.12.1)(@codemirror/search@6.6.0)(@codemirror/state@6.6.0)(@codemirror/view@6.41.0)':
+  '@replit/codemirror-vim@6.3.0(@codemirror/commands@6.10.3)(@codemirror/language@6.12.1)(@codemirror/search@6.7.0)(@codemirror/state@6.6.0)(@codemirror/view@6.42.0)':
     dependencies:
       '@codemirror/commands': 6.10.3
       '@codemirror/language': 6.12.1
-      '@codemirror/search': 6.6.0
+      '@codemirror/search': 6.7.0
       '@codemirror/state': 6.6.0
-      '@codemirror/view': 6.41.0
+      '@codemirror/view': 6.42.0
 
   '@rolldown/binding-android-arm64@1.0.0-rc.17':
     optional: true
@@ -1348,11 +1356,15 @@ snapshots:
     dependencies:
       acorn: 8.15.0
 
-  '@sveltejs/adapter-auto@7.0.1(@sveltejs/kit@2.58.0(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))':
+  '@sveltejs/adapter-auto@7.0.1(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))':
     dependencies:
-      '@sveltejs/kit': 2.58.0(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))
+      '@sveltejs/kit': 2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))
 
-  '@sveltejs/kit@2.58.0(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))':
+  '@sveltejs/adapter-static@3.0.10(@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2)))':
+    dependencies:
+      '@sveltejs/kit': 2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))
+
+  '@sveltejs/kit@2.59.1(@sveltejs/vite-plugin-svelte@7.0.0(svelte@5.55.5)(vite@8.0.10(esbuild@0.27.2)))(svelte@5.55.5)(typescript@6.0.3)(vite@8.0.10(esbuild@0.27.2))':
     dependencies:
       '@standard-schema/spec': 1.0.0
       '@sveltejs/acorn-typescript': 1.0.8(acorn@8.15.0)
@@ -1751,7 +1763,7 @@ snapshots:
 
   unzipit@2.0.0: {}
 
-  valibot@1.3.1(typescript@6.0.3):
+  valibot@1.4.0(typescript@6.0.3):
     optionalDependencies:
       typescript: 6.0.3
 

@@ -3,6 +3,8 @@ import type { PageLoad } from "./$types";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 
+export const prerender = false;
+
 async function fetchJson<T>(
   fetch: typeof globalThis.fetch,
   input: RequestInfo,

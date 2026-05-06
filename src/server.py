@@ -58,7 +58,10 @@ class Handler(SimpleHTTPRequestHandler):
     full = app_settings.STATIC_DIR / rel
 
     if full.is_dir():
-      return str(app_settings.STATIC_DIR / "index.html")
+      index = full / "index.html"
+      if index.exists():
+        return str(index)
+      return str(app_settings.STATIC_DIR / "200.html")
 
     if full.exists():
       return str(full)

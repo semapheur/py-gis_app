@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import "maplibre-gl/dist/maplibre-gl.css";
@@ -25,7 +26,9 @@
   }: Props = $props();
 
   let showLayers = $state<boolean>(false);
-  const initialBbox = syncBbox ? page.url.searchParams.get("bbox") : null;
+  const initialBbox = $derived(
+    syncBbox && browser ? page.url.searchParams.get("bbox") : null,
+  );
   const mapLibre = getMapLibreState();
 
   function searchCurrentExtent() {
@@ -38,7 +41,7 @@
   }
 
   $effect(() => {
-    if (!syncBbox) return;
+    if (!syncBbox || !browser) return;
 
     const cleanup = mapLibre.onMoveEnd((bbox) => {
       const params = new URLSearchParams(page.url.searchParams);

@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { browser } from "$app/environment";
   import { page } from "$app/state";
   import { setAreaMapState } from "$lib/contexts/ol_area_map.svelte";
   import { setAreaEditorState } from "$lib/contexts/area_editor.svelte";
@@ -6,8 +7,11 @@
   import AreaEditor from "$lib/components/AreaEditor.svelte";
   import { parseBbox } from "$lib/utils/geo/bbox";
 
-  const initialBbox = page.url.searchParams.get("bbox");
-  const bbox = initialBbox !== null ? parseBbox(initialBbox) : initialBbox;
+  const bbox = $derived.by(() => {
+    if (!browser) return;
+    const raw = page.url.searchParams.get("bbox");
+    return raw !== null ? parseBbox(raw) : null;
+  });
 
   setAreaMapState([], bbox);
   setAreaEditorState();
