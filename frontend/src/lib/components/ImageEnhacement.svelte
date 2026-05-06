@@ -1,9 +1,7 @@
 <script lang="ts">
   import RangeSlider from "$lib/components/RangeSlider.svelte";
-  import {
-    getImageViewerController,
-    type Enhancement,
-  } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import { type Enhancement } from "$lib/contexts/ol_image_viewer/styling";
   import Button from "$lib/components/Button.svelte";
 
   interface SliderConfig {
@@ -15,11 +13,11 @@
   }
 
   const sliders: SliderConfig[] = [
-    { key: "brightness", label: "Brightness", min: -1, max: 1, step: 0.01 },
-    { key: "contrast", label: "Contrast", min: -1, max: 1, step: 0.01 },
-    { key: "exposure", label: "Exposure", min: -1, max: 1, step: 0.01 },
-    { key: "saturation", label: "Saturation", min: -1, max: 1, step: 0.01 },
-    { key: "gamma", label: "Gamma", min: 1, max: 10, step: 0.1 },
+    { key: "brightness", label: "Brightness", min: -0.5, max: 0.5, step: 0.01 },
+    { key: "contrast", label: "Contrast", min: 0, max: 4, step: 0.05 },
+    { key: "exposure", label: "Exposure", min: -3, max: 3, step: 0.01 },
+    { key: "saturation", label: "Saturation", min: 0, max: 3, step: 0.05 },
+    { key: "gamma", label: "Gamma", min: 0.2, max: 5, step: 0.05 },
   ];
 
   const viewer = getImageViewerController();

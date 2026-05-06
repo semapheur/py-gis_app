@@ -29,5 +29,7 @@
   .table-list {
     display: flex;
     flex-direction: column;
+    gap: var(--size-sm);
+    padding: var(--size-lg);
   }
 </style>

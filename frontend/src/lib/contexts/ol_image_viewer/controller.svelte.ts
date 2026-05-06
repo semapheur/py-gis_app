@@ -31,7 +31,10 @@ import {
   defaultEnhancement,
   type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
-import { BandStretchManager } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
+import {
+  BandStretchManager,
+  buildStyleExpression,
+} from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
 import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
@@ -51,7 +54,7 @@ interface ViewerInteractions {
 }
 
 interface Options {
-  imageInfo: Partial<ImageInfo>;
+  imageInfo: ImageInfo;
   radiometricParams: RadiometricParams | null;
   annotations?: AnnotationInfo[];
 }
@@ -59,7 +62,7 @@ interface Options {
 export class ImageViewerController {
   #image: string | null = null;
   #map: Map | null = null;
-  #bandStretch: BandStretchManager | null = null;
+  //#bandStretch: BandStretchManager | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
@@ -112,8 +115,8 @@ export class ImageViewerController {
   private destroy() {
     if (!this.#map) return;
 
-    this.#bandStretch?.stop();
-    this.#bandStretch = null;
+    //this.#bandStretch?.stop();
+    //this.#bandStretch = null;
 
     const interactions = this.#map.getInteractions().getArray();
     interactions.forEach((i) => {
@@ -173,10 +176,17 @@ export class ImageViewerController {
           url, //"https://sentinel-cogs.s3.us-west-2.amazonaws.com/sentinel-s2-l2a-cogs/36/Q/WD/2020/7/S2A_36QWD_20200701_0_L2A/TCI.tif", //
         },
       ],
+      normalize: false,
     });
+
+    const rasterStyle = buildStyleExpression(options.imageInfo.band_statistics);
 
     this.#rasterLayer = new WebGLTileLayer({
       source: rasterSource,
+      style: {
+        variables: { ...defaultEnhancement },
+        ...rasterStyle,
+      },
     });
     this.#equipmentLayer = new WebGLVectorLayer({
       source: this.#annotationSources.equipment,
@@ -212,18 +222,18 @@ export class ImageViewerController {
       view: rasterSource.getView(),
     });
 
-    this.#bandStretch = new BandStretchManager(
-      this.#rasterLayer,
-      this.#map,
-      url,
-      {
-        debounceMs: 400,
-        lowPercentile: 2,
-        highPercentile: 98,
-        sampleSize: 256,
-      },
-    );
-    this.#bandStretch.start();
+    //this.#bandStretch = new BandStretchManager(
+    //  this.#rasterLayer,
+    //  this.#map,
+    //  url,
+    //  {
+    //    debounceMs: 400,
+    //    lowPercentile: 2,
+    //    highPercentile: 98,
+    //    sampleSize: 256,
+    //  },
+    //);
+    //this.#bandStretch.start();
 
     this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();

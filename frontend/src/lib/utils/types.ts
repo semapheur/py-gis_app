@@ -1,10 +1,18 @@
-export interface ImageStats {}
+export interface BandStatistics {
+  data_type: string;
+  color_interpretation: string;
+  min: number;
+  max: number;
+  mean: number;
+  std: number;
+}
 
 export interface ImageInfo {
   id: string;
   filename: string;
   classification: string;
   image_type: "grd" | "pan" | "ms" | "slc";
+  band_statistics: BandStatistics[];
 }
 
 export interface ImageMetadata extends ImageInfo {

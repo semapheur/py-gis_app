@@ -9,6 +9,7 @@ from uuid import UUID
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
+  Band,
   CogOptions,
   GdalTranslateOptions,
   GdalWarpOptions,
@@ -35,6 +36,7 @@ from src.sqlite.table import (
   datetime_field,
   enum_field,
   hash_field,
+  json_field,
   path_field,
   uuid_field,
 )
@@ -52,6 +54,15 @@ class ImageryType(str, Enum):
   PAN = "pan"
   MS = "ms"
   SLC = "slc"
+
+
+class BandStatistics(TypedDict):
+  data_type: str
+  color_interpretation: str
+  min: int
+  max: int
+  mean: float
+  std: float
 
 
 class ImageIndexTable(Table):
@@ -72,6 +83,7 @@ class ImageIndexTable(Table):
   ground_sample_distance_row = Field(float)
   ground_sample_distance_col = Field(float)
   interpretation_rating = Field(float)
+  band_statistics = json_field(list[BandStatistics], nullable=False)
 
 
 def create_index_table():
@@ -79,15 +91,34 @@ def create_index_table():
     db.create_table(ImageIndexTable)
 
 
-def detect_image_type(
-  gdal_info: dict,
-) -> tuple[ImagerySensorType, ImageryType]:
-  bands = gdal_info.get("bands")
+def get_band_statistics(gdal_info: dict) -> list[BandStatistics]:
+  bands = cast(Optional[list[Band]], gdal_info.get("bands"))
   if bands is None:
-    raise ValueError("'bands' missing from gdalinfo")
+    raise ValueError("'bands' field missing from gdalinfo")
+
+  print(bands)
+
+  band_statistics = [
+    BandStatistics(
+      data_type=band["type"],
+      color_interpretation=band["colorInterpretation"],
+      min=band["min"],
+      max=band["max"],
+      mean=band["mean"],
+      std=band["stdDev"],
+    )
+    for band in bands
+  ]
+
+  return band_statistics
+
+
+def detect_image_type(
+  bands: list[BandStatistics], gdal_info: dict
+) -> tuple[ImagerySensorType, ImageryType]:
 
   metadata = gdal_info.get("metadata", {}).get("", {})
-  complex_bands = [band.get("type", "").lower().startswith("c") for band in bands]
+  complex_bands = [band["data_type"].lower().startswith("c") for band in bands]
   if any(complex_bands):
     return (ImagerySensorType.SAR, ImageryType.SLC)
 
@@ -224,7 +255,8 @@ def parse_image_metadata(
   relative_directory: Path,
 ) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
 
-  sensor_type, image_type = detect_image_type(gdal_info)
+  band_statistics = get_band_statistics(gdal_info)
+  sensor_type, image_type = detect_image_type(band_statistics, gdal_info)
 
   base_data = {
     "id": hash,
@@ -234,6 +266,7 @@ def parse_image_metadata(
     "filetype": file_path.suffix,
     "sensor_type": sensor_type,
     "image_type": image_type,
+    "band_statistics": band_statistics,
   }
 
   isd = gdal_info.get("isd")
@@ -439,7 +472,7 @@ def index_image(
     # TODO: handle duplicates
     return None, None
 
-  info = gdalinfo(file)
+  info = gdalinfo(file, stats="exact")
   relative_directory = file.parent.relative_to(image_dir)
   index_row, radiometric_row = parse_image_metadata(
     info, image_hash, catalog_id, file, relative_directory
@@ -585,7 +618,7 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
 def get_image_info(id: bytes) -> dict:
   query = (
     Query()
-    .select("filename", "image_type")
+    .select("filename", "image_type", "band_statistics")
     .from_(ImageIndexTable._table_name)
     .where("id = ?", id)
   )

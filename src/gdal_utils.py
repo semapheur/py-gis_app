@@ -152,16 +152,18 @@ class BandMetadata(TypedDict):
   STATISTICS_VALID_PERCENT: str
 
 
-class Band(TypedDict):
+class Band(TypedDict, total=False):
   band: int
   block: list[int]
+  type: NumberTypes
   colorInterpretation: str
+  min: float
+  max: float
+  minimum: float
   maximum: float
   mean: float
-  metadata: dict[Literal[""], BandMetadata]
-  minimum: float
   stdDev: float
-  type: NumberTypes
+  metadata: dict[Literal[""], BandMetadata]
 
 
 def gdalinfo(

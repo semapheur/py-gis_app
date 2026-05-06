@@ -1,5 +1,6 @@
 from __future__ import annotations
 
+import json
 import uuid
 from dataclasses import dataclass
 from datetime import datetime
@@ -347,12 +348,23 @@ def path_field(nullable: bool, unique: bool):
   )
 
 
-def enum_field(enum: type[Enum], sql_type: ColumnType):
+def enum_field(enum: type[Enum], sql_type: ColumnType, nullable: bool = True):
   return Field(
     enum,
     sql_type,
+    nullable=nullable,
     to_sql=lambda x: x.value,
     from_sql=lambda x: enum(x),
     to_json=lambda x: x.value if isinstance(x, enum) else x,
     from_json=lambda x: enum(x),
+  )
+
+
+def json_field(python_json: type[T], nullable: bool = True):
+  return Field(
+    python_json,
+    ColumnType.TEXT,
+    nullable=nullable,
+    to_sql=lambda x: json.dumps(x),
+    from_sql=lambda x: json.loads(x),
   )

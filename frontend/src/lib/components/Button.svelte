@@ -21,7 +21,7 @@
     gap: var(--size-sm);
     appearance: none;
     padding: var(--size-md);
-    color: inherit;
+    color: oklch(var(--color-text));
     background-color: oklch(var(--color-secondary));
     border: none;
     border-radius: var(--size-sm);

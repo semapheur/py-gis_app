@@ -453,7 +453,7 @@
     ondragover={handleDragOver}
     ondragleave={handleDragLeave}
     ondrop={handleDrop}
-    role="drag"
+    role="none"
     undo
   >
     {#if isDragging}

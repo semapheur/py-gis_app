@@ -5,7 +5,7 @@ from typing import Literal, TypeAlias, TypedDict
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import Query
-from src.sqlite.table import ColumnType, Field, Table, hash_field
+from src.sqlite.table import ColumnType, Field, Table, hash_field, json_field
 
 app_settings = get_settings()
 
@@ -17,12 +17,7 @@ class NoiseParameters(TypedDict):
   poly: list[list[float]]
 
 
-polygon = Field(
-  list[list[float]],
-  ColumnType.TEXT,
-  to_sql=lambda x: json.dumps(x),
-  from_sql=lambda x: json.loads(x),
-)
+polygon = json_field(list[list[float]])
 
 
 class RadiometricParamsTable(Table):

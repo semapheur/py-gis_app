@@ -6,25 +6,91 @@ import type {
   BandStretchError,
   Extent,
 } from "$lib/workers/bandstretch.worker";
+import type { BandStatistics } from "$lib/utils/types";
 
-function buildStyleExpression(
-  result: BandStretchResult,
+function isComplexBand(band: BandStatistics): boolean {
+  return band.data_type.toLowerCase().startsWith("c");
+}
+
+function stretchRange(band: BandStatistics) {
+  if (isComplexBand(band)) {
+    const amplitudeScale = band.std * Math.SQRT2;
+    return { min: 0, max: amplitudeScale * 4 };
+  }
+
+  return { min: band.min, max: band.max };
+}
+
+export function buildStyleExpression(
+  bands: BandStatistics[],
 ): Record<string, unknown> {
-  const { bands, singleBand } = result;
-
   const stretch = (bandIndex: number) => {
-    const { min, max } = bands[bandIndex - 1] ?? { min: 0, max: 1 };
+    const { min, max } = stretchRange(bands[bandIndex - 1]);
     const range = max - min || 1;
     return ["clamp", ["/", ["-", ["band", bandIndex], min], range], 0, 1];
   };
 
-  if (singleBand) {
-    const s = stretch(1);
-    return { color: ["array", s, s, s, 1] };
-  }
+  const singleBand = bands.length === 1;
+  const raw = singleBand
+    ? { r: stretch(1), g: stretch(1), b: stretch(1) }
+    : { r: stretch(1), g: stretch(2), b: stretch(3) };
+
+  const gamma = (channel: unknown) => [
+    "^",
+    ["clamp", ["*", channel, ["^", 2, ["var", "exposure"]]], 0, 1],
+    ["/", 1, ["var", "gamma"]],
+  ];
+
+  const gammaExposed = {
+    r: gamma(raw.r),
+    g: gamma(raw.g),
+    b: gamma(raw.b),
+  };
+
+  const saturated = singleBand
+    ? gammaExposed
+    : (() => {
+        const luma = [
+          "+",
+          ["*", 0.2126, gammaExposed.r],
+          ["*", 0.7152, gammaExposed.g],
+          ["*", 0.0722, gammaExposed.b],
+        ];
+
+        const saturation = (channel: unknown) => [
+          "clamp",
+          ["+", luma, ["*", ["var", "saturation"], ["-", channel, luma]]],
+          0,
+          1,
+        ];
+
+        return {
+          r: saturation(gammaExposed.r),
+          g: saturation(gammaExposed.g),
+          b: saturation(gammaExposed.b),
+        };
+      })();
+
+  const enhance = (channel: unknown) => [
+    "clamp",
+    [
+      "+",
+      ["var", "brightness"],
+      ["*", ["var", "contrast"], ["-", channel, 0.5]],
+      0.5,
+    ],
+    0,
+    1,
+  ];
 
   return {
-    color: ["array", stretch(1), stretch(2), stretch(3), 1],
+    color: [
+      "array",
+      enhance(saturated.r),
+      enhance(saturated.g),
+      enhance(saturated.b),
+      1,
+    ],
   };
 }
 

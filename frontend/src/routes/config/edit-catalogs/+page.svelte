@@ -30,12 +30,6 @@
       validate: validateCatalogPath,
       unique: true,
     },
-    {
-      id: "last_indexed",
-      header: "Last indexed",
-      template: formatDatetime,
-      flexgrow: 1,
-    },
   ];
 
   let { data }: { data: PageData } = $props();

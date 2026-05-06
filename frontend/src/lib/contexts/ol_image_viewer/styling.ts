@@ -14,9 +14,9 @@ export interface Enhancement {
 
 export const defaultEnhancement: Enhancement = {
   brightness: 0,
-  contrast: 0,
+  contrast: 1,
   exposure: 0,
-  saturation: 0,
+  saturation: 1,
   gamma: 1,
 };
 
@@ -163,17 +163,17 @@ export function styleAnnotationLabel(
 
 const measurementStyle = new Style({
   fill: new Fill({
-    color: "rgba(255, 255, 255, 0.2)",
+    color: "rgba(255, 255, 255, 0)",
   }),
   stroke: new Stroke({
-    color: "rgba(0, 0, 0, 0.5)",
+    color: "oklch(70.5% 0.213 47.604)",
     lineDash: [10, 10],
     width: 2,
   }),
   image: new Circle({
     radius: 5,
     stroke: new Stroke({
-      color: "rgba(0, 0, 0, 0.7)",
+      color: "oklch(68.5% 0.169 237.323)",
     }),
     fill: new Fill({
       color: "rgba(255, 255, 255, 0.2)",
