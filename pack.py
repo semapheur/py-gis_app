@@ -1,6 +1,8 @@
+import inspect
 import shutil
 import subprocess
 from pathlib import Path
+from typing import Sequence
 
 
 def move_contents(from_dir: Path, to_dir: Path):
@@ -19,6 +21,31 @@ def copy_contents(from_dir: Path, to_dir: Path):
       shutil.copytree(item, target, dirs_exist_ok=True)
     else:
       shutil.copy2(item, target)
+
+
+def append_file_suffix(root: Path, target_suffixes: Sequence[str], extra_suffix: str):
+  suffix_set = {s.lower() for s in target_suffixes}
+
+  for file in root.rglob("*"):
+    if not file.is_file():
+      continue
+
+    if file.suffix.lower() not in suffix_set:
+      continue
+
+    new_name = file.with_name(file.name + extra_suffix)
+    file.rename(new_name)
+
+
+def remove_extra_suffix(root: Path, extra_suffix: str):
+  for file in root.rglob("*"):
+    if not file.is_file():
+      continue
+
+    file_suffixes = file.suffixes
+    if len(file_suffixes) > 1 and file_suffixes[-1] == extra_suffix:
+      new_name = file.name[: -len(extra_suffix)]
+      file.rename(file.with_name(new_name))
 
 
 def create_dist_structure(base: Path = Path("dist")):
@@ -49,14 +76,29 @@ def build_frontend():
   subprocess.run([package_manager, "build"], cwd=frontend_dir, check=True, shell=True)
 
 
-def package_app():
+def package_app(zip_dist: bool = False, mask_suffixes: bool = False):
   create_dist_structure()
   build_frontend()
   move_contents(Path("frontend/build"), Path("dist/static"))
-  shutil.copytree("src", "dist/src", dirs_exist_ok=True)
+  shutil.copytree(
+    "src",
+    "dist/src",
+    dirs_exist_ok=True,
+    ignore=shutil.ignore_patterns("__pycache__"),
+  )
   shutil.copy2("app.py", "dist/app.py")
   shutil.copy2(".env", "dist/.env")
 
+  if mask_suffixes:
+    append_file_suffix(Path("dist"), (".js", ".py"), ".txt")
+
+    function_source = inspect.getsource(remove_extra_suffix)
+    with open("dist/restore_filenames.py.txt", "w") as f:
+      f.write(function_source)
+
+  if zip_dist:
+    shutil.make_archive("dist", "zip", root_dir="dist")
+
 
 if __name__ == "__main__":
-  package_app()
+  package_app(True, True)
