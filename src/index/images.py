@@ -96,8 +96,6 @@ def get_band_statistics(gdal_info: dict) -> list[BandStatistics]:
   if bands is None:
     raise ValueError("'bands' field missing from gdalinfo")
 
-  print(bands)
-
   band_statistics = [
     BandStatistics(
       data_type=band["type"],
@@ -418,6 +416,7 @@ def process_thumbnail(
   minsize: tuple[int, int],
 ):
   thumbnail_dir = app_settings.STATIC_DIR / "thumbnails"
+  thumbnail_dir.mkdir(parents=True, exist_ok=True)
 
   thumbnail_path = thumbnail_dir / f"{image_file.stem}.png"
   make_thumbnail = not thumbnail_path.exists()
@@ -445,6 +444,7 @@ def process_cog(
   old_stem: Optional[str],
 ):
   cog_dir = app_settings.STATIC_DIR / "cog"
+  cog_dir.mkdir(parents=True, exist_ok=True)
   cog_path = cog_dir / f"{image_file.stem}.cog.tif"
   make_cog = True if not cog_path.exists() else False
 

@@ -16,18 +16,21 @@
   });
 </script>
 
-{#if viewerOptions.imageInfo}
-  <div
-    class="map"
-    {@attach (el) => {
-      viewerController.attach(el, viewerOptions);
-    }}
-  ></div>
-{/if}
+<div
+  class="map"
+  {@attach (el) => {
+    viewerController.attach(el, viewerOptions);
+  }}
+></div>
 
 <style>
   .map {
     width: 100%;
     height: 100%;
+  }
+
+  .map :global(canvas) {
+    image-rendering: pixelated;
+    image-rendering: crisp-edges;
   }
 </style>

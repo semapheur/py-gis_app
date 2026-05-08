@@ -198,6 +198,20 @@ def gdalinfo(
   return result
 
 
+def is_cloud_optimized(path: Path) -> bool:
+  if not path.exists():
+    raise FileNotFoundError(f"Invalid path: {str(path)}")
+
+  gdal_python = os.environ["GDAL_PATH"] + "/python/validate_cloud_optimized_geotiff.py"
+  python_exe = "python"
+
+  process = subprocess.run(
+    [python_exe, gdal_python, str(path)], capture_output=True, text=True
+  )
+
+  return process.returncode == 0
+
+
 def gdal_translate(
   input_path: Path,
   output_path: Path,

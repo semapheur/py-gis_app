@@ -1,5 +1,6 @@
 import { getContext, setContext } from "svelte";
 import Map from "ol/Map";
+import View from "ol/View";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import WebGLTileLayer from "ol/layer/WebGLTile";
@@ -32,7 +33,7 @@ import {
   type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
-  BandStretchManager,
+  //BandStretchManager,
   buildStyleExpression,
 } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
 import { vertexStyle } from "$lib/utils/ol_styles";
@@ -113,7 +114,7 @@ export class ImageViewerController {
   }
 
   private destroy() {
-    if (!this.#map) return;
+    if (this.#map === null) return;
 
     //this.#bandStretch?.stop();
     //this.#bandStretch = null;
@@ -165,7 +166,9 @@ export class ImageViewerController {
     };
   }
 
-  private setupMap(target: HTMLElement, options: Options) {
+  private async setupMap(target: HTMLElement, options: Options) {
+    if (!target) return;
+
     this.#image = options.imageInfo.id!;
 
     const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
@@ -178,6 +181,21 @@ export class ImageViewerController {
       ],
       normalize: false,
     });
+
+    const viewOptions = await rasterSource.getView();
+
+    if (!target || this.#map) return;
+
+    const nativeResolutions = viewOptions.resolutions;
+    if (!nativeResolutions) return;
+
+    const lastRes = nativeResolutions[nativeResolutions.length - 1];
+    const extraLevels = 6;
+    const extendedResolutions = [...nativeResolutions];
+
+    for (let i = 1; i <= extraLevels; i++) {
+      extendedResolutions.push(lastRes / Math.pow(2, i));
+    }
 
     const rasterStyle = buildStyleExpression(options.imageInfo.band_statistics);
 
@@ -219,7 +237,11 @@ export class ImageViewerController {
         this.#labelLayer,
         this.#measurementLayer,
       ],
-      view: rasterSource.getView(),
+      view: new View({
+        ...viewOptions,
+        resolutions: extendedResolutions,
+        constrainResolution: false,
+      }),
     });
 
     //this.#bandStretch = new BandStretchManager(
@@ -244,7 +266,12 @@ export class ImageViewerController {
   }
 
   private setupAnnotationInteractions() {
-    if (!this.#map || !this.#equipmentLayer || !this.#labelLayer) return;
+    if (
+      this.#map === null ||
+      this.#equipmentLayer === null ||
+      this.#labelLayer === null
+    )
+      return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
       const originalGeometries = features.map((feature) => ({
@@ -344,7 +371,7 @@ export class ImageViewerController {
   }
 
   private setupMeasurementInteractions() {
-    if (!this.#map || !this.#measurementLayer) return;
+    if (this.#map === null || this.#measurementLayer === null) return;
 
     const modifiable = new Collection<Feature>();
 
@@ -427,7 +454,7 @@ export class ImageViewerController {
     annotateState: AnnotateState,
     isActive: boolean,
   ) {
-    if (!this.#map || !this.#interactions.annotation) return;
+    if (this.#map === null || this.#interactions.annotation === null) return;
 
     if (this.#interactions.annotation.draw) {
       this.#map.removeInteraction(this.#interactions.annotation.draw);
@@ -444,7 +471,11 @@ export class ImageViewerController {
     type: MeasurementType,
     isActive: boolean,
   ) {
-    if (!this.#map || !this.projection || !this.#interactions.measurement)
+    if (
+      this.#map === null ||
+      this.projection === null ||
+      this.#interactions.measurement === null
+    )
       return;
 
     if (this.#interactions.measurement.draw) {
@@ -468,7 +499,7 @@ export class ImageViewerController {
   }
 
   public updateInteraction(set: InteractionSet, mode: InteractionMode) {
-    if (!this.#map || !this.#interactions) return;
+    if (this.#map === null || this.#interactions === null) return;
 
     const interactions = this.#interactions[set];
     const otherSet = set === "annotation" ? "measurement" : "annotation";
@@ -506,7 +537,7 @@ export class ImageViewerController {
   }
 
   private loadAnnotations(records: AnnotationInfo[]) {
-    if (!this.#map || !this.projection) return;
+    if (this.#map === null || this.projection === null) return;
 
     const format = new GeoJSON({
       featureProjection: this.projection,
@@ -574,7 +605,7 @@ export class ImageViewerController {
   }
 
   public applyEnhancement() {
-    if (!this.#rasterLayer) return;
+    if (this.#rasterLayer === null) return;
 
     this.#rasterLayer.updateStyleVariables({
       brightness: this.enhancement.brightness,
@@ -586,7 +617,7 @@ export class ImageViewerController {
   }
 
   public resetEnhancement() {
-    if (!this.#rasterLayer) return;
+    if (this.#rasterLayer === null) return;
 
     this.enhancement = { ...defaultEnhancement };
   }
@@ -676,7 +707,7 @@ export class ImageViewerController {
   }
 
   public removeFeatures(features: Feature[]) {
-    if (!this.#interactions.annotation) return;
+    if (this.#interactions.annotation === null) return;
 
     const selected = this.#interactions.annotation.select.getFeatures();
     const payload: Record<string, string[]> = {};

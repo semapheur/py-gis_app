@@ -368,3 +368,13 @@ def json_field(python_json: type[T], nullable: bool = True):
     to_sql=lambda x: json.dumps(x),
     from_sql=lambda x: json.loads(x),
   )
+
+
+def jsonb_field(python_json: type[T], nullable: bool = True):
+  return Field(
+    python_json,
+    ColumnType.BLOB,
+    nullable=nullable,
+    to_sql=lambda x: json.dumps(x),
+    from_sql=lambda x: json.loads(x),
+  )
