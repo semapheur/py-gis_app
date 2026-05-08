@@ -8,7 +8,7 @@ export const prerender = false;
 
 interface ImageSearchResult {
   wkt: string | null;
-  images: ImageMetadata;
+  images: ImageMetadata[];
 }
 
 const dateField = v.nullish(

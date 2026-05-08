@@ -10,6 +10,7 @@ import { Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature from "ol/Feature";
 import { Point, LineString, Polygon, MultiPolygon } from "ol/geom";
+import { fromExtent } from "ol/geom/Polygon";
 import {
   pointerMove,
   platformModifierKeyOnly,
@@ -740,6 +741,16 @@ export class ImageViewerController {
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify(payload),
     });
+  }
+
+  public getViewExtentWkt(): string | null {
+    if (this.#map === null) return null;
+
+    const view = this.#map.getView();
+    const extent = view.calculateExtent(this.#map.getSize());
+    const polygon = fromExtent(extent);
+
+    return new WKT().writeGeometry(polygon);
   }
 }
 

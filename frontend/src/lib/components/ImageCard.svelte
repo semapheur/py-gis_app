@@ -4,7 +4,7 @@
 
   interface Props {
     image: ImageMetadata;
-    onHoverImage: (image: ImageMetadata | null) => void;
+    onHoverImage?: (image: ImageMetadata | null) => void;
   }
 
   const { image, onHoverImage }: Props = $props();
@@ -30,7 +30,7 @@
     <img
       src={`/thumbnails/${image.filename}.png`}
       alt={image.filename}
-      onmouseenter={() => onHoverImage(image)}
+      onmouseenter={() => onHoverImage?.(image)}
     />
 
     <div class="header">

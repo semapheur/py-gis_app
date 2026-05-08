@@ -80,7 +80,7 @@
 </script>
 
 <form class="form" onsubmit={submitForm}>
-  <Button type="submit">Filter</Button>
+  <Button type="submit">Search</Button>
   <Input placeholder="File name" name="filename" bind:value={filename} />
   <Input
     placeholder="Min coverage (%)"

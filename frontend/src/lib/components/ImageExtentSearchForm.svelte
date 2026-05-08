@@ -1,0 +1,95 @@
+<script lang="ts">
+  import DaterangePicker from "$lib/components/DaterangePicker.svelte";
+  import Input from "$lib/components/Input.svelte";
+  import Button from "$lib/components/Button.svelte";
+  import { toast } from "$lib/stores/toast.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import { toUnix, formatDate, type DateRange } from "$lib/utils/date";
+  import type { ImageMetadata } from "$lib/utils/types";
+
+  interface Props {
+    onFetch: (images: ImageMetadata[]) => void;
+  }
+
+  const { onFetch }: Props = $props();
+
+  let filename = $state<string | null>(null);
+  let coverage = $state<number | null>(null);
+  let iirs = $state<number | null>(null);
+  let gsd = $state<number | null>(null);
+
+  let dateRange = $state<DateRange>({
+    start: null,
+    end: null,
+  });
+
+  const viewer = getImageViewerController();
+
+  async function submitForm(e: SubmitEvent) {
+    e.preventDefault();
+
+    const payload = {
+      wkt: viewer.getViewExtentWkt(),
+      filename,
+      min_coverage: coverage,
+      min_iirs: iirs,
+      max_gsd: gsd,
+      date_start:
+        dateRange.start !== null ? toUnix(formatDate(dateRange.start)) : null,
+      date_end:
+        dateRange.end !== null ? toUnix(formatDate(dateRange.end)) : null,
+    };
+
+    const response = await fetch("/api/search-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      toast.error("Failed to fetch images");
+    }
+
+    onFetch(await response.json());
+  }
+</script>
+
+<form class="form" onsubmit={submitForm}>
+  <Button type="submit">Search</Button>
+  <Input placeholder="File name" name="filename" bind:value={filename} />
+  <Input
+    placeholder="Min coverage (%)"
+    name="min_coverage"
+    bind:value={coverage}
+    type="number"
+    min="0"
+    max="100"
+  />
+  <Input
+    placeholder="Min IIRS"
+    name="min_iirs"
+    type="number"
+    bind:value={iirs}
+    min="0"
+    max="9"
+    step="any"
+  />
+  <Input
+    placeholder="Max GSD (m)"
+    name="max_gsd"
+    type="number"
+    bind:value={gsd}
+    min="0"
+    step="any"
+  />
+  <DaterangePicker bind:selectedRange={dateRange} />
+</form>
+
+<style>
+  .form {
+    display: flex;
+    flex-wrap: wrap;
+    gap: var(--size-md);
+    width: 100%;
+  }
+</style>

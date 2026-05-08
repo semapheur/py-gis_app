@@ -4,7 +4,7 @@
 
   interface Props {
     images?: ImageMetadata[];
-    onHoverImage: (image: ImageMetadata | null) => void;
+    onHoverImage?: (image: ImageMetadata | null) => void;
   }
 
   const { images = [], onHoverImage }: Props = $props();

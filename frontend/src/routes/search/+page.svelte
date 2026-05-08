@@ -2,7 +2,7 @@
   import type { PageData } from "./$types";
   import { Pane, Splitpanes } from "svelte-splitpanes";
   import Map from "$lib/components/Map.svelte";
-  import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
+  import ImageSearchForm from "$lib/components/ImageSearchForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
   import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
   import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
@@ -36,7 +36,7 @@
   </Pane>
   <Pane>
     <div class="right-panel">
-      <ImageFilterForm />
+      <ImageSearchForm />
       <ImageGrid images={data.images} {onHoverImage} />
     </div>
   </Pane>
