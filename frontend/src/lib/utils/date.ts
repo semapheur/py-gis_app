@@ -1,6 +1,6 @@
 export interface DateRange {
-  start: Date | null;
-  end: Date | null;
+  start: Date;
+  end: Date;
 }
 
 export function formatDate(date: Date | null) {
@@ -16,11 +16,15 @@ export function formatDatetime(unix: number) {
 }
 
 export function parseIsoDate(dateText: string | null): Date | null {
-  if (!dateText) return null;
+  if (dateText === null) return null;
   const [y, m, d] = dateText.split("-").map(Number);
   return new Date(y, m - 1, d);
 }
 
-export function toUnix(date: string) {
-  return Math.floor(new Date(date).getTime() / 1000);
+export function startOfDay(date: Date) {
+  return new Date(date.getFullYear(), date.getMonth(), date.getDate());
+}
+
+export function parseToUnix(dateText: string) {
+  return parseIsoDate(dateText)!.getTime();
 }

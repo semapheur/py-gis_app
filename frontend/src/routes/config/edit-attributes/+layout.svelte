@@ -14,7 +14,7 @@
 <div class="page-container">
   <nav class="table-list">
     {#each data.tables as info}
-      <Link href={`/config/attributes/${info.table_name}`}>{info.label}</Link>
+      <Link href={`/config/attributes/${info.name}`}>{info.label}</Link>
     {/each}
   </nav>
   {@render children()}

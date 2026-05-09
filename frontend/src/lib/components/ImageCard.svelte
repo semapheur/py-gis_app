@@ -9,23 +9,26 @@
 
   const { image, onHoverImage }: Props = $props();
 
-  const href = `/view/${image.id}`;
-
-  const datetime = new Date(image.datetime_collected);
-  const dateText = datetime.toISOString().slice(0, 10);
-  const timeText = datetime.toTimeString().slice(0, 8);
-
-  const coverage = `${(image.coverage * 100).toFixed(0)}%`;
-  const gsd = Math.max(
-    image.ground_sample_distance_row,
-    image.ground_sample_distance_row,
+  const datetime = $derived(new Date(image.datetime_collected));
+  const gsd = $derived(
+    Math.max(
+      image.ground_sample_distance_row,
+      image.ground_sample_distance_row,
+    ),
   );
-  const gsd_text = `${(gsd * 100).toFixed(2)}cm`;
-  const azimuth_angle = `${image.azimuth_angle.toFixed(0)}°`;
-  const look_angle = `${image.look_angle.toFixed(0)}°`;
+
+  const formattedProps = $derived({
+    href: `/view/${image.id}`,
+    dateText: datetime.toISOString().slice(0, 10),
+    timeText: datetime.toTimeString().slice(0, 8),
+    coverage: `${(image.coverage * 100).toFixed(0)}%`,
+    gsd_text: `${(gsd * 100).toFixed(2)}cm`,
+    azimuth_angle: `${image.azimuth_angle.toFixed(0)}°`,
+    look_angle: `${image.look_angle.toFixed(0)}°`,
+  });
 </script>
 
-<a {href} class="card-link">
+<a href={formattedProps.href} class="card-link">
   <div class="card">
     <img
       src={`/thumbnails/${image.filename}.png`}
@@ -36,26 +39,26 @@
     <div class="header">
       <div class="parameter-badges">
         <Badge>
-          {coverage}
+          {formattedProps.coverage}
         </Badge>
         <Badge>
           {image.interpretation_rating}
         </Badge>
         <Badge>
-          {gsd_text}
+          {formattedProps.gsd_text}
         </Badge>
         <Badge>
-          {azimuth_angle}
+          {formattedProps.azimuth_angle}
         </Badge>
         <Badge>
-          {look_angle}
+          {formattedProps.look_angle}
         </Badge>
       </div>
     </div>
 
     <div class="footer">
-      {dateText}
-      {timeText}
+      {formattedProps.dateText}
+      {formattedProps.timeText}
     </div>
   </div>
 </a>

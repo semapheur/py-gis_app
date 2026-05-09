@@ -3,6 +3,8 @@
   import { formatDate, type DateRange } from "$lib/utils/date";
   import MdiCalendarMonthOutline from "@iconify-svelte/mdi/calendar-month-outline";
 
+  type RangeState = null | { start: Date; end: null } | DateRange;
+
   interface ViewDate {
     month: number;
     year: number;
@@ -28,13 +30,13 @@
   interface Props {
     minDate?: Date | null;
     maxDate?: Date | null;
-    selectedRange?: DateRange;
+    selectedRange?: DateRange | null;
   }
 
   let {
     minDate = null,
     maxDate = new Date(),
-    selectedRange = $bindable({ start: null, end: null }),
+    selectedRange = $bindable(),
   }: Props = $props();
 
   let hoverDate = $state<Date | null>(null);
@@ -77,17 +79,17 @@
   ];
 
   let open = $state<boolean>(false);
-  let range = $state<DateRange>({ start: null, end: null });
+  let range = $state<RangeState>(selectedRange ?? null);
   let inputValue = $derived(
-    range.start && range.end
+    range && range.end
       ? `${formatDate(range.start)} - ${formatDate(range.end)}`
-      : range.start
+      : range
         ? `${formatDate(range.start)} - `
         : "",
   );
 
   $effect(() => {
-    selectedRange = { start: range.start, end: range.end };
+    selectedRange = range?.end ? range : null;
   });
 
   let view = $state<ViewDate>({
@@ -133,11 +135,10 @@
   function applyPreset(p: DatePreset) {
     const tempRange = p.value();
 
-    const clampStart = tempRange.start ? clampToBounds(tempRange.start) : null;
-    const clampEnd = tempRange.end ? clampToBounds(tempRange.end) : null;
-
-    range = { start: clampStart, end: clampEnd };
-
+    range = {
+      start: clampToBounds(tempRange.start),
+      end: clampToBounds(tempRange.end),
+    };
     open = false;
   }
 
@@ -150,7 +151,7 @@
   }
 
   function clearRange() {
-    range = { start: null, end: null };
+    range = null;
   }
 
   function clampToBounds(d: Date) {
@@ -243,11 +244,11 @@
 
     const date = cellToDate(c);
 
-    if (!range.start || (range.start && range.end)) {
+    if (!range || range.end) {
       range = { start: date, end: null };
     } else {
       if (date >= range.start) {
-        range.end = date;
+        range = { start: range.start, end: date };
       } else {
         range = { start: date, end: range.start };
       }
@@ -308,10 +309,9 @@
   });
 
   function isStartCell(c: CalendarCell) {
-    if (!range.start) return false;
+    if (!range) return false;
     const d = cellToDate(c);
     const start = stripTime(range.start);
-
     if (!range.end && hoverDate && hoverDate < start) {
       return d.getTime() === hoverDate.getTime();
     }
@@ -319,10 +319,10 @@
   }
 
   function isEndCell(c: CalendarCell) {
+    if (!range) return false;
     const d = cellToDate(c);
     if (range.end) return d.getTime() === stripTime(range.end).getTime();
-
-    if (range.start && !range.end && hoverDate) {
+    if (hoverDate) {
       const start = stripTime(range.start);
       if (hoverDate > start) return d.getTime() === hoverDate.getTime();
       if (hoverDate < start) return d.getTime() === start.getTime();
@@ -331,12 +331,11 @@
   }
 
   function isInRangeCell(c: CalendarCell) {
-    if (isDisabledCell(c)) return false;
+    if (isDisabledCell(c) || !range) return false;
     const d = cellToDate(c);
-    const start = range.start ? stripTime(range.start) : null;
+    const start = stripTime(range.start);
     const end = range.end ? stripTime(range.end) : hoverDate;
-
-    if (!start || !end) return false;
+    if (!end) return false;
     const from = start < end ? start : end;
     const to = start < end ? end : start;
     return d > from && d < to;
@@ -410,7 +409,7 @@
     suffixWidth="2.5rem"
   >
     {#snippet suffix()}
-      {#if range.start || range.end}
+      {#if range}
         <button type="button" class="clear" onclick={clearRange}>✕</button>
       {/if}
       <button
@@ -541,7 +540,7 @@
                   disabled={isDisabledCell(day)}
                   onclick={() => clickDayCell(day)}
                   onmouseenter={() => {
-                    if (range.start && !range.end && !isDisabledCell(day)) {
+                    if (range && !range.end && !isDisabledCell(day)) {
                       hoverDate = cellToDate(day);
                     }
                   }}

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { error } from "@sveltejs/kit";
+  import { untrack } from "svelte";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
@@ -8,6 +8,7 @@
     AnnotateValue,
     EquipmentData,
   } from "$lib/contexts/annotate.svelte";
+  import { toast } from "$lib/stores/toast.svelte";
 
   type EquipmentPatch = Partial<EquipmentData>;
 
@@ -23,7 +24,7 @@
   const { confidenceOptions, statusOptions } = getEquipmentOptions();
 
   let selectedEquipment = $state<SelectOption | null>(
-    toSelectOption(value?.equipment ?? null),
+    toSelectOption(untrack(() => value?.equipment) ?? null),
   );
   let confidenceId = $derived<string | null>(value.confidence?.id ?? null);
   let statusId = $derived<string | null>(value.status?.id ?? null);
@@ -86,7 +87,7 @@
     });
 
     if (!response.ok) {
-      throw error(response.status, "Failed to search equipment");
+      toast.error("Failed to search equipment");
     }
 
     return await response.json();

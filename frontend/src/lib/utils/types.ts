@@ -10,6 +10,7 @@ export interface BandStatistics {
 export interface ImageInfo {
   id: string;
   filename: string;
+  datetime_collected: number;
   classification: string;
   image_type: "grd" | "pan" | "ms" | "slc";
   band_statistics: BandStatistics[];
@@ -51,4 +52,9 @@ export interface RadiometricParams {
 export interface SelectOption<T = string> {
   label: string;
   value: T;
+}
+
+export interface AttributeTableInfo {
+  name: string;
+  label: string;
 }

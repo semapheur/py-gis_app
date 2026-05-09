@@ -1,27 +1,27 @@
 <script lang="ts">
+  import { untrack } from "svelte";
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import Input from "$lib/components/Input.svelte";
   import Button from "$lib/components/Button.svelte";
   import { toast } from "$lib/stores/toast.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { toUnix, formatDate, type DateRange } from "$lib/utils/date";
+  import { type DateRange } from "$lib/utils/date";
   import type { ImageMetadata } from "$lib/utils/types";
 
   interface Props {
+    initialDateRange: DateRange;
     onFetch: (images: ImageMetadata[]) => void;
   }
 
-  const { onFetch }: Props = $props();
+  const { initialDateRange, onFetch }: Props = $props();
 
   let filename = $state<string | null>(null);
   let coverage = $state<number | null>(null);
   let iirs = $state<number | null>(null);
   let gsd = $state<number | null>(null);
 
-  let dateRange = $state<DateRange>({
-    start: null,
-    end: null,
-  });
+  let dateRange = $state<DateRange>(untrack(() => initialDateRange));
+  $inspect(dateRange);
 
   const viewer = getImageViewerController();
 
@@ -34,10 +34,8 @@
       min_coverage: coverage,
       min_iirs: iirs,
       max_gsd: gsd,
-      date_start:
-        dateRange.start !== null ? toUnix(formatDate(dateRange.start)) : null,
-      date_end:
-        dateRange.end !== null ? toUnix(formatDate(dateRange.end)) : null,
+      date_start: dateRange.start.getTime(),
+      date_end: dateRange.end.getTime(),
     };
 
     const response = await fetch("/api/search-images", {

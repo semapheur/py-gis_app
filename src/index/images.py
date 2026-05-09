@@ -1,5 +1,4 @@
 import json
-import tempfile
 import warnings
 from datetime import datetime, timezone
 from enum import Enum
@@ -22,7 +21,6 @@ from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_
 from src.index.radiometric import (
   NoiseParameters,
   RadiometricParamsTable,
-  generate_intensity_vrt,
 )
 from src.models.areas import get_area_wkt
 from src.sicd_model import SicdObject, sicd_polygon_wkt
@@ -618,11 +616,17 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
 def get_image_info(id: bytes) -> dict:
   query = (
     Query()
-    .select("filename", "image_type", "band_statistics")
+    .select(
+      "filename",
+      "datetime_collected",
+      "classification",
+      "image_type",
+      "band_statistics",
+    )
     .from_(ImageIndexTable._table_name)
     .where("id = ?", id)
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    info = db.select_records(ImageIndexTable, query)
+    info = db.select_records(ImageIndexTable, query, to_json=True)
     return info[0]

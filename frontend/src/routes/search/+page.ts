@@ -2,7 +2,7 @@ import { error } from "@sveltejs/kit";
 import * as v from "valibot";
 import type { PageLoad } from "./$types";
 import type { ImageMetadata } from "$lib/utils/types";
-import { toUnix } from "$lib/utils/date";
+import { parseToUnix } from "$lib/utils/date";
 
 export const prerender = false;
 
@@ -15,7 +15,7 @@ const dateField = v.nullish(
   v.pipe(
     v.string(),
     v.regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD"),
-    v.transform(toUnix),
+    v.transform(parseToUnix),
   ),
 );
 

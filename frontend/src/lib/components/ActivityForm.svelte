@@ -48,7 +48,7 @@
   />
   <Select
     options={activityTypes}
-    label="Confidence"
+    placeholder="Confidence"
     value={value.type}
     onchange={(v) => update("type", v || (bulk ? undefined : v))}
   />

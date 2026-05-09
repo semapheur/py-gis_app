@@ -6,6 +6,7 @@
   import AreaMap from "$lib/components/AreaMap.svelte";
   import AreaEditor from "$lib/components/AreaEditor.svelte";
   import { parseBbox } from "$lib/utils/geo/bbox";
+  import { untrack } from "svelte";
 
   const bbox = $derived.by(() => {
     if (!browser) return;
@@ -13,7 +14,10 @@
     return raw !== null ? parseBbox(raw) : null;
   });
 
-  setAreaMapState([], bbox);
+  setAreaMapState(
+    [],
+    untrack(() => bbox),
+  );
   setAreaEditorState();
 </script>
 

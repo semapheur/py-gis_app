@@ -85,11 +85,7 @@
 <div class="area-browser">
   <form class="area-search">
     <LinkButton href={newAreaHref}>Add</LinkButton>
-    <Input
-      placeholder="Search"
-      value={searchQuery}
-      oninput={(v) => (searchQuery = v)}
-    />
+    <Input placeholder="Search" bind:value={searchQuery} />
   </form>
   <nav>
     {#each filteredAreas as area (area.id)}

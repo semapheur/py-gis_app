@@ -6,7 +6,7 @@
   interface Props {
     value?: SelectOption | null;
     placeholder?: string;
-    fetchOptions: (query: string) => SelectOption[];
+    fetchOptions: (query: string) => SelectOption[] | Promise<SelectOption[]>;
     onchange?: (value: SelectOption | null) => void;
   }
 

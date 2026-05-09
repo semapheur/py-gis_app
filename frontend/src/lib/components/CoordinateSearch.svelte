@@ -79,9 +79,8 @@
   <form class="coordinate-parse">
     <Input
       placeholder="Coordinate"
-      value={coordinates}
+      bind:value={coordinates}
       fieldSizing="content"
-      oninput={(v) => (coordinates = v)}
     />
     <Button type="button" onclick={submit}>Parse</Button>
   </form>

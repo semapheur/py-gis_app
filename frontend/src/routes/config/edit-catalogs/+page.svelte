@@ -2,7 +2,6 @@
   import type { PageData } from "./$types";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
-  import { formatDatetime } from "$lib/utils/date";
 
   async function validateCatalogPath(path: string) {
     const response = await fetch("/api/validate-catalog-dir", {

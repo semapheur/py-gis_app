@@ -1,5 +1,7 @@
 <script lang="ts">
   import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
+  import { getImageViewerOptions } from "$lib/contexts/common.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
 
   import ImageRenderer from "$lib/components/ImageRenderer.svelte";
   import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
@@ -8,9 +10,12 @@
   import MeasureDialog from "$lib/components/MeasureDialog.svelte";
   import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
   import Button from "$lib/components/Button.svelte";
-  import ImageFilterForm from "$lib/components/ImageFilterForm.svelte";
-  import ImageGrid from "$lib/components/ImageGrid.svelte";
+  import ImageExtentSearch from "$lib/components/ImageExtentSearch.svelte";
   import CloseButton from "$lib/components/CloseButton.svelte";
+
+  import { startOfDay, type DateRange } from "$lib/utils/date";
+  import { toast } from "$lib/stores/toast.svelte";
+  import type { ImageMetadata } from "$lib/utils/types";
 
   let leftSidebarOpen = $state<boolean>(false);
   let annotateOpen = $state<boolean>(false);
@@ -18,10 +23,15 @@
   let enhancementOpen = $state<boolean>(false);
   let measurementOpen = $state<boolean>(false);
   let searchOpen = $state<boolean>(false);
+  let images = $state<ImageMetadata[]>([]);
 
+  const imageViewer = getImageViewerController();
+  const viewerOptions = getImageViewerOptions();
   const viewerState = getImageViewerState();
   viewerState.setActiveSet("annotation");
   viewerState.setActiveMode("edit");
+
+  const initialDateRange = setInitialDateRange(3);
 
   function openAnnotation() {
     annotateOpen = true;
@@ -33,6 +43,43 @@
     measurementOpen = true;
     annotateOpen = false;
     viewerState.setActiveSet("measurement");
+  }
+
+  function setInitialDateRange(months: number) {
+    const dateCollected = startOfDay(
+      new Date(viewerOptions.imageInfo.datetime_collected),
+    );
+    const dateStart = new Date(dateCollected);
+    dateStart.setMonth(dateCollected.getMonth() + months);
+    const dateEnd = new Date(dateCollected);
+    dateEnd.setMonth(dateCollected.getMonth() - months);
+
+    const dateRange: DateRange = {
+      start: dateStart,
+      end: dateEnd,
+    };
+    return dateRange;
+  }
+
+  async function searhImagesOnExtent() {
+    const payload = {
+      wkt: imageViewer.getViewExtentWkt(),
+      date_start: initialDateRange.start.getTime(),
+      date_end: initialDateRange.start.getTime(),
+    };
+
+    const response = await fetch("/api/search-images", {
+      method: "POST",
+      headers: { "Content-Type": "application/json" },
+      body: JSON.stringify(payload),
+    });
+
+    if (!response.ok) {
+      toast.error("Failed to fetch images");
+    }
+
+    const result = (await response.json()) as ImageMetadata[];
+    return result;
   }
 </script>
 
@@ -62,6 +109,9 @@
       onclick={() => {
         leftSidebarOpen = true;
         searchOpen = true;
+        searhImagesOnExtent().then((result) => {
+          images = result;
+        });
       }}>Extent search</Button
     >
   </div>
@@ -83,8 +133,7 @@
     <div class="left-sidebar">
       <CloseButton onclick={() => (leftSidebarOpen = false)} />
       {#if searchOpen}
-        <ImageFilterForm />
-        <ImageGrid />
+        <ImageExtentSearch {initialDateRange} initialImages={images} />
       {/if}
     </div>
   {/if}
