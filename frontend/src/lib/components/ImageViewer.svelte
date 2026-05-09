@@ -23,6 +23,7 @@
   let enhancementOpen = $state<boolean>(false);
   let measurementOpen = $state<boolean>(false);
   let searchOpen = $state<boolean>(false);
+  let ghostsOpen = $state<boolean>(false);
   let images = $state<ImageMetadata[]>([]);
 
   const imageViewer = getImageViewerController();
@@ -114,6 +115,12 @@
         });
       }}>Extent search</Button
     >
+    <Button
+      onclick={() => {
+        leftSidebarOpen = true;
+        ghostsOpen = true;
+      }}>Ghosts</Button
+    >
   </div>
   {#if enhancementOpen}
     <div class="enhancement">
@@ -134,6 +141,8 @@
       <CloseButton onclick={() => (leftSidebarOpen = false)} />
       {#if searchOpen}
         <ImageExtentSearch {initialDateRange} initialImages={images} />
+      {:else if ghostsOpen}
+        <GhostSearch />
       {/if}
     </div>
   {/if}

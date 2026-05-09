@@ -597,13 +597,13 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
     query.where("datetime_collected <= ?", date_end)
 
   if polygon_wkt is not None:
-    poly_cte = (
+    polygon_cte = (
       Query()
       .select("geom", "ST_Area(geom) AS area")
       .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
     )
 
-    query.with_("poly", poly_cte).cross_join("poly").where(
+    query.with_("poly", polygon_cte).cross_join("poly").where(
       "ST_Intersects(footprint, poly.geom)"
     ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
 

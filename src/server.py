@@ -22,7 +22,7 @@ from src.models.annotation import (
   ConvertAnnotation,
   convert_annotation,
   delete_annotations,
-  get_annotations,
+  get_annotations_by_image,
   update_annotations,
 )
 from src.models.areas import (
@@ -183,8 +183,12 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_convert_annotation()
       return
 
+    if self.path == "/api/get-annotation-ghosts":
+      self._post_get_annotation_ghosts()
+      return
+
     if self.path == "/api/get-area":
-      self._post_get_area()
+      self._post_fetch_area()
       return
 
     if self.path == "/api/update-area":
@@ -365,7 +369,13 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def _post_get_area(self):
+  def _post_fetch_annotation_ghosts(self):
+    def logic(payload):
+      return
+
+    self._handle_post(logic)
+
+  def _post_fetch_area(self):
     def logic(payload: AreaId):
       return get_area(payload)
 
@@ -468,7 +478,7 @@ class Handler(SimpleHTTPRequestHandler):
 
   def _get_annotations(self, image_id: str):
     image_hash = decode_sha256_from_b64(image_id)
-    annotations = get_annotations(image_hash)
+    annotations = get_annotations_by_image(image_hash)
     self._json_response(annotations)
 
   def _get_areas(self):

@@ -5,7 +5,7 @@ from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
 from src.bootstrap import get_settings
-from src.hashing import uuid_bytes_to_str
+from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
@@ -134,7 +134,7 @@ def delete_annotations(payload: dict[str, list[str]]):
       db.delete_by_ids(model, uuids)
 
 
-def get_annotations(image_id: bytes):
+def get_annotations_by_image(image_id: bytes):
   return [
     *get_annotations_by_geometry(image_id, "POINT"),
     *get_annotations_by_geometry(image_id, "POLYGON"),
@@ -219,6 +219,124 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
 
     try:
       return [map_row(r) for r in cursor.execute(select_sql, params)]
+
+    finally:
+      for statement in detach_sql:
+        cursor.execute(statement)
+
+
+class GhostSearch(TypedDict):
+  polygon_wkt: str
+  datetime_collected: int
+  future: bool
+
+
+def get_annotation_ghosts(payload: GhostSearch):
+
+  return
+
+
+class GhostResult(TypedDict):
+  datetime: int
+  annotations: list[dict]
+
+
+def get_annotations_ghosts_by_geometry_(
+  polygon_wkt: str, datetime: int, future: bool, geometry: EquipmentGeometry
+):
+  data: dict[str, GhostResult] = {}
+
+  def map_row(row: Row):
+    r = dict(row)
+
+    label = "\n".join(
+      [
+        r["equipment_label"],
+        r["confidence_label"],
+        r["status_label"],
+      ]
+    )
+
+    ghost_result = data.setdefault(
+      encode_sha256_to_b64(r["image"]),
+      GhostResult(datetime=r["datetime"], annotations=[]),
+    )
+
+    ghost_result["annotations"].append(
+      {
+        "geometry": json.loads(r["geometry"]),
+        "label": label,
+        "data": {
+          "equipment": {
+            "id": uuid_bytes_to_str(r["equipment_id"]),
+            "label": r["equipment_label"],
+          },
+          "confidence": {
+            "id": uuid_bytes_to_str(r["confidence_id"]),
+            "label": r["confidence_label"],
+          },
+          "status": {
+            "id": uuid_bytes_to_str(r["status_id"]),
+            "label": r["status_label"],
+          },
+        },
+      }
+    )
+
+  date_op = ">=" if future else "<="
+
+  attach_sql = (
+    f"ATTACH DATABASE '{app_settings.INDEX_DB}' AS i",
+    f"ATTACH DATABASE '{app_settings.EQUIPMENT_DB}' AS ed",
+    f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a",
+  )
+  detach_sql = ("DETACH i", "DETACH DATABASE ed", "DETACH DATABASE a")
+
+  polygon_cte = (
+    Query()
+    .select("geom", "ST_Area(geom) AS area")
+    .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
+  )
+
+  select_sql, params = (
+    Query()
+    .select(
+      "ea.image AS image",
+      "i.images.datetime_collected AS datetime",
+      "AsGeoJSON(ea.geometry) AS geometry",
+      "ea.equipment AS equipment_id",
+      "ed.equipment.displayName AS equipment_label",
+      "ea.confidence AS confidence_id",
+      "a.observation_confidence.text AS confidence_label",
+      "ea.status AS status_id",
+      "a.equipment_status.text AS status_label",
+    )
+    .from_(f"equipment_{geometry.lower()} ea")
+    .inner_join("i.images", "i.images.id = ea.image")
+    .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
+    .inner_join(
+      "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
+    )
+    .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
+    .with_("poly", polygon_cte)
+    .cross_join("poly")
+    .where(f"i.images.datetime_collected {date_op} ?", datetime)
+    .where("ST_Intersects(ea.geometry, poly.geom)")
+    .build()
+  )
+
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
+    db.conn.row_factory = Row
+    cursor = db.conn.cursor()
+
+    for statement in attach_sql:
+      cursor.execute(statement)
+
+    try:
+      for r in cursor.execute(select_sql, params):
+        map_row(r)
+
+      return data
 
     finally:
       for statement in detach_sql:
