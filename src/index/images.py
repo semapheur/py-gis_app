@@ -254,7 +254,7 @@ def parse_image_metadata(
   band_statistics = get_band_statistics(gdal_info)
   sensor_type, image_type = detect_image_type(band_statistics, gdal_info)
 
-  base_data = {
+  data = {
     "id": hash,
     "catalog": catalog_id,
     "relative_path": relative_directory,
@@ -273,8 +273,7 @@ def parse_image_metadata(
     datetime_collected = datetime.fromisoformat(image_info.get("acquisition_time"))
     footprint = isd_polygon_wkt(tile)
 
-    data = {
-      **base_data,
+    data |= {
       "classification": "UNCLASSIFIED",
       "datetime_collected": datetime_collected,
       "sensor_name": image_info.get("satellite_id"),
@@ -294,7 +293,7 @@ def parse_image_metadata(
   if sicd_obj is not None:
     sicd_data = parse_sicd_metadata(gdal_info, cast(SicdObject, sicd_obj))
 
-    data = {**base_data, **sicd_data}
+    data |= sicd_data
     index_row = make_index_row(data)
 
     if image_type != ImageryType.SLC:
@@ -304,12 +303,7 @@ def parse_image_metadata(
     return index_row, radiometric_row
 
 
-def generate_cog(
-  image_path: Path,
-  cog_path: Path,
-  gdal_info: dict,
-  image_type: ImageryType,
-):
+def generate_cog(image_path: Path, cog_path: Path):
   if cog_path.exists():
     warnings.warn(f"COG already generated for {str(image_path)}")
     return
@@ -454,7 +448,7 @@ def process_cog(
 
   if make_cog:
     image_type = ImageryType(getattr(index_row, "image_type"))
-    generate_cog(image_file, cog_path, image_info, image_type)
+    generate_cog(image_file, cog_path)
 
 
 def index_image(

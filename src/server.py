@@ -22,6 +22,7 @@ from src.models.annotation import (
   ConvertAnnotation,
   convert_annotation,
   delete_annotations,
+  get_annotation_ghosts,
   get_annotations_by_image,
   update_annotations,
 )
@@ -370,8 +371,8 @@ class Handler(SimpleHTTPRequestHandler):
     self._handle_post(logic)
 
   def _post_fetch_annotation_ghosts(self):
-    def logic(payload):
-      return
+    def logic(payload: GhostSearch):
+      return get_annotation_ghosts(payload)
 
     self._handle_post(logic)
 

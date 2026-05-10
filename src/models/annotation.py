@@ -1,6 +1,7 @@
 import json
 import re
 import uuid
+from datetime import datetime_CAPI
 from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
@@ -232,8 +233,13 @@ class GhostSearch(TypedDict):
 
 
 def get_annotation_ghosts(payload: GhostSearch):
+  polygon_wkt = payload["polygon_wkt"]
+  datetime = payload["datetime_collected"]
+  future = payload["future"]
 
-  return
+  result = get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POINT")
+  result |= get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POLYGON")
+  return result
 
 
 class GhostResult(TypedDict):
@@ -241,7 +247,7 @@ class GhostResult(TypedDict):
   annotations: list[dict]
 
 
-def get_annotations_ghosts_by_geometry_(
+def get_annotation_ghosts_by_geometry(
   polygon_wkt: str, datetime: int, future: bool, geometry: EquipmentGeometry
 ):
   data: dict[str, GhostResult] = {}
