@@ -30,6 +30,7 @@ import {
   styleMeasurement,
   styleAnnotationLabel,
   equipmentStyle,
+  ghostStyle,
   defaultEnhancement,
   type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
@@ -45,6 +46,7 @@ import type {
   AnnotationInfo,
   EquipmentData,
   ActivityData,
+  AnnotationBaseInfo,
 } from "$lib/contexts/annotate.svelte";
 
 interface ViewerInteractions {
@@ -67,6 +69,7 @@ export class ImageViewerController {
   //#bandStretch: BandStretchManager | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: WebGLVectorLayer | null = null;
+  #ghostLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
   #labelLayer: VectorLayer | null = null;
   #measurementLayer: VectorLayer | null = null;
@@ -81,11 +84,13 @@ export class ImageViewerController {
   constructor() {
     this.#interactions = {
       annotation: null,
+      ghost: null,
       measurement: null,
     };
 
     this.#annotationSources = {
       equipment: new VectorSource(),
+      ghost: new VectorSource(),
       activity: new VectorSource(),
     };
 
@@ -132,6 +137,7 @@ export class ImageViewerController {
     const layers = [
       this.#rasterLayer,
       this.#equipmentLayer,
+      this.#ghostLayer,
       this.#activityLayer,
       this.#measurementLayer,
     ];
@@ -150,6 +156,7 @@ export class ImageViewerController {
     this.#map = null;
     this.#rasterLayer = null;
     this.#equipmentLayer = null;
+    this.#ghostLayer = null;
     this.#activityLayer = null;
     this.#measurementLayer = null;
     this.#equipmentFeatures = [];
@@ -214,6 +221,14 @@ export class ImageViewerController {
         hoverId: "",
       },
     });
+    this.#ghostLayer = new WebGLVectorLayer({
+      source: this.#annotationSources.ghost,
+      style: ghostStyle,
+      variables: {
+        hoverId: "",
+      },
+    });
+
     this.#activityLayer = new VectorLayer({
       source: this.#annotationSources.activity,
       style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
@@ -234,6 +249,7 @@ export class ImageViewerController {
       layers: [
         this.#rasterLayer,
         this.#equipmentLayer,
+        this.#ghostLayer,
         this.#activityLayer,
         this.#labelLayer,
         this.#measurementLayer,
@@ -436,7 +452,7 @@ export class ImageViewerController {
           createdByUserId: "",
           modifiedByUserId: null,
           createdAtTimestamp: Date.now(),
-          modifiedAtTimestmap: null,
+          modifiedAtTimestamp: null,
         },
       });
 
@@ -562,6 +578,51 @@ export class ImageViewerController {
     this.#annotationSources.equipment.addFeatures(features);
   }
 
+  public addGhosts(records: AnnotationBaseInfo[]) {
+    if (this.#map === null || this.projection === null) return;
+
+    const format = new GeoJSON({
+      featureProjection: this.projection,
+      dataProjection: this.projection,
+    });
+
+    const features: Feature[] = [];
+    for (const record of records) {
+      const geometry = format.readGeometry(record.geometry);
+      const feature = new Feature({ geometry });
+
+      feature.setProperties({
+        type: "equipment",
+        label: record.label,
+        data: record.data,
+      });
+      features.push(feature);
+    }
+    this.#annotationSources.ghost.addFeatures(features);
+  }
+
+  public async acceptGhosts(features: Feature[]) {
+    for (const feature of features) {
+      feature.setProperties({
+        id: crypto.randomUUID(),
+        metaData: {
+          createdByUserId: "",
+          modifiedByUserId: null,
+          createdAtTimestamp: Date.now(),
+          modifiedAtTimestamp: null,
+        },
+      });
+    }
+
+    this.#annotationSources.ghost.removeFeatures(features);
+    this.#annotationSources.equipment.addFeatures(features);
+    await this.persistFeatures(features, "draw");
+  }
+
+  public removeGhosts(features: Feature[]) {
+    this.#annotationSources.ghost.removeFeatures(features);
+  }
+
   private async persistFeatures(features: Feature[], mode: "draw" | "edit") {
     const format = new WKT();
 
@@ -586,7 +647,7 @@ export class ImageViewerController {
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,
             modifiedAtTimestamp:
-              mode === "edit" ? Date.now() : metaData.modifiedByUserId,
+              mode === "edit" ? Date.now() : metaData.modifiedAtTimestamp,
           },
         };
       })

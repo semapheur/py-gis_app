@@ -4,7 +4,7 @@ export const measureOptions = ["Area", "Length"] as const;
 export type MeasurementType = Lowercase<(typeof measureOptions)[number]>;
 
 export type InteractionMode = "draw" | "edit";
-export type InteractionSet = "annotation" | "measurement";
+export type InteractionSet = "annotation" | "ghost" | "measurement";
 
 export class ImageViewerState {
   activeSet = $state<InteractionSet>("annotation");

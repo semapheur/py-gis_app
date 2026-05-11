@@ -1,26 +1,15 @@
 <script lang="ts">
-  import type { EquipmentData } from "$lib/contexts/annotate.svelte";
+  import type { GhostCollection } from "$lib/contexts/annotate.svelte";
   import { getImageViewerOptions } from "$lib/contexts/common.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import { toast } from "$lib/stores/toast.svelte";
-  import Button from "./Button.svelte";
-
-  interface GhostInfo {
-    geometry: GeoJSON.Polygon | GeoJSON.Point;
-    label: string;
-    data: EquipmentData;
-  }
-
-  interface GhostCollection {
-    datetime: number;
-    annotations: GhostInfo[];
-  }
+  import Button from "$lib/components/Button.svelte";
 
   const imageViewer = getImageViewerController();
   const imageInfo = getImageViewerOptions();
 
   let future = $state<boolean>(false);
-  let ghostData = $state<Record<string, GhostCollection>>({});
+  let ghostData = $state<GhostCollection[]>([]);
 
   async function searchGhosts() {
     const payload = {

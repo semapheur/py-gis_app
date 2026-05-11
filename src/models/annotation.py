@@ -1,7 +1,6 @@
 import json
 import re
 import uuid
-from datetime import datetime_CAPI
 from sqlite3 import Row
 from typing import Literal, TypedDict, Union
 
@@ -237,19 +236,21 @@ def get_annotation_ghosts(payload: GhostSearch):
   datetime = payload["datetime_collected"]
   future = payload["future"]
 
-  result = get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POINT")
-  result |= get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POLYGON")
-  return result
+  return [
+    *get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POINT"),
+    *get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POLYGON"),
+  ]
 
 
 class GhostResult(TypedDict):
+  image_id: str
   datetime: int
   annotations: list[dict]
 
 
 def get_annotation_ghosts_by_geometry(
   polygon_wkt: str, datetime: int, future: bool, geometry: EquipmentGeometry
-):
+) -> list[GhostResult]:
   data: dict[str, GhostResult] = {}
 
   def map_row(row: Row):
@@ -263,9 +264,11 @@ def get_annotation_ghosts_by_geometry(
       ]
     )
 
+    image_id = encode_sha256_to_b64(r["image"])
+
     ghost_result = data.setdefault(
-      encode_sha256_to_b64(r["image"]),
-      GhostResult(datetime=r["datetime"], annotations=[]),
+      image_id,
+      GhostResult(image_id=image_id, datetime=r["datetime"], annotations=[]),
     )
 
     ghost_result["annotations"].append(
@@ -342,11 +345,22 @@ def get_annotation_ghosts_by_geometry(
       for r in cursor.execute(select_sql, params):
         map_row(r)
 
-      return data
+      return sorted(data.values(), key=lambda d: d["datetime"])
 
     finally:
       for statement in detach_sql:
         cursor.execute(statement)
+
+
+def get_equipment_count(polygon_wkt: str, datetime: int, future):
+
+  polygon_cte = (
+    Query()
+    .select("geom", "ST_Area(geom) AS area")
+    .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
+  )
+
+  select_sql = Query()
 
 
 class ConvertAnnotation(TypedDict):

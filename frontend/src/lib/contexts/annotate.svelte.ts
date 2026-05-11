@@ -49,12 +49,21 @@ interface AttributeMetaData {
   modifiedAtTimestamp: number;
 }
 
-export interface AnnotationInfo {
-  id: string;
+export interface AnnotationBaseInfo {
   geometry: GeoJSON.Point | GeoJSON.Polygon;
   label: string;
   data: EquipmentData;
+}
+
+export interface AnnotationInfo extends AnnotationBaseInfo {
+  id: string;
   metaData: AttributeMetaData;
+}
+
+export interface GhostCollection {
+  image_id: string;
+  datetime: number;
+  annotations: AnnotationBaseInfo[];
 }
 
 export const activityTypes = ["Maneuver"] as const;

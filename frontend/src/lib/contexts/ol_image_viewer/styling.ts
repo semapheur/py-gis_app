@@ -127,6 +127,52 @@ export const equipmentStyle = [
   },
 ];
 
+const ghostPointStyle = {
+  base: {
+    "circle-radius": 5,
+    "circle-fill-color": "rgba(255 255 255 / 0.5)",
+    "circle-stroke-color": "rgba(0 0 0 / 0.5)",
+    "circle-stroke-width": 1,
+  },
+  selected: {
+    "circle-radius": 5,
+    "circle-fill-color": "oklch(57.7% 0.245 27.325)",
+    "circle-stroke-color": "rgba(0 0 0)",
+    "circle-stroke-width": 2,
+  },
+};
+
+const ghostPolygonStyle = {
+  base: {
+    "stroke-color": "rgba(255 255 255 / 0.5)",
+    "stroke-Width": 2,
+  },
+  selected: {
+    "stroke-color": "oklch(57.7% 0.245 27.325)",
+    "stroke-width": 3,
+    "fill-color": "oklch(0 0 0 / 0.1)",
+  },
+};
+
+export const ghostStyle = [
+  {
+    filter: ["all", ["==", ["geometry-type"], "Polygon"], selectFilter],
+    style: ghostPolygonStyle.selected,
+  },
+  {
+    filter: ["all", ["==", ["geometry-type"], "Point"], selectFilter],
+    style: ghostPointStyle.selected,
+  },
+  {
+    filter: ["==", ["geometry-type"], "Polygon"],
+    style: ghostPolygonStyle.base,
+  },
+  {
+    filter: ["==", ["geometry-type"], "Point"],
+    style: ghostPointStyle.base,
+  },
+];
+
 export function styleText(
   label: string,
   font: string,
