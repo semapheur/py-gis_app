@@ -1,3 +1,4 @@
+from datetime import datetime as dt
 from typing import Sequence, Union
 
 from src.parse.sicd_model import ImageCorner, LatLon, SicdObject
@@ -15,7 +16,7 @@ def sicd_polygon_wkt(points: Sequence[Union[LatLon, ImageCorner]]) -> str:
   return f"POLYGON(({', '.join(vertices)}))"
 
 
-def parse_sicd_metadata(gdal_info: dict, sicd_obj: SicdObject):
+def parse_sicd_info(gdal_info: dict, sicd_obj: SicdObject):
 
   sicd = sicd_obj["metadata"]
 
@@ -34,7 +35,7 @@ def parse_sicd_metadata(gdal_info: dict, sicd_obj: SicdObject):
   image_corners = geo_data["ImageCorners"]
   footprint = sicd_polygon_wkt(image_corners)
 
-  datetime_collected = datetime.fromisoformat(timeline["CollectStart"])
+  datetime_collected = dt.fromisoformat(timeline["CollectStart"])
   look_angle = 90.0 - scpcoa["IncidenceAng"]
   azimuth_angle = scpcoa["AzimAng"]
 

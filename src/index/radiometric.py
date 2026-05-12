@@ -34,6 +34,38 @@ def create_radiometric_table():
     db.create_table(RadiometricParamsTable)
 
 
+def make_radiometric_row(
+  sicd: dict, image_hash: bytes
+) -> RadiometricParamsTable | None:
+  radiometric_metadata = sicd.get("Radiometric", {})
+  if not radiometric_metadata:
+    return None
+
+  noise_params = radiometric_metadata.get("NoiseLevel", {})
+  noise_data = (
+    NoiseParameters(
+      type=noise_params["NoiseLevelType"],
+      poly=noise_params["NoisePoly"]["Coefs"],
+    )
+    if noise_params
+    else None
+  )
+
+  radiometric_params = {
+    "id": image_hash,
+    "noise": noise_data,
+    "sigma0": radiometric_metadata.get("SigmaZeroSFPoly", {}).get("Coefs", []),
+    "beta0": radiometric_metadata.get("BetaZeroSFPoly", {}).get("Coefs", []),
+    "gamma0": radiometric_metadata.get("GammaZeroSFPoly", {}).get("Coefs", []),
+  }
+
+  row = RadiometricParamsTable()
+  for key, value in radiometric_params.items():
+    setattr(row, key, value)
+
+  return row
+
+
 def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors, ...]):
   query = (
     Query()

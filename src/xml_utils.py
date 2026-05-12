@@ -52,4 +52,7 @@ def xml_to_dict(element: ET.Element) -> Union[dict, str]:
 
       result[child.tag].append(value)
 
+    else:
+      result[child.tag] = value
+
   return result

@@ -8,21 +8,24 @@ from uuid import UUID
 
 from src.bootstrap import get_settings
 from src.gdal_utils import (
-  Band,
   CogOptions,
   GdalTranslateOptions,
   GdalWarpOptions,
   gdal_translate,
-  gdalinfo,
   gdalwarp,
 )
 from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_time
-from src.index.radiometric import (
-  NoiseParameters,
-  RadiometricParamsTable,
-)
+from src.index.radiometric import RadiometricParamsTable, make_radiometric_row
 from src.models.areas import get_area_wkt
+from src.parse.bj3_metadata import get_b3j_info
+from src.parse.image_metadata import (
+  BandStatistics,
+  get_band_statistics,
+  parse_image_metadata,
+)
+from src.parse.isd_metadata import get_isd_info
+from src.parse.sicd_metadata import parse_sicd_info
 from src.parse.sicd_model import SicdObject
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import OnConflict, Query
@@ -54,15 +57,6 @@ class ImageryType(str, Enum):
   SLC = "slc"
 
 
-class BandStatistics(TypedDict):
-  data_type: str
-  color_interpretation: str
-  min: int
-  max: int
-  mean: float
-  std: float
-
-
 class ImageIndexTable(Table):
   _table_name = "images"
   id = hash_field(True)
@@ -87,26 +81,6 @@ class ImageIndexTable(Table):
 def create_index_table():
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     db.create_table(ImageIndexTable)
-
-
-def get_band_statistics(gdal_info: dict) -> list[BandStatistics]:
-  bands = cast(Optional[list[Band]], gdal_info.get("bands"))
-  if bands is None:
-    raise ValueError("'bands' field missing from gdalinfo")
-
-  band_statistics = [
-    BandStatistics(
-      data_type=band["type"],
-      color_interpretation=band["colorInterpretation"],
-      min=band["min"],
-      max=band["max"],
-      mean=band["mean"],
-      std=band["stdDev"],
-    )
-    for band in bands
-  ]
-
-  return band_statistics
 
 
 def detect_image_type(
@@ -147,39 +121,7 @@ def make_index_row(data: dict) -> ImageIndexTable:
   return row
 
 
-def make_radiometric_row(
-  sicd: dict, image_hash: bytes
-) -> RadiometricParamsTable | None:
-  radiometric_metadata = sicd.get("Radiometric", {})
-  if not radiometric_metadata:
-    return None
-
-  noise_params = radiometric_metadata.get("NoiseLevel", {})
-  noise_data = (
-    NoiseParameters(
-      type=noise_params["NoiseLevelType"],
-      poly=noise_params["NoisePoly"]["Coefs"],
-    )
-    if noise_params
-    else None
-  )
-
-  radiometric_params = {
-    "id": image_hash,
-    "noise": noise_data,
-    "sigma0": radiometric_metadata.get("SigmaZeroSFPoly", {}).get("Coefs", []),
-    "beta0": radiometric_metadata.get("BetaZeroSFPoly", {}).get("Coefs", []),
-    "gamma0": radiometric_metadata.get("GammaZeroSFPoly", {}).get("Coefs", []),
-  }
-
-  row = RadiometricParamsTable()
-  for key, value in radiometric_params.items():
-    setattr(row, key, value)
-
-  return row
-
-
-def parse_image_metadata(
+def parse_image_info(
   gdal_info: dict,
   hash: bytes,
   catalog_id: UUID,
@@ -203,32 +145,21 @@ def parse_image_metadata(
 
   isd = gdal_info.get("isd")
   if isd is not None:
-    image_info = isd.get("image", {})
-    tile = find_tile_for_file(isd, file_path.stem)
+    isd_data = get_isd_info(file_path, isd)
+    data |= isd_data
+    index_row = make_index_row(data)
+    return index_row, None
 
-    datetime_collected = datetime.fromisoformat(image_info.get("acquisition_time"))
-    footprint = isd_polygon_wkt(tile)
-
-    data |= {
-      "classification": "UNCLASSIFIED",
-      "datetime_collected": datetime_collected,
-      "sensor_name": image_info.get("satellite_id"),
-      "footprint": footprint,
-      "look_angle": image_info.get("mean_off_nadir"),
-      "azimuth_angle": image_info.get("mean_sat_azimuth"),
-      "ground_sample_distance_row": image_info.get("mean_gsd_row"),
-      "ground_sample_distance_col": image_info.get("mean_gsd_col"),
-      "interpretation_rating": image_info.get("pniirs"),
-    }
-
+  b3j = gdal_info.get("b3j")
+  if b3j is not None:
+    b3j_data = get_b3j_info(b3j)
+    data |= b3j_data
     index_row = make_index_row(data)
     return index_row, None
 
   sicd_obj = tiff_metadata(gdal_info, "SICD_METADATA")
-
   if sicd_obj is not None:
-    sicd_data = parse_sicd_metadata(gdal_info, cast(SicdObject, sicd_obj))
-
+    sicd_data = parse_sicd_info(gdal_info, cast(SicdObject, sicd_obj))
     data |= sicd_data
     index_row = make_index_row(data)
 
@@ -366,8 +297,6 @@ def process_thumbnail(
 
 def process_cog(
   image_file: Path,
-  image_info: dict,
-  index_row: ImageIndexTable,
   action: IndexAction,
   old_stem: Optional[str],
 ):
@@ -383,7 +312,6 @@ def process_cog(
       make_cog = False
 
   if make_cog:
-    image_type = ImageryType(getattr(index_row, "image_type"))
     generate_cog(image_file, cog_path)
 
 
@@ -400,17 +328,17 @@ def index_image(
     # TODO: handle duplicates
     return None, None
 
-  info = gdalinfo(file, stats="exact")
+  metadata = parse_image_metadata(file)
   relative_directory = file.parent.relative_to(image_dir)
-  index_row, radiometric_row = parse_image_metadata(
-    info, image_hash, catalog_id, file, relative_directory
+  index_row, radiometric_row = parse_image_info(
+    metadata, image_hash, catalog_id, file, relative_directory
   )
 
   if action == IndexAction.REINDEX_PARENT:
     return index_row, radiometric_row
 
-  process_thumbnail(file, info, index_row, action, old_stem, thumbnail_minsize)
-  process_cog(file, info, index_row, action, old_stem)
+  process_thumbnail(file, metadata, index_row, action, old_stem, thumbnail_minsize)
+  process_cog(file, action, old_stem)
 
   return index_row, radiometric_row
 
