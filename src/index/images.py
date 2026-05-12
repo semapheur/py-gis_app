@@ -23,7 +23,7 @@ from src.index.radiometric import (
   RadiometricParamsTable,
 )
 from src.models.areas import get_area_wkt
-from src.sicd_model import SicdObject, sicd_polygon_wkt
+from src.parse.sicd_model import SicdObject
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
@@ -177,70 +177,6 @@ def make_radiometric_row(
     setattr(row, key, value)
 
   return row
-
-
-def find_tile_for_file(isd: dict, stem: str) -> dict:
-  for tile in isd.get("tiles", []):
-    if Path(tile.get("filename", "")).stem == stem:
-      return tile
-  return {}
-
-
-def isd_polygon_wkt(tile: dict) -> str:
-  points = (
-    f"{tile['ullon']} {tile['ullat']}",
-    f"{tile['urlon']} {tile['urlat']}",
-    f"{tile['lrlon']} {tile['lrlat']}",
-    f"{tile['lllon']} {tile['lllat']}",
-    f"{tile['ullon']} {tile['ullat']}",
-  )
-  return f"POLYGON(({', '.join(points)}))"
-
-
-def parse_sicd_metadata(gdal_info: dict, sicd_obj: SicdObject):
-
-  sicd = sicd_obj["metadata"]
-
-  tifftag = tiff_metadata(gdal_info, "TIFFTAG_IMAGEDESCRIPTION") or {}
-  tifftag = tifftag.get("collect", {}).get("image", {})
-
-  collection_info = sicd["CollectionInfo"]
-  geo_data = sicd["GeoData"]
-  timeline = sicd["Timeline"]
-  scpcoa = sicd["SCPCOA"]
-
-  sensor_name = collection_info["CollectorName"]
-  classification = collection_info["Classification"]
-  interpretation_rating = collection_info.get("Parameters", {}).get("PREDICTED_RNIIRS")
-
-  image_corners = geo_data["ImageCorners"]
-  footprint = sicd_polygon_wkt(image_corners)
-
-  datetime_collected = datetime.fromisoformat(timeline["CollectStart"])
-  look_angle = 90.0 - scpcoa["IncidenceAng"]
-  azimuth_angle = scpcoa["AzimAng"]
-
-  plane = sicd["RadarCollection"].get("Area", {}).get("Plane", {})
-
-  gsd_row = plane.get("XDir", {}).get("LineSpacing") or tifftag.get(
-    "ground_range_resolution"
-  )
-
-  gsd_col = plane.get("YDir", {}).get("SampleSpacing") or tifftag.get(
-    "ground_azimuth_resolution"
-  )
-
-  return {
-    "classification": classification,
-    "datetime_collected": datetime_collected,
-    "sensor_name": sensor_name,
-    "footprint": footprint,
-    "look_angle": look_angle,
-    "azimuth_angle": azimuth_angle,
-    "ground_sample_distance_row": gsd_row,
-    "ground_sample_distance_col": gsd_col,
-    "interpretation_rating": interpretation_rating,
-  }
 
 
 def parse_image_metadata(

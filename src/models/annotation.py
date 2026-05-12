@@ -292,7 +292,7 @@ def get_annotation_ghosts_by_geometry(
       }
     )
 
-  date_op = ">=" if future else "<="
+  date_op = ">" if future else "<"
 
   attach_sql = (
     f"ATTACH DATABASE '{app_settings.INDEX_DB}' AS i",
