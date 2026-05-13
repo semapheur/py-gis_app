@@ -190,6 +190,18 @@ def gdalinfo(
   return json.loads(process.stdout)
 
 
+def parse_gdalinfo_json_field(gdal_info: dict, field: str) -> dict:
+  metadata_json = gdal_info.get("metadata", {}).get("", {}).get(field)
+
+  if metadata_json is None:
+    raise ValueError(f"'{field}' missing in gdalinfo")
+
+  try:
+    return json.loads(metadata_json)
+  except json.JSONDecodeError as e:
+    raise ValueError(f"Invalid json string: {e}")
+
+
 def is_cloud_optimized(path: Path) -> bool:
   if not path.exists():
     raise FileNotFoundError(f"Invalid path: {str(path)}")

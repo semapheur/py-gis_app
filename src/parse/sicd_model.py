@@ -1,4 +1,4 @@
-from typing import Literal, Optional, Sequence, TypedDict, Union
+from typing import Literal, Optional, TypedDict
 
 
 class RadarModeObject(TypedDict):

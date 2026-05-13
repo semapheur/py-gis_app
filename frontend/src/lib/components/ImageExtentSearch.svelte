@@ -21,3 +21,9 @@
   />
   <ImageGrid {images} />
 </div>
+
+<style>
+  .image-extent-search {
+    height: 100%;
+  }
+</style>

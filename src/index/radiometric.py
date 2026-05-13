@@ -1,11 +1,10 @@
-import json
 from pathlib import Path
 from typing import Literal, TypeAlias, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import Query
-from src.sqlite.table import ColumnType, Field, Table, hash_field, json_field
+from src.sqlite.table import Table, hash_field, json_field
 
 app_settings = get_settings()
 

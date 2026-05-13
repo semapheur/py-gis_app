@@ -30,17 +30,19 @@
   }
 </script>
 
-<Splitpanes>
-  <Pane>
-    <Map {imagePreview} {extentPolygon} />
-  </Pane>
-  <Pane>
-    <div class="right-panel">
-      <ImageSearchForm />
-      <ImageGrid images={data.images} {onHoverImage} />
-    </div>
-  </Pane>
-</Splitpanes>
+<div style="height: 100vh; width: 100%">
+  <Splitpanes>
+    <Pane>
+      <Map {imagePreview} {extentPolygon} />
+    </Pane>
+    <Pane>
+      <div class="right-panel">
+        <ImageSearchForm />
+        <ImageGrid images={data.images} {onHoverImage} />
+      </div>
+    </Pane>
+  </Splitpanes>
+</div>
 
 <style>
   .right-panel {

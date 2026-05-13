@@ -1,6 +1,7 @@
 from datetime import datetime as dt
 from typing import Sequence, Union
 
+from src.gdal_utils import parse_gdalinfo_json_field
 from src.parse.sicd_model import ImageCorner, LatLon, SicdObject
 
 
@@ -20,7 +21,7 @@ def parse_sicd_info(gdal_info: dict, sicd_obj: SicdObject):
 
   sicd = sicd_obj["metadata"]
 
-  tifftag = tiff_metadata(gdal_info, "TIFFTAG_IMAGEDESCRIPTION") or {}
+  tifftag = parse_gdalinfo_json_field(gdal_info, "TIFFTAG_IMAGEDESCRIPTION") or {}
   tifftag = tifftag.get("collect", {}).get("image", {})
 
   collection_info = sicd["CollectionInfo"]

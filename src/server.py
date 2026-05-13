@@ -185,7 +185,7 @@ class Handler(SimpleHTTPRequestHandler):
       return
 
     if self.path == "/api/get-annotation-ghosts":
-      self._post_get_annotation_ghosts()
+      self._post_fetch_annotation_ghosts()
       return
 
     if self.path == "/api/get-area":
@@ -275,6 +275,7 @@ class Handler(SimpleHTTPRequestHandler):
       self._json_response(result)
 
     except Exception as e:
+      print(e)
       self._error_response(500, f"Server error: {str(e)}")
 
   def _handle_post_stream(self, fn: Callable[[P], None]):
@@ -301,6 +302,7 @@ class Handler(SimpleHTTPRequestHandler):
       fn(payload_in, send_event)
       send_event("done", {"message": "OK"})
     except Exception as e:
+      print(e)
       send_event("error", {"message": str(e)})
 
   def _post_query_images(self):

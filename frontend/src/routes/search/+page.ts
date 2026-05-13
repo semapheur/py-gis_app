@@ -4,7 +4,7 @@ import type { PageLoad } from "./$types";
 import type { ImageMetadata } from "$lib/utils/types";
 import { parseToUnix } from "$lib/utils/date";
 
-export const prerender = false;
+//export const prerender = false;
 
 interface ImageSearchResult {
   wkt: string | null;

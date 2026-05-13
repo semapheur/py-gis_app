@@ -13,12 +13,13 @@ from src.gdal_utils import (
   GdalWarpOptions,
   gdal_translate,
   gdalwarp,
+  parse_gdalinfo_json_field,
 )
 from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_time
 from src.index.radiometric import RadiometricParamsTable, make_radiometric_row
 from src.models.areas import get_area_wkt
-from src.parse.bj3_metadata import get_b3j_info
+from src.parse.bj3_metadata import get_bj3_info
 from src.parse.image_metadata import (
   BandStatistics,
   get_band_statistics,
@@ -102,17 +103,6 @@ def detect_image_type(
   return (ImagerySensorType.EO, ImageryType.MS)
 
 
-def tiff_metadata(
-  gdal_info: dict, schema: Literal["SICD_METADATA", "TIFFTAG_IMAGEDESCRIPTION"]
-) -> Union[dict, None]:
-  metadata_text = gdal_info.get("metadata", {}).get("", {}).get(schema)
-
-  if metadata_text is not None:
-    return json.loads(metadata_text)
-
-  return None
-
-
 def make_index_row(data: dict) -> ImageIndexTable:
   row = ImageIndexTable()
   for key, value in data.items():
@@ -150,14 +140,14 @@ def parse_image_info(
     index_row = make_index_row(data)
     return index_row, None
 
-  b3j = gdal_info.get("b3j")
-  if b3j is not None:
-    b3j_data = get_b3j_info(b3j)
-    data |= b3j_data
+  bj3 = gdal_info.get("bj3")
+  if bj3 is not None:
+    bj3_data = get_bj3_info(bj3)
+    data |= bj3_data
     index_row = make_index_row(data)
     return index_row, None
 
-  sicd_obj = tiff_metadata(gdal_info, "SICD_METADATA")
+  sicd_obj = parse_gdalinfo_json_field(gdal_info, "SICD_METADATA")
   if sicd_obj is not None:
     sicd_data = parse_sicd_info(gdal_info, cast(SicdObject, sicd_obj))
     data |= sicd_data
@@ -369,7 +359,11 @@ def index_images(
 
     image_dir = cast(Path, catalog_record[0]["path"])
 
-    files = [f for f in image_dir.rglob("*") if f.suffix.lower() in extensions]
+    files = [
+      f
+      for f in image_dir.rglob("*")
+      if f.suffix.lower() in extensions and not f.name.lower().endswith("_browser.tif")
+    ]
     total = len(files)
 
     image_index: list[ImageIndexTable] = []
