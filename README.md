@@ -48,4 +48,4 @@ To build the application, run the following command from the project root:
 python pack.py
 ```
 
-The packaged application will be generated in the `dist` directory at the root of the project. To start the application run `app.py` from inside the `dist` directory. In production mode, map servers can be configure in the `map_config.json` file located in `dist/static`.
+The packaged application will be generated in the `dist` directory at the root of the project. To start the application run `app.py` from inside the `dist` directory. In production mode, map servers can be configured in the `map_config.json` file located in `dist/static`.
