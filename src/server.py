@@ -20,6 +20,7 @@ from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation import (
   AnnotationUpdate,
   ConvertAnnotation,
+  GhostSearch,
   convert_annotation,
   delete_annotations,
   get_annotation_ghosts,
@@ -43,6 +44,7 @@ from src.models.attributes import (
 )
 from src.models.equipment import search_equipment
 from src.models.update import TableUpdate
+from src.msgpack import decode_msgpack, encode_msgpack
 
 P = TypeVar("P")
 R = TypeVar("R")
@@ -248,19 +250,21 @@ class Handler(SimpleHTTPRequestHandler):
 
       remaining -= len(chunk)
 
-  def _json_response(self, object: R):
-    payload = json.dumps(object).encode("utf-8")
+  def _api_response(self, object: R):
+    # payload = json.dumps(object).encode("utf-8")
+    payload = encode_msgpack(object)
 
     self.send_response(200)
-    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Type", "application/msgpack")
     self.send_header("Content-Length", str(len(payload)))
     self.end_headers()
     self.wfile.write(payload)
 
   def _error_response(self, status: int, message: str):
-    payload = json.dumps({"detail": message}).encode("utf-8")
+    # payload = json.dumps({"detail": message}).encode("utf-8")
+    payload = encode_msgpack({"detail": message})
     self.send_response(status)
-    self.send_header("Content-Type", "application/json")
+    self.send_header("Content-Type", "application/msgpack")
     self.send_header("Content-Length", str(len(payload)))
     self.end_headers()
     self.wfile.write(payload)
@@ -268,12 +272,10 @@ class Handler(SimpleHTTPRequestHandler):
   def _handle_post(self, fn: Callable[[P], R]):
     try:
       content_length = int(self.headers.get("Content-Length", 0))
-      body = self.rfile.read(content_length).decode("utf-8")
-      payload_in = json.loads(body)
+      body = self.rfile.read(content_length)
+      payload_in = decode_msgpack(body)
       result: R = fn(payload_in)
-
-      self._json_response(result)
-
+      self._api_response(result)
     except Exception as e:
       print(e)
       self._error_response(500, f"Server error: {str(e)}")
@@ -281,8 +283,8 @@ class Handler(SimpleHTTPRequestHandler):
   def _handle_post_stream(self, fn: Callable[[P], None]):
     try:
       content_length = int(self.headers.get("Content-Length", 0))
-      body = self.rfile.read(content_length).decode("utf-8")
-      payload_in = json.loads(body)
+      body = self.rfile.read(content_length)
+      payload_in = decode_msgpack(body)
     except Exception as e:
       self._error_response(400, f"Bad request: {str(e)}")
       return
@@ -448,7 +450,7 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       tables = get_attribute_tables()
       result = {"tables": tables}
-      self._json_response(result)
+      self._api_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -461,7 +463,7 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       attribute_options = get_attribute_data(table, True)
       result = {"options": attribute_options}
-      self._json_response(result)
+      self._api_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -474,7 +476,7 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       attribute_data = get_attribute_data(table)
       result = {"data": attribute_data}
-      self._json_response(result)
+      self._api_response(result)
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
@@ -482,18 +484,18 @@ class Handler(SimpleHTTPRequestHandler):
   def _get_annotations(self, image_id: str):
     image_hash = decode_sha256_from_b64(image_id)
     annotations = get_annotations_by_image(image_hash)
-    self._json_response(annotations)
+    self._api_response(annotations)
 
   def _get_areas(self):
     areas = get_areas()
-    self._json_response(areas)
+    self._api_response(areas)
 
   def _get_catalogs_index(self):
     catalogs = get_catalog_index_data()
     result = {"catalogs": catalogs}
-    self._json_response(result)
+    self._api_response(result)
 
   def _get_catalogs_edit(self):
     catalogs = get_catalog_edit_data()
     result = {"catalogs": catalogs}
-    self._json_response(result)
+    self._api_response(result)

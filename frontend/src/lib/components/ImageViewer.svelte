@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { encode, decode } from "@msgpack/msgpack";
   import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
   import { getImageViewerOptions } from "$lib/contexts/common.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
@@ -71,16 +72,16 @@
 
     const response = await fetch("/api/search-images", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
 
     if (!response.ok) {
       toast.error("Failed to fetch images");
     }
 
-    const result = (await response.json()) as ImageMetadata[];
-    return result;
+    const buffer = await response.arrayBuffer();
+    return decode(buffer) as ImageMetadata[];
   }
 </script>
 
@@ -124,7 +125,7 @@
   </div>
   {#if enhancementOpen}
     <div class="enhancement">
-      <ImageEnhacement />
+      <ImageEnhacement bind:isOpen={enhancementOpen} />
     </div>
   {/if}
   {#if annotateOpen}
@@ -170,6 +171,7 @@
     position: absolute;
     top: var(--size-sm);
     right: var(--size-sm);
+    z-index: 1;
   }
 
   .bottom-left {

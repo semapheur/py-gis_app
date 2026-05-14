@@ -1,11 +1,12 @@
 import { error } from "@sveltejs/kit";
+import { encode, decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 
 export const prerender = false;
 
-async function fetchJson<T>(
+async function fetchMsgPack<T>(
   fetch: typeof globalThis.fetch,
   input: RequestInfo,
   init?: RequestInit,
@@ -17,7 +18,8 @@ async function fetchJson<T>(
     throw error(response.status, message);
   }
 
-  return response.json() as Promise<T>;
+  const buffer = await response.arrayBuffer();
+  return decode(buffer) as T;
 }
 
 export const load: PageLoad = async ({ params, fetch }) => {
@@ -26,31 +28,31 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
   const postRequest: RequestInit = {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
+    headers: { "Content-Type": "application/msgpack" },
+    body: encode({ id }),
   };
 
   const [confidenceOptions, statusOptions, imageInfoWithoutId, annotations] =
     await Promise.all([
-      fetchJson(
+      fetchMsgPack(
         fetch,
         "/api/get-attributes/observation_confidence",
         undefined,
         "Failed to fetch observation confidence attributes",
       ),
-      fetchJson(
+      fetchMsgPack(
         fetch,
         "/api/get-attributes/equipment_status",
         undefined,
         "Failed to fetch equipment status attributes",
       ),
-      fetchJson<Partial<ImageInfo>>(
+      fetchMsgPack<Partial<ImageInfo>>(
         fetch,
         "/api/image-info",
         postRequest,
         "Failed to fetch image info",
       ),
-      fetchJson<AnnotationInfo[]>(
+      fetchMsgPack<AnnotationInfo[]>(
         fetch,
         `/api/get-annotations/${id}`,
         undefined,
@@ -60,7 +62,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
   const radiometricParams =
     imageInfoWithoutId.image_type === "slc"
-      ? await fetchJson<RadiometricParams>(
+      ? await fetchMsgPack<RadiometricParams>(
           fetch,
           "/api/radiometric-params",
           postRequest,

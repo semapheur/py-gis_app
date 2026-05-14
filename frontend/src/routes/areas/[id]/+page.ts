@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { encode, decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
 import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
 
@@ -11,14 +12,15 @@ export const load: PageLoad = async ({ params, fetch }) => {
   const response = await fetch("/api/get-area", {
     method: "POST",
     headers: { "Content-Type": "application/json" },
-    body: JSON.stringify({ id }),
+    body: encode({ id }),
   });
 
   if (!response.ok) {
     throw error(response.status, `Failed to fetch area for id ${id}`);
   }
 
-  const areaInfo: AreaInfo = await response.json();
+  const buffer = await response.arrayBuffer();
+  const areaInfo = decode(buffer) as AreaInfo;
 
   return areaInfo;
 };

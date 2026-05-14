@@ -1,6 +1,6 @@
 import json
 from dataclasses import dataclass, fields, MISSING
-from typing import Any, Optional, Union, TypedDict, get_args, get_origin, get_type_hints, TYPE_CHECKING, cast
+from typing import Any, Optional, Union, TypedDict, get_args, get_origin, get_type_hints
 from typing_extensions import dataclass_transform
 
 class ErrorMessage(TypedDict):
@@ -13,7 +13,7 @@ class ValidationError(Exception):
     super().__init__(json.dumps(errors, indent=2))
 
 @dataclass_transform()
-class BaseModel:
+class JsonModel:
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
     dataclass(cls)

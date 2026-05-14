@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { encode, decode } from "@msgpack/msgpack";
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import Input from "$lib/components/Input.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -21,7 +22,6 @@
   let gsd = $state<number | null>(null);
 
   let dateRange = $state<DateRange>(untrack(() => initialDateRange));
-  $inspect(dateRange);
 
   const viewer = getImageViewerController();
 
@@ -40,15 +40,16 @@
 
     const response = await fetch("/api/search-images", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
 
     if (!response.ok) {
       toast.error("Failed to fetch images");
     }
 
-    onFetch(await response.json());
+    const buffer = await response.arrayBuffer();
+    onFetch(decode(buffer) as ImageMetadata[]);
   }
 </script>
 

@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ params, fetch }) => {
@@ -14,7 +15,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
     throw error(response.status, "Failed to load attribute data");
   }
 
-  const { data } = await response.json();
+  const buffer = await response.arrayBuffer();
+  const { data } = decode(buffer);
 
   return {
     data,

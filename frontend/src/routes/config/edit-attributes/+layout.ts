@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
 import { type AttributeTableInfo } from "$lib/utils/types";
 
@@ -9,7 +10,8 @@ export const load: PageLoad = async ({ fetch }) => {
     throw error(response.status, "Failed to load attribute tables");
   }
 
-  const data: { tables: AttributeTableInfo[] } = await response.json();
+  const buffer = await response.arrayBuffer();
+  const data: { tables: AttributeTableInfo[] } = decode(buffer);
 
   return data;
 };

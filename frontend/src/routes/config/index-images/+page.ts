@@ -1,4 +1,5 @@
 import { error } from "@sveltejs/kit";
+import { decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
 
 export const load: PageLoad = async ({ fetch }) => {
@@ -8,7 +9,8 @@ export const load: PageLoad = async ({ fetch }) => {
     throw error(response.status, "Failed to load catalogs");
   }
 
-  const { catalogs } = await response.json();
+  const buffer = await response.arrayBuffer();
+  const { catalogs } = decode(buffer);
 
   return {
     catalogs,

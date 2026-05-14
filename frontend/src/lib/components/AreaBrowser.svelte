@@ -1,4 +1,5 @@
 <script lang="ts">
+  import { decode, encode } from "@msgpack/msgpack";
   import MdiDeleteOutline from "@iconify-svelte/mdi/delete-outline";
   import MdiEditOutline from "@iconify-svelte/mdi/edit-outline";
   import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
@@ -37,9 +38,9 @@
 
   $effect(() => {
     fetch("/api/get-areas")
-      .then((r) => r.json())
-      .then((data: AreaInfo[]) => {
-        areas = data;
+      .then((r) => r.arrayBuffer())
+      .then((buffer) => {
+        areas = decode(buffer) as AreaInfo[];
       })
       .catch((error) => {
         console.error("Failed to fetch areas", error);
@@ -69,8 +70,8 @@
 
     const response = await fetch("/api/delete-areas", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ delete: [id] }),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode({ delete: [id] }),
     });
 
     if (!response.ok) {

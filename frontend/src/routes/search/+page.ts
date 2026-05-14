@@ -1,10 +1,11 @@
 import { error } from "@sveltejs/kit";
+import { encode, decode } from "@msgpack/msgpack";
 import * as v from "valibot";
 import type { PageLoad } from "./$types";
 import type { ImageMetadata } from "$lib/utils/types";
 import { parseToUnix } from "$lib/utils/date";
 
-//export const prerender = false;
+export const prerender = false;
 
 interface ImageSearchResult {
   wkt: string | null;
@@ -85,13 +86,13 @@ export const load: PageLoad = async ({ fetch, url }) => {
 
   const response = await fetch("/api/search-images", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
-    body: JSON.stringify(result.output),
+    headers: { "Content-Type": "application/msgpack" },
+    body: encode(result.output),
   });
 
   if (!response.ok) {
     throw error(response.status, "Failed to fetch images");
   }
 
-  return (await response.json()) as Promise<ImageSearchResult>;
+  return decode(await response.arrayBuffer()) as ImageSearchResult;
 };
