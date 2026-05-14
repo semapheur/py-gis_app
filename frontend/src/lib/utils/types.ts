@@ -4,7 +4,7 @@ export interface BandStatistics {
   min: number;
   max: number;
   mean: number;
-  std: number;
+  stddev: number;
 }
 
 export interface ImageInfo {

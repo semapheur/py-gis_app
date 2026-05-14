@@ -12,3 +12,7 @@ export function splitFloat(float: number) {
   const decimal = float - integer;
   return { integer, decimal };
 }
+
+export function clamp(value: number, min: number, max: number): number {
+  return value < min ? min : value > max ? max : value;
+}

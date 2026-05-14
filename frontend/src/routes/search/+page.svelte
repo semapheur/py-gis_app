@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { Pane, Splitpanes } from "svelte-splitpanes";
+  import SplitPanes from "$lib/components/SplitPanes.svelte";
   import Map from "$lib/components/Map.svelte";
   import ImageSearchForm from "$lib/components/ImageSearchForm.svelte";
   import ImageGrid from "$lib/components/ImageGrid.svelte";
@@ -30,25 +30,25 @@
   }
 </script>
 
-<div style="height: 100vh; width: 100%">
-  <Splitpanes>
-    <Pane>
-      <Map {imagePreview} {extentPolygon} />
-    </Pane>
-    <Pane>
-      <div class="right-panel">
-        <ImageSearchForm />
-        <ImageGrid images={data.images} {onHoverImage} />
-      </div>
-    </Pane>
-  </Splitpanes>
-</div>
+{#snippet leftPane()}
+  <Map {imagePreview} {extentPolygon} />
+{/snippet}
+
+{#snippet rightPane()}
+  <div class="right-pane">
+    <ImageSearchForm />
+    <ImageGrid images={data.images} {onHoverImage} />
+  </div>
+{/snippet}
+
+<SplitPanes panes={[leftPane, rightPane]} />
 
 <style>
-  .right-panel {
+  .right-pane {
     display: grid;
     grid-template-rows: auto 1fr;
     gap: var(--size-md);
+    height: 100%;
     width: 100%;
     padding: var(--size-md);
   }

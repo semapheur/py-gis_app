@@ -14,7 +14,7 @@ function isComplexBand(band: BandStatistics): boolean {
 
 function stretchRange(band: BandStatistics) {
   if (isComplexBand(band)) {
-    const amplitudeScale = band.std * Math.SQRT2;
+    const amplitudeScale = band.stddev * Math.SQRT2;
     return { min: 0, max: amplitudeScale * 4 };
   }
 
@@ -91,6 +91,55 @@ export function buildStyleExpression(
       enhance(saturated.b),
       1,
     ],
+  };
+}
+
+function _buildStyleExpression(
+  result: BandStretchResult,
+): Record<string, unknown> {
+  const { bands, singleBand, isComplex } = result;
+
+  const linearStretch = (bandIndex: number) => {
+    const { min, max } = bands[bandIndex - 1] ?? { min: 0, max: 0 };
+    const range = max - min || 1;
+    return ["clamp", ["/", ["-", ["band", bandIndex], min], range], 0, 1];
+  };
+
+  const logStretch = () => {
+    const { min: minDb, maxDb } = bands[0] ?? { min: -30, max: 0 };
+    const rangeDb = maxDb - minDb || 1;
+
+    const re: unknown[] = ["band", 1];
+    const im: unknown[] = ["band", 2];
+
+    const mag2: unknown[] = ["+", ["*", re, re], ["*", im, im]];
+
+    const powerDb: unknown[] = [
+      "*",
+      10,
+      ["log", ["/", ["max", mag2, 1e-10], Math.LN10]],
+    ];
+    const log10Expr: unknown[] = [
+      "/",
+      ["log", ["max", mag2, 1e-10], Math.LN10],
+    ];
+    const powerDb10: unknown[] = ["*", 10, log10Expr];
+    const stretched: unknown[] = [
+      "clamp",
+      ["/", ["-", powerDb10, minDb], rangeDb],
+      0,
+      1,
+    ];
+    return stretched;
+  };
+
+  if (isComplex) {
+    const s = logStretch();
+    return { color: ["array", s, s, s, 1] };
+  }
+
+  return {
+    color: ["array", linearStretch(1), linearStretch(2), linearStretch(3), 1],
   };
 }
 
@@ -237,7 +286,7 @@ export class BandStretchManager {
   }
 
   #applyStretch(result: BandStretchResult) {
-    const style = buildStyleExpression(result);
+    const style = _buildStyleExpression(result);
     (this.#layer as any).setStyle(style);
   }
 }
