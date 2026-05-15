@@ -141,7 +141,7 @@
 
     &:hover::after,
     &.active::after {
-      background: oklch(var(--color-accent));
+      background: oklch(var(--color-secondary));
     }
   }
 </style>

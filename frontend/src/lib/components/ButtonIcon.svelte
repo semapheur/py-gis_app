@@ -6,7 +6,7 @@
     children: Snippet;
   }
 
-  const { children, ...rest }: Props = $props();
+  let { children, ...rest }: Props = $props();
 </script>
 
 <button {...rest}>

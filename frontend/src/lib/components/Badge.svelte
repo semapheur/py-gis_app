@@ -5,13 +5,14 @@
 
   interface Props {
     children: Snippet;
+    tooltip?: string;
     variant?: Variant;
   }
 
-  const { children, variant = "default" }: Props = $props();
+  const { children, tooltip, variant = "default" }: Props = $props();
 </script>
 
-<span class={variant}>
+<span class={variant} title={tooltip}>
   {@render children()}
 </span>
 

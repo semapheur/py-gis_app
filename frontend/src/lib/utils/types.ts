@@ -58,3 +58,8 @@ export interface AttributeTableInfo {
   name: string;
   label: string;
 }
+
+export interface AngleRange {
+  start: number;
+  end: number;
+}

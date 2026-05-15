@@ -81,7 +81,11 @@
     }
 
     const buffer = await response.arrayBuffer();
-    return decode(buffer) as ImageMetadata[];
+    const { images } = decode(buffer) as {
+      images: ImageMetadata[];
+      wkt: string;
+    };
+    return images;
   }
 </script>
 
@@ -110,6 +114,7 @@
     <Button
       onclick={() => {
         leftSidebarOpen = true;
+        ghostsOpen = false;
         searchOpen = true;
         searhImagesOnExtent().then((result) => {
           images = result;
@@ -119,6 +124,7 @@
     <Button
       onclick={() => {
         leftSidebarOpen = true;
+        searchOpen = false;
         ghostsOpen = true;
       }}>Ghosts</Button
     >
@@ -139,7 +145,9 @@
   {/if}
   {#if leftSidebarOpen}
     <div class="left-sidebar">
-      <CloseButton onclick={() => (leftSidebarOpen = false)} />
+      <div class="left-sidebar-button-group">
+        <CloseButton onclick={() => (leftSidebarOpen = false)} />
+      </div>
       {#if searchOpen}
         <ImageExtentSearch {initialDateRange} initialImages={images} />
       {:else if ghostsOpen}
@@ -166,7 +174,13 @@
     height: 100%;
     padding: var(--size-md);
     background-color: oklch(var(--color-primary));
+    border-right: 1px solid oklch(var(--color-secondary));
     z-index: 2;
+  }
+
+  .left-sidebar-button-group {
+    display: flex;
+    justify-content: flex-end;
   }
 
   .enhancement {

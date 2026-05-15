@@ -1,6 +1,6 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import { Pane, Splitpanes } from "svelte-splitpanes";
+  import SplitPanes from "$lib/components/SplitPanes.svelte";
   import Map from "$lib/components/Map.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
   import CoordinateSearch from "$lib/components/CoordinateSearch.svelte";
@@ -23,29 +23,30 @@
   }
 </script>
 
-<Splitpanes>
-  <Pane>
-    <Map showSearchButton syncBbox onSearchExtent={handleSearchExtent} />
-  </Pane>
-  <Pane>
-    <div class="right-panel">
-      <header class="panel-header">
-        <Tabs
-          {tabs}
-          selected={activeTab}
-          onselect={(tab) => (activeTab = tab as Tabs)}
-        />
-      </header>
-      <main class="panel-content">
-        {#if activeTab === "areas"}
-          <AreaBrowser />
-        {:else if activeTab === "coordinates"}
-          <CoordinateSearch />
-        {/if}
-      </main>
-    </div>
-  </Pane>
-</Splitpanes>
+{#snippet leftPane()}
+  <Map showSearchButton syncBbox onSearchExtent={handleSearchExtent} />
+{/snippet}
+
+{#snippet rightPane()}
+  <div class="right-panel">
+    <header class="panel-header">
+      <Tabs
+        {tabs}
+        selected={activeTab}
+        onselect={(tab) => (activeTab = tab as Tabs)}
+      />
+    </header>
+    <main class="panel-content">
+      {#if activeTab === "areas"}
+        <AreaBrowser />
+      {:else if activeTab === "coordinates"}
+        <CoordinateSearch />
+      {/if}
+    </main>
+  </div>
+{/snippet}
+
+<SplitPanes panes={[leftPane, rightPane]} />
 
 <style>
   .right-panel {

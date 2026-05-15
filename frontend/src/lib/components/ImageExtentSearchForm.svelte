@@ -49,7 +49,7 @@
     }
 
     const buffer = await response.arrayBuffer();
-    const { images, wkt } = decode(buffer) as {
+    const { images } = decode(buffer) as {
       images: ImageMetadata[];
       wkt: string;
     };

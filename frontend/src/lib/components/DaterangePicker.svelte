@@ -424,7 +424,7 @@
 
   {#if open}
     <div class="calendar-wrapper" {@attach repositionCalendar}>
-      <!-- PRESETS DROPDOWN -->
+      <!-- presets dropdown -->
       <label>
         Presets
         <select class="preset-select" onchange={handleSelectPreset}>
@@ -434,7 +434,7 @@
         </select>
       </label>
 
-      <!-- HEADER -->
+      <!-- header -->
       <div class="header">
         {#if mode === "calendar"}
           <button
@@ -470,7 +470,7 @@
         {/if}
       </div>
 
-      <!-- MONTH PICKER -->
+      <!-- month picker -->
       {#if mode === "choose-month"}
         <div class="month-grid">
           {#each months as m, i}
@@ -487,7 +487,7 @@
         </div>
       {/if}
 
-      <!-- YEAR PICKER -->
+      <!-- year picker -->
       {#if mode === "choose-year"}
         <div class="year-grid">
           {#each yearOptions as y}
@@ -511,14 +511,14 @@
         </div>
       {/if}
 
-      <!-- CALENDAR -->
+      <!-- calendar -->
       {#if mode === "calendar"}
         <div
           class="calendar-grid"
           role="presentation"
           onmouseleave={() => (hoverDate = null)}
         >
-          <!-- Header row with week number label and weekdays -->
+          <!-- header row with week number label and weekdays -->
           <div class="calendar-header">
             <div class="week-number-header">Wk</div>
             {#each weekdays as day}
@@ -526,7 +526,7 @@
             {/each}
           </div>
 
-          <!-- Each week row with week number and days -->
+          <!-- each week row with week number and days -->
           {#each calendarWeeks as week}
             <div class="week-row">
               <div class="week-number">{week.weekNumber}</div>

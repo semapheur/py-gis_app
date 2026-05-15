@@ -21,7 +21,9 @@
     href: `/view/${image.id}`,
     dateText: datetime.toISOString().slice(0, 10),
     timeText: datetime.toTimeString().slice(0, 8),
-    coverage: `${(image.coverage * 100).toFixed(0)}%`,
+    coverage: Number.isFinite(image.coverage)
+      ? `${(image.coverage * 100).toFixed(0)}%`
+      : null,
     gsd_text: `${(gsd * 100).toFixed(2)}cm`,
     azimuth_angle: `${image.azimuth_angle.toFixed(0)}°`,
     look_angle: `${image.look_angle.toFixed(0)}°`,
@@ -38,19 +40,23 @@
 
     <div class="header">
       <div class="parameter-badges">
-        <Badge>
-          {formattedProps.coverage}
-        </Badge>
-        <Badge>
-          {image.interpretation_rating}
-        </Badge>
-        <Badge>
+        {#if formattedProps.coverage !== null}
+          <Badge tooltip="Coverage">
+            {formattedProps.coverage}
+          </Badge>
+        {/if}
+        {#if image.interpretation_rating !== null}
+          <Badge tooltip="Image interpretation rating scale">
+            {image.interpretation_rating}
+          </Badge>
+        {/if}
+        <Badge tooltip="Ground sample distance">
           {formattedProps.gsd_text}
         </Badge>
-        <Badge>
+        <Badge tooltip="Azimuth angle">
           {formattedProps.azimuth_angle}
         </Badge>
-        <Badge>
+        <Badge tooltip="Look angle">
           {formattedProps.look_angle}
         </Badge>
       </div>

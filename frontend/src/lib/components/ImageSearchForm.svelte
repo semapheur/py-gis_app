@@ -1,10 +1,12 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
-  import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import Input from "$lib/components/Input.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DaterangePicker from "$lib/components/DaterangePicker.svelte";
+  import AzimuthRangePicker from "$lib/components/AzimuthRangePicker.svelte";
   import { formatDate, parseIsoDate, type DateRange } from "$lib/utils/date";
+  import { type AngleRange } from "$lib/utils/types";
 
   const params = page.url.searchParams;
   let filename = $state<string | null>(params.get("filename") ?? null);
@@ -23,6 +25,14 @@
       ? {
           start: parseIsoDate(params.get("date_start"))!,
           end: parseIsoDate(params.get("date_end"))!,
+        }
+      : null,
+  );
+  let azimuthRange = $state<AngleRange | null>(
+    params.has("azimuth.start") && params.has("azimuth.end")
+      ? {
+          start: parseInt(params.get("azimuth_start")!),
+          end: parseInt(params.get("azimuth_end")!),
         }
       : null,
   );
@@ -97,7 +107,7 @@
     max="100"
   />
   <Input
-    placeholder="Min IIRS"
+    placeholder="Min IIRS (0-9)"
     name="min_iirs"
     type="number"
     bind:value={iirs}
@@ -114,6 +124,7 @@
     step="any"
   />
   <DaterangePicker bind:selectedRange={dateRange} />
+  <AzimuthRangePicker />
 </form>
 
 <style>
