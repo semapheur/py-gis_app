@@ -1,14 +1,32 @@
 <script lang="ts">
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
+  import * as v from "valibot";
   import Input from "$lib/components/Input.svelte";
+  import Select from "$lib/components/Select.svelte";
   import Button from "$lib/components/Button.svelte";
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import AzimuthRangePicker from "$lib/components/AzimuthRangePicker.svelte";
   import { formatDate, parseIsoDate, type DateRange } from "$lib/utils/date";
   import { type AngleRange } from "$lib/utils/types";
+  import {
+    ORDERING_OPTIONS,
+    ORDER_COLUMN_OPTIONS,
+    orderingSchema,
+    imageOrderColumnSchema,
+  } from "$lib/utils/constants";
 
   const params = page.url.searchParams;
+  let ordering = $state<(typeof ORDERING_OPTIONS)[number]["value"]>(
+    v.is(orderingSchema, params.get("ordering"))
+      ? params.get("ordering")
+      : "desc",
+  );
+  let orderColumn = $state<(typeof ORDER_COLUMN_OPTIONS)[number]["value"]>(
+    v.is(imageOrderColumnSchema, params.get("order_by"))
+      ? params.get("ordering")
+      : "datetime_collected",
+  );
   let filename = $state<string | null>(params.get("filename") ?? null);
   let coverage = $state<number | null>(
     params.has("min_coverage") ? Number(params.get("min_coverage")) : null,
@@ -29,7 +47,7 @@
       : null,
   );
   let azimuthRange = $state<AngleRange | null>(
-    params.has("azimuth.start") && params.has("azimuth.end")
+    params.has("azimuth_start") && params.has("azimuth_end")
       ? {
           start: parseInt(params.get("azimuth_start")!),
           end: parseInt(params.get("azimuth_end")!),
@@ -71,6 +89,9 @@
 
     const params = new URLSearchParams(page.url.searchParams);
 
+    params.set("ordering", ordering);
+    params.set("order_by", orderColumn);
+
     if (filename) params.set("filename", filename);
     else params.delete("filename");
 
@@ -97,6 +118,18 @@
 
 <form class="form" onsubmit={submitForm}>
   <Button type="submit">Search</Button>
+  <Select
+    placeholder="Ordering"
+    options={orderingOptions}
+    name="ordering"
+    bind:value={ordering}
+  />
+  <Select
+    placeholder="Order column"
+    options={orderColumns}
+    name="order_by"
+    bind:value={orderColumn}
+  />
   <Input placeholder="File name" name="filename" bind:value={filename} />
   <Input
     placeholder="Min coverage (%)"

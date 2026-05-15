@@ -1,4 +1,6 @@
 <script lang="ts">
+  import type { HTMLSelectAttributes } from "svelte/elements";
+
   interface SelectOption<T = string> {
     label: string;
     value: T;
@@ -7,19 +9,18 @@
 
   type OptionInput<T = string> = T | SelectOption<T>;
 
-  interface Props<T = string> {
+  interface Props<T = string> extends HTMLSelectAttributes {
     placeholder?: string | null;
     value?: T | null;
     options: readonly OptionInput[];
-    onchange?: (value: T) => void;
   }
 
   const uid = $props.id();
   let {
     placeholder = null,
-    value = null,
+    value = $bindable(),
     options = [],
-    onchange,
+    ...rest
   }: Props = $props();
 
   const normalizedOptions = $derived(
@@ -30,11 +31,7 @@
 </script>
 
 <div class="select">
-  <select
-    id={uid}
-    bind:value
-    onchange={(e) => onchange?.(e.currentTarget.value)}
-  >
+  <select id={uid} bind:value {...rest}>
     {#if placeholder}
       <option value="" disabled hidden>
         {placeholder}

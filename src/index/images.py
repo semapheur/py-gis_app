@@ -1,9 +1,8 @@
-import json
 import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypedDict, Union, cast
+from typing import Callable, Literal, Optional, TypeAlias, TypedDict, Union, cast
 from uuid import UUID
 
 from src.bootstrap import get_settings
@@ -44,6 +43,15 @@ from src.sqlite.table import (
 )
 
 app_settings = get_settings()
+
+OrderColumn: TypeAlias = Literal[
+  "datetime_collected",
+  "coverage",
+  "ground_sample_distance",
+  "interpretation_rating",
+  "azimuth_angle",
+  "look_angle",
+]
 
 
 class ImagerySensorType(Enum):
@@ -404,12 +412,16 @@ def index_images(
 class ImageQuery(TypedDict, total=False):
   wkt: Optional[str]
   area_id: Optional[str]
+  ordering: Literal["asc", "desc"]
+  order_by: OrderColumn
   filename: Optional[str]
   min_coverage: Optional[int]
   min_iirs: Optional[float]
   max_gsd: Optional[float]
   date_start: Optional[int]
   date_end: Optional[int]
+  azimuth_start: Optional[float]
+  azimuth_end: Optional[float]
 
 
 def search_images(payload: ImageQuery):
@@ -448,6 +460,23 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
     query.where("datetime_collected >= ?", date_start)
     query.where("datetime_collected <= ?", date_end)
 
+  azimuth_start = payload.get("azimuth_start")
+  azimuth_end = payload.get("azimuth_end")
+  if azimuth_start is not None and azimuth_end is not None:
+    azimuth_start = azimuth_start % 360
+    azimuth_end = azimuth_end % 360
+
+    if azimuth_start <= azimuth_end:
+      query.where("azimuth_angle >= ?", azimuth_start)
+      query.where("azimuth_angle <= ?", azimuth_end)
+    else:
+      query.where_group(
+        ("azimuth_angle >= ?", azimuth_start),
+        ("azimuth_angle <= ?", azimuth_end),
+        op_inner="OR",
+        op_outer="AND",
+      )
+
   if polygon_wkt is not None:
     polygon_cte = (
       Query()
@@ -458,6 +487,11 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
     query.with_("poly", polygon_cte).cross_join("poly").where(
       "ST_Intersects(footprint, poly.geom)"
     ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
+
+  ordering = payload.get("ordering")
+  order_by = payload.get("order_by")
+
+  query.order_by(order_by, ordering)
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     results = db.select_records(ImageIndexTable, query, True)

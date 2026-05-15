@@ -15,7 +15,7 @@
 
   let open = $state<boolean>(false);
   let inputValue = $derived(
-    selectedRange ? `${selectedRange.start} - ${selectedRange.end}` : "",
+    selectedRange ? `${selectedRange.start}° - ${selectedRange.end}°` : "",
   );
 
   let displayRange = $state<AngleRange>(selectedRange ?? defaultRange);

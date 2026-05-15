@@ -1,5 +1,5 @@
 import re
-from typing import Literal, Optional, TypeAlias, TypedDict
+from typing import Any, Literal, Optional, TypeAlias, TypedDict
 
 WhereOp: TypeAlias = Literal["AND", "OR"]
 JoinOp: TypeAlias = Literal["INNER", "LEFT", "CROSS"]
@@ -82,7 +82,7 @@ class Query:
 
   def where_group(
     self,
-    *conditions: tuple[str, ...],
+    *conditions: tuple[str, Any],
     op_inner: WhereOp = "OR",
     op_outer: WhereOp = "AND",
   ):
@@ -103,8 +103,8 @@ class Query:
     self._params.extend(values)
     return self
 
-  def order_by(self, col: str):
-    self._order = col
+  def order_by(self, col: str, direction: Literal["asc", "desc"] = "asc"):
+    self._order = f"{col} {direction.upper()}"
     return self
 
   def limit(self, n: int):
