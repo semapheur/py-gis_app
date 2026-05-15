@@ -49,7 +49,11 @@
     }
 
     const buffer = await response.arrayBuffer();
-    onFetch(decode(buffer) as ImageMetadata[]);
+    const { images, wkt } = decode(buffer) as {
+      images: ImageMetadata[];
+      wkt: string;
+    };
+    onFetch(images);
   }
 </script>
 

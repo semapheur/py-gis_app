@@ -12,6 +12,7 @@
 
   const { initialImages, initialDateRange }: Props = $props();
   let images = $state<ImageMetadata[]>(untrack(() => initialImages));
+  $inspect(images);
 </script>
 
 <div class="image-extent-search">
@@ -24,6 +25,9 @@
 
 <style>
   .image-extent-search {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-md);
     height: 100%;
   }
 </style>

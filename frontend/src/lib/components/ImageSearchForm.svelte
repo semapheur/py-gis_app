@@ -18,17 +18,26 @@
     params.has("max_gsd") ? Number(params.get("max_gsd")) : null,
   );
 
-  let dateRange = $state<DateRange>({
-    start: parseIsoDate(params.get("date_start")),
-    end: parseIsoDate(params.get("date_end")),
-  });
+  let dateRange = $state<DateRange | null>(
+    params.has("date_start") && params.has("date_end")
+      ? {
+          start: parseIsoDate(params.get("date_start"))!,
+          end: parseIsoDate(params.get("date_end"))!,
+        }
+      : null,
+  );
 
   let lastDateRangeKey = $state<string | null>(null);
 
   $effect(() => {
     const params = new URLSearchParams(page.url.searchParams);
 
-    if (dateRange.start && dateRange.end) {
+    const hasRange = dateRange !== null;
+    const hadRange = lastDateRangeKey !== null;
+
+    if (!hasRange && !hadRange) return;
+
+    if (dateRange !== null) {
       const start = formatDate(dateRange.start);
       const end = formatDate(dateRange.end);
       const key = `${start}_${end}`;
@@ -38,13 +47,10 @@
 
       params.set("date_start", start);
       params.set("date_end", end);
-    } else if (lastDateRangeKey !== null) {
+    } else {
       lastDateRangeKey = null;
-
       params.delete("date_start");
       params.delete("date_end");
-    } else {
-      return;
     }
 
     goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
@@ -67,7 +73,7 @@
     if (gsd !== null) params.set("max_gsd", String(gsd));
     else params.delete("max_gsd");
 
-    if (dateRange.start && dateRange.end) {
+    if (dateRange !== null) {
       params.set("date_start", formatDate(dateRange.start));
       params.set("date_end", formatDate(dateRange.end));
     } else {

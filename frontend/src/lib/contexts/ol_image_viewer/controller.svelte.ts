@@ -1,6 +1,7 @@
 import { getContext, setContext } from "svelte";
 import Map from "ol/Map";
 import View from "ol/View";
+import { transformExtent } from "ol/proj";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import WebGLTileLayer from "ol/layer/WebGLTile";
@@ -48,6 +49,7 @@ import type {
   ActivityData,
   AnnotationBaseInfo,
 } from "$lib/contexts/annotate.svelte";
+import { encode } from "@msgpack/msgpack";
 
 interface ViewerInteractions {
   hover: Select;
@@ -657,8 +659,8 @@ export class ImageViewerController {
 
     const response = await fetch("/api/update-annotations", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
 
     if (!response.ok) {
@@ -752,8 +754,8 @@ export class ImageViewerController {
     try {
       const response = await fetch("/api/convert-annotation", {
         method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify(payload),
+        headers: { "Content-Type": "application/msgpack" },
+        body: encode(payload),
       });
 
       if (!response.ok) {
@@ -799,8 +801,8 @@ export class ImageViewerController {
 
     fetch("/api/delete-annotations", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
   }
 
@@ -809,7 +811,12 @@ export class ImageViewerController {
 
     const view = this.#map.getView();
     const extent = view.calculateExtent(this.#map.getSize());
-    const polygon = fromExtent(extent);
+    const extent4326 = transformExtent(
+      extent,
+      view.getProjection(),
+      "EPSG:4326",
+    );
+    const polygon = fromExtent(extent4326);
 
     return new WKT().writeGeometry(polygon);
   }

@@ -157,6 +157,8 @@
   }
 
   .left-sidebar {
+    display: flex;
+    flex-direction: column;
     position: absolute;
     top: 0;
     left: 0;
