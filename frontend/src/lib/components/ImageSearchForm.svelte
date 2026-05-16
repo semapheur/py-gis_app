@@ -24,7 +24,7 @@
   );
   let orderColumn = $state<(typeof ORDER_COLUMN_OPTIONS)[number]["value"]>(
     v.is(imageOrderColumnSchema, params.get("order_by"))
-      ? params.get("ordering")
+      ? params.get("order_by")
       : "datetime_collected",
   );
   let filename = $state<string | null>(params.get("filename") ?? null);
@@ -54,35 +54,6 @@
         }
       : null,
   );
-
-  let lastDateRangeKey = $state<string | null>(null);
-
-  $effect(() => {
-    const params = new URLSearchParams(page.url.searchParams);
-
-    const hasRange = dateRange !== null;
-    const hadRange = lastDateRangeKey !== null;
-
-    if (!hasRange && !hadRange) return;
-
-    if (dateRange !== null) {
-      const start = formatDate(dateRange.start);
-      const end = formatDate(dateRange.end);
-      const key = `${start}_${end}`;
-
-      if (key === lastDateRangeKey) return;
-      lastDateRangeKey = key;
-
-      params.set("date_start", start);
-      params.set("date_end", end);
-    } else {
-      lastDateRangeKey = null;
-      params.delete("date_start");
-      params.delete("date_end");
-    }
-
-    goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
-  });
 
   async function submitForm(e: SubmitEvent) {
     e.preventDefault();
@@ -120,13 +91,13 @@
   <Button type="submit">Search</Button>
   <Select
     placeholder="Ordering"
-    options={orderingOptions}
+    options={ORDERING_OPTIONS}
     name="ordering"
     bind:value={ordering}
   />
   <Select
     placeholder="Order column"
-    options={orderColumns}
+    options={ORDER_COLUMN_OPTIONS}
     name="order_by"
     bind:value={orderColumn}
   />

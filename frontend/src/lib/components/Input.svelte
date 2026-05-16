@@ -81,11 +81,12 @@
   }
 
   input {
-    padding: var(--size-md);
     max-width: 100%;
+    height: var(--input-height, auto);
+    padding: 0 var(--size-md);
     font-size: inherit;
     color: oklch(var(--color-text));
-    background-color: oklch(var(--color-accent));
+    background-color: oklch(var(--color-primary-accent));
     border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-sm);
 

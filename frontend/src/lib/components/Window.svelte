@@ -118,7 +118,7 @@
     display: grid;
     grid-template-columns: 1fr auto;
     padding: 0 var(--size-md);
-    background: oklch(var(--color-accent));
+    background: oklch(var(--color-secondary-accent));
     color: oklch(var(--color-text));
   }
 

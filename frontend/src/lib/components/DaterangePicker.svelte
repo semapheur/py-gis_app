@@ -2,6 +2,7 @@
   import Input from "$lib/components/Input.svelte";
   import { formatDate, type DateRange } from "$lib/utils/date";
   import MdiCalendarMonthOutline from "@iconify-svelte/mdi/calendar-month-outline";
+  import Select from "./Select.svelte";
 
   type RangeState = null | { start: Date; end: null } | DateRange;
 
@@ -423,50 +424,46 @@
   </Input>
 
   {#if open}
-    <div class="calendar-wrapper" {@attach repositionCalendar}>
+    <div class="calendar-container" {@attach repositionCalendar}>
       <!-- presets dropdown -->
-      <label>
-        Presets
-        <select class="preset-select" onchange={handleSelectPreset}>
-          {#each presets as preset, i}
-            <option value={i}>{preset.label}</option>
-          {/each}
-        </select>
-      </label>
+      <Select
+        placeholder="Presets"
+        options={presets.map((p, i) => ({ label: p.label, value: i }))}
+        onchange={handleSelectPreset}
+      />
 
       <!-- header -->
       <div class="header">
-        {#if mode === "calendar"}
-          <button
-            class="arrow"
-            onclick={() => changeMonth(-1)}
-            disabled={!canGoPrevMonth}>◀</button
-          >
-        {/if}
-
-        <span class="month-year">
+        <div class="month-year">
           <button
             type="button"
-            class="month"
+            class="month-button"
             onclick={() => (mode = "choose-month")}
           >
             {months[view.month]}
           </button>
           <button
             type="button"
-            class="year"
+            class="year-button"
             onclick={() => (mode = "choose-year")}
           >
             {view.year}
           </button>
-        </span>
+        </div>
 
         {#if mode === "calendar"}
-          <button
-            class="arrow"
-            onclick={() => changeMonth(1)}
-            disabled={!canGoNextMonth}>▶</button
-          >
+          <div class="arrows">
+            <button
+              class="arrow-button"
+              onclick={() => changeMonth(-1)}
+              disabled={!canGoPrevMonth}>◀</button
+            >
+            <button
+              class="arrow-button"
+              onclick={() => changeMonth(1)}
+              disabled={!canGoNextMonth}>▶</button
+            >
+          </div>
         {/if}
       </div>
 
@@ -585,51 +582,59 @@
     color: red;
   }
 
-  .calendar-wrapper {
+  .calendar-container {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-lg);
     position: absolute;
     top: 100%;
     right: 0;
     padding: var(--size-lg);
     margin-top: var(--size-md);
-    border: 1px solid #ccc;
+    background-color: oklch(var(--color-primary) / 0.75);
+    backdrop-filter: blur(var(--blur-sm));
+    border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-md);
-    background-color: oklch(var(--color-accent));
     z-index: 1;
   }
 
   .header {
     display: flex;
-    justify-content: center;
-    align-items: center;
-    margin-bottom: 6px;
-  }
-
-  .preset-select {
-    background-color: oklch(var(--color-secondary));
-    color: inherit;
-    border-radius: var(--size-sm);
+    justify-content: space-between;
   }
 
   .month-year {
-    cursor: default;
+    display: flex;
+    gap: var(--size-md);
     font-weight: 600;
   }
 
-  .month,
-  .year {
+  .month-button {
+    width: 6rem;
+    text-align: right;
+  }
+
+  .month-button,
+  .year-button {
     cursor: pointer;
     background: none;
     border: none;
     font: inherit;
     color: inherit;
   }
-  .arrow {
+
+  .arrows {
+    margin-left: auto;
+    display: flex;
+    gap: var(--size-md);
+  }
+  .arrow-button {
     cursor: pointer;
     background: none;
     border: none;
     color: inherit;
   }
-  .arrow:disabled {
+  .arrow-button:disabled {
     opacity: 0.3;
     cursor: not-allowed;
   }
@@ -650,7 +655,7 @@
     font-weight: bold;
     font-size: var(--text-xs);
     width: var(--text-xl);
-    border-right: 1px solid oklch(var(--color-text));
+    border-right: 1px solid oklch(var(--color-secondary-accent));
   }
 
   .weekday {
@@ -658,7 +663,7 @@
     font-weight: bold;
     font-size: var(--text-xs);
     width: var(--cell-size);
-    border-bottom: 1px solid oklch(var(--color-text));
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
   }
 
   .week-row {
@@ -674,7 +679,7 @@
     text-align: center;
     font-weight: bold;
     font-size: var(--text-2xs);
-    border-right: 1px solid oklch(var(--color-text));
+    border-right: 1px solid oklch(var(--color-secondary-accent));
   }
 
   .day {
@@ -729,7 +734,7 @@
   }
 
   .day:disabled {
-    opacity: 0.1;
+    opacity: 0.3;
     cursor: not-allowed;
   }
 

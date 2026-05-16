@@ -72,16 +72,16 @@
 
   select {
     width: 100%;
-    padding: var(--size-sm);
-    background-color: oklch(var(--color-accent));
+    height: var(--input-height, auto);
+    background-color: oklch(var(--color-primary-accent));
     color: oklch(var(--color-text));
+    font-size: inherit;
     border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-sm);
 
     /* hide placeholder text */
     &:has(option[value=""]:checked) + label {
       font-size: inherit;
-      top: 0.35rem;
       background-color: transparent;
     }
 

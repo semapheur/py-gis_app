@@ -412,8 +412,8 @@ def index_images(
 class ImageQuery(TypedDict, total=False):
   wkt: Optional[str]
   area_id: Optional[str]
-  ordering: Literal["asc", "desc"]
-  order_by: OrderColumn
+  ordering: Optional[Literal["asc", "desc"]]
+  order_by: Optional[OrderColumn]
   filename: Optional[str]
   min_coverage: Optional[int]
   min_iirs: Optional[float]
@@ -488,14 +488,13 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
       "ST_Intersects(footprint, poly.geom)"
     ).select("ST_Area(ST_Intersection(footprint, poly.geom)) / poly.area AS coverage")
 
-  ordering = payload.get("ordering")
   order_by = payload.get("order_by")
-
-  query.order_by(order_by, ordering)
+  if order_by is not None:
+    ordering = payload.get("ordering") or "asc"
+    query.order_by(order_by, ordering)
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
     results = db.select_records(ImageIndexTable, query, True)
-    print(results)
 
   return {"wkt": polygon_wkt, "images": results}
 

@@ -126,7 +126,7 @@
     display: flex;
     gap: var(--size-md);
     padding-bottom: var(--size-md);
-    border-bottom: 1px solid oklch(var(--color-accent));
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
   }
 
   .area-row {
@@ -135,7 +135,7 @@
     gap: var(--size-md);
     padding: var(--size-md);
     width: 100%;
-    border-bottom: 1px solid oklch(var(--color-accent));
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
   }
 
   .area-text {

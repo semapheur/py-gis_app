@@ -98,7 +98,7 @@
     width: 100%;
     padding: var(--size-sm);
     color: oklch(var(--color-text));
-    background-color: oklch(var(--color-accent));
+    background-color: oklch(var(--color-secondary-accent));
     border-radius: var(--size-sm);
 
     &::placeholder {

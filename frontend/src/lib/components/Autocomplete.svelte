@@ -108,7 +108,7 @@
     padding: 0;
     overflow-y: scroll;
     z-index: 10;
-    background: oklch(var(--color-accent));
+    background: oklch(var(--color-secondary-accent));
   }
 
   li {

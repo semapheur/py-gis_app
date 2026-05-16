@@ -559,7 +559,7 @@
   .grid-footer {
     min-height: calc(1rem + var(--size-sm));
     padding: var(--size-sm);
-    background: oklch(var(--color-accent));
+    background: oklch(var(--color-secondary-accent));
   }
 
   .error {

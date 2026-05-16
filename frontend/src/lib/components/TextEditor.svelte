@@ -174,7 +174,7 @@
     display: flex;
     justify-content: space-between;
     align-items: center;
-    background: oklch(var(--color-accent));
+    background: oklch(var(--color-secondary-accent));
     flex-shrink: 0;
   }
 

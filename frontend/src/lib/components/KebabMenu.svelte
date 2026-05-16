@@ -47,7 +47,7 @@
     position: absolute;
     display: flex;
     flex-direction: column;
-    background: oklch(var(--color-accent));
+    background: oklch(var(--color-secondary-accent));
     border: 1px solid oklch(var(--color-text));
     z-index: 1;
 

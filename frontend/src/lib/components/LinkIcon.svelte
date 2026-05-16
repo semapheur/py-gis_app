@@ -38,7 +38,7 @@
     z-index: 2;
     padding: 0 var(--size-sm);
     background-color: oklch(var(--color-primary));
-    border: 1px solid oklch(var(--color-accent));
+    border: 1px solid oklch(var(--color-secondary-accent));
     border-radius: var(--size-sm);
     font-size: var(--text-xs);
     white-space: nowrap;

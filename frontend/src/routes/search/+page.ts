@@ -37,8 +37,8 @@ const searchSchema = v.pipe(
     area_id: v.nullish(
       v.pipe(v.string(), v.uuid("area_id must be a valid UUID")),
     ),
-    ordering: v.picklist(ORDERING_OPTIONS.map((o) => o.value)),
-    order_by: v.picklist(ORDER_COLUMN_OPTIONS.map((o) => o.value)),
+    ordering: v.nullish(v.picklist(ORDERING_OPTIONS.map((o) => o.value))),
+    order_by: v.nullish(v.picklist(ORDER_COLUMN_OPTIONS.map((o) => o.value))),
     filename: v.nullish(v.string()),
     min_coverage: v.nullish(
       v.pipe(

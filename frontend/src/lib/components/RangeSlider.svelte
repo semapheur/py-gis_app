@@ -99,7 +99,7 @@
     top: -2rem;
     transform: translateX(-50%);
     padding: 0 var(--size-sm);
-    background-color: oklch(var(--color-accent));
+    background-color: oklch(var(--color-secondary-accent));
     border-radius: var(--size-sm);
   }
 

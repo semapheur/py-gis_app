@@ -272,7 +272,11 @@
     position: absolute;
     top: 100%;
     right: 0;
-    background-color: oklch(var(--color-accent));
+    margin-top: var(--size-md);
+    background-color: oklch(var(--color-primary) / 0.75);
+    backdrop-filter: blur(var(--blur-sm));
+    border: 1px solid oklch(var(--color-secondary));
+    border-radius: var(--size-md);
     z-index: 1;
   }
 
