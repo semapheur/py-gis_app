@@ -7,6 +7,7 @@
   import Button from "$lib/components/Button.svelte";
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import AzimuthRangePicker from "$lib/components/AzimuthRangePicker.svelte";
+  import NumberRangeInput from "$lib/components/NumberRangeInput.svelte";
   import { formatDate, parseIsoDate, type DateRange } from "$lib/utils/date";
   import { type AngleRange } from "$lib/utils/types";
   import {
@@ -54,6 +55,13 @@
         }
       : null,
   );
+  let lookangle_min = $state<number | null>(
+    params.has("lookangle_min") ? parseInt(params.get("lookangle_min")!) : null,
+  );
+
+  let lookangle_max = $state<number | null>(
+    params.has("lookangle_max") ? parseInt(params.get("lookangle_max")!) : null,
+  );
 
   async function submitForm(e: SubmitEvent) {
     e.preventDefault();
@@ -66,13 +74,13 @@
     if (filename) params.set("filename", filename);
     else params.delete("filename");
 
-    if (coverage !== null) params.set("min_coverage", String(coverage));
+    if (coverage !== null) params.set("min_coverage", coverage.toString());
     else params.delete("min_coverage");
 
-    if (iirs !== null) params.set("min_iirs", String(iirs));
+    if (iirs !== null) params.set("min_iirs", iirs.toString());
     else params.delete("min_iirs");
 
-    if (gsd !== null) params.set("max_gsd", String(gsd));
+    if (gsd !== null) params.set("max_gsd", gsd.toString());
     else params.delete("max_gsd");
 
     if (dateRange !== null) {
@@ -81,6 +89,18 @@
     } else {
       params.delete("date_start");
       params.delete("date_end");
+    }
+
+    if (lookangle_min !== null) {
+      params.set("lookangle_min", lookangle_min.toString());
+    } else {
+      params.delete("lookangle_min");
+    }
+
+    if (lookangle_max !== null) {
+      params.set("lookangle_min", lookangle_max.toString());
+    } else {
+      params.delete("lookangle_min");
     }
 
     goto(`?${params.toString()}`, { replaceState: true, keepFocus: true });
@@ -128,7 +148,23 @@
     step="any"
   />
   <DaterangePicker bind:selectedRange={dateRange} />
-  <AzimuthRangePicker />
+  <AzimuthRangePicker bind:selectedRange={azimuthRange} />
+  <Input
+    placeholder="Min look angle"
+    name="min_lookangle"
+    type="number"
+    bind:value={lookangle_min}
+    min="0"
+    max="90"
+  />
+  <Input
+    placeholder="Max look angle"
+    name="max_lookangle"
+    type="number"
+    bind:value={lookangle_max}
+    min="0"
+    max="90"
+  />
 </form>
 
 <style>

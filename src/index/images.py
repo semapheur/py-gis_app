@@ -422,6 +422,8 @@ class ImageQuery(TypedDict, total=False):
   date_end: Optional[int]
   azimuth_start: Optional[float]
   azimuth_end: Optional[float]
+  lookangle_min: Optional[float]
+  lookangle_max: Optional[float]
 
 
 def search_images(payload: ImageQuery):
@@ -476,6 +478,14 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
         op_inner="OR",
         op_outer="AND",
       )
+
+  lookangle_min = payload.get("lookangle_min")
+  if lookangle_min is not None:
+    query.where("azimuth_angle >= ?", lookangle_min)
+
+  lookangle_max = payload.get("lookangle_max")
+  if lookangle_max is not None:
+    query.where("azimuth_angle <= ?", lookangle_max)
 
   if polygon_wkt is not None:
     polygon_cte = (

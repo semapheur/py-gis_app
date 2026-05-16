@@ -31,6 +31,16 @@ const azimuthField = v.nullish(
   ),
 );
 
+const lookangleField = v.nullish(
+  v.pipe(
+    v.string(),
+    v.transform(Number),
+    v.finite(),
+    v.minValue(0),
+    v.maxValue(90),
+  ),
+);
+
 const searchSchema = v.pipe(
   v.object({
     wkt: v.nullish(v.string()),
@@ -65,6 +75,8 @@ const searchSchema = v.pipe(
     date_end: dateField,
     azimuth_start: azimuthField,
     azimuth_end: azimuthField,
+    lookangle_min: lookangleField,
+    lookangle_max: lookangleField,
   }),
 
   v.check(
@@ -84,6 +96,16 @@ const searchSchema = v.pipe(
     (p) => (p.azimuth_start === null) === (p.azimuth_end === null),
     "azimuth_start and azimuth_end must both be provided or both emitted",
   ),
+
+  v.check(
+    (p) =>
+      p.lookangle_min === null ||
+      p.lookangle_min === undefined ||
+      p.lookangle_max === null ||
+      p.lookangle_max === undefined ||
+      p.lookangle_min <= p.lookangle_max,
+    "lookangle_min must be less or equal to lookangle_max",
+  ),
 );
 
 export const load: PageLoad = async ({ fetch, url }) => {
@@ -100,6 +122,8 @@ export const load: PageLoad = async ({ fetch, url }) => {
     date_end: url.searchParams.get("date_end"),
     azimuth_start: url.searchParams.get("azimuth_start"),
     azimuth_end: url.searchParams.get("azimuth_end"),
+    lookangle_min: url.searchParams.get("lookangle_min"),
+    lookangle_max: url.searchParams.get("lookangle_max"),
   };
 
   const result = v.safeParse(searchSchema, raw);
