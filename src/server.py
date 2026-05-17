@@ -42,7 +42,7 @@ from src.models.attributes import (
   get_attribute_tables,
   update_attributes,
 )
-from src.models.equipment import search_equipment
+from src.models.equipment import get_equipment, search_equipment, update_equipment
 from src.models.update import TableUpdate
 from src.msgpack import decode_msgpack, encode_msgpack
 
@@ -86,6 +86,11 @@ class Handler(SimpleHTTPRequestHandler):
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
       self._get_attributes(table)
+      return
+
+    prefix = "/api/get-equipment"
+    if self.path.startswith(prefix):
+      self._get_equipment()
       return
 
     prefix = "/api/get-annotations/"
@@ -166,6 +171,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     if self.path == "/api/search-equipment":
       self._post_search_equipment()
+      return
+
+    if self.path == "/api/update-equipment":
+      self._post_update_equipment()
       return
 
     prefix = "/api/update-attributes/"
@@ -343,6 +352,12 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
+  def _post_update_equipment(self):
+    def logic(payload: TableUpdate):
+      return update_equipment(payload)
+
+    self._handle_post(logic)
+
   def _post_update_attributes(self, table: str):
     def logic(payload: TableUpdate):
       return update_attributes(table, payload)
@@ -480,6 +495,10 @@ class Handler(SimpleHTTPRequestHandler):
 
     except Exception as e:
       self.send_error(500, f"Server error: {str(e)}")
+
+  def _get_equipment(self):
+    result = get_equipment()
+    self._api_response(result)
 
   def _get_annotations(self, image_id: str):
     image_hash = decode_sha256_from_b64(image_id)

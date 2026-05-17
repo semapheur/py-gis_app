@@ -1,4 +1,5 @@
 <script lang="ts" generics="T">
+  import { encode, decode } from "@msgpack/msgpack";
   import {
     Grid,
     HeaderMenu,
@@ -259,18 +260,20 @@
     const response = await fetch(saveApi, {
       method: "POST",
       headers: {
-        "Content-Type": "application/json",
+        "Content-Type": "application/msgpack",
       },
-      body: JSON.stringify(payload),
+      body: encode(payload),
     });
 
     if (!response.ok) {
-      const { detail } = await response.json();
+      const buffer = await response.arrayBuffer();
+      const { detail } = decode(buffer);
       toast.error(detail ?? `Failed to save changes (${response.status})`);
       return;
     }
 
-    const { created } = (await response.json()) as {
+    const buffer = await response.arrayBuffer();
+    const { created } = decode(buffer) as {
       created: { client_id: string; server_id: string }[];
     };
 

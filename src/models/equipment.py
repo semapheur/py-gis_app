@@ -46,6 +46,14 @@ def create_equipment_table():
     db.create_fts_table(EquipmentList, FTS_COLUMNS)
 
 
+def get_equipment():
+  query = Query().from_(EquipmentList._table_name)
+
+  with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
+    query = query.select("*")
+    return db.select_records(EquipmentList, query, True)
+
+
 def search_equipment(search_query: str):
   query = (
     Query()
@@ -55,7 +63,7 @@ def search_equipment(search_query: str):
     .where("equipment_fts MATCH ?", f'"{search_query}"')
   )
 
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+  with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
     return db.select_records(EquipmentSearch, query, True)
 
 

@@ -1,9 +1,11 @@
 <script lang="ts">
+  import { encode, decode } from "@msgpack/msgpack";
   import type { GhostCollection } from "$lib/contexts/annotate.svelte";
   import { getImageViewerOptions } from "$lib/contexts/common.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import { toast } from "$lib/stores/toast.svelte";
   import Button from "$lib/components/Button.svelte";
+  import GhostBrowser from "$lib/components/GhostBrowser.svelte";
 
   const imageViewer = getImageViewerController();
   const imageInfo = getImageViewerOptions();
@@ -20,16 +22,16 @@
 
     const response = await fetch("/api/get-annotation-ghosts", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
 
     if (!response.ok) {
       toast.error("Failed to fetch ghost annotations");
     }
 
-    const result = await response.json();
-    return result;
+    const buffer = await response.arrayBuffer();
+    return decode(buffer) as GhostCollection[];
   }
 </script>
 

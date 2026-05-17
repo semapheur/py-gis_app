@@ -16,7 +16,7 @@
   }
 
   let {
-    value = $bindable(null),
+    value = $bindable(),
     placeholder = "",
     rows = 4,
     resize = "none",

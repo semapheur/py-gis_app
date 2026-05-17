@@ -28,8 +28,26 @@
     },
   ];
   let { data }: { data: PageData } = $props();
+
+  const addFill = {
+    createdByUserId: () => "",
+    createdAtTimestamp: () => Date.now(),
+    modifiedByUserId: () => null,
+    modifiedAtTimestamp: () => null,
+  };
+
+  const editFill = {
+    modifiedByUserId: () => "",
+    modifiedAtTimestamp: () => Date.now(),
+  };
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.equipment} />
+  <DataGrid
+    {columns}
+    data={data.equipment}
+    {addFill}
+    {editFill}
+    saveApi="/api/update-equipment"
+  />
 {/if}

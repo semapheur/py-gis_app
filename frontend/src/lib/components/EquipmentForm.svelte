@@ -1,5 +1,6 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import { encode, decode } from "@msgpack/msgpack";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
@@ -82,15 +83,16 @@
   async function searchEquipment(query: string): Promise<SelectOption[]> {
     const response = await fetch("/api/search-equipment", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ query }),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode({ query }),
     });
 
     if (!response.ok) {
       toast.error("Failed to search equipment");
     }
 
-    return await response.json();
+    const buffer = await response.arrayBuffer();
+    return decode(buffer) as SelectOption[];
   }
 </script>
 

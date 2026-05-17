@@ -12,6 +12,7 @@
   import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
   import Button from "$lib/components/Button.svelte";
   import ImageExtentSearch from "$lib/components/ImageExtentSearch.svelte";
+  import GhostSearch from "$lib/components/GhostSearch.svelte";
   import CloseButton from "$lib/components/CloseButton.svelte";
 
   import { startOfDay, type DateRange } from "$lib/utils/date";
