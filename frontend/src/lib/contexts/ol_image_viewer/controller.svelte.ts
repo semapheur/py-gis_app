@@ -166,17 +166,27 @@ export class ImageViewerController {
     this.#image = null;
   }
 
-  public attach(target: HTMLElement, options: Options) {
+  public attach(
+    target: HTMLElement,
+    options: Options,
+    interactionSet: InteractionSet,
+    interactionMode: InteractionMode,
+  ) {
     if (this.#map) return;
 
-    this.setupMap(target, options);
+    this.setupMap(target, options, interactionSet, interactionMode);
 
     return () => {
       this.destroy();
     };
   }
 
-  private async setupMap(target: HTMLElement, options: Options) {
+  private async setupMap(
+    target: HTMLElement,
+    options: Options,
+    interactionSet: InteractionSet,
+    interactionMode: InteractionMode,
+  ) {
     if (!target) return;
 
     this.#image = options.imageInfo.id!;
@@ -278,6 +288,8 @@ export class ImageViewerController {
 
     this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();
+
+    this.updateInteraction(interactionSet, interactionMode);
 
     if (options.annotations?.length) {
       this.loadAnnotations(options.annotations);

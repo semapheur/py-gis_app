@@ -45,12 +45,12 @@
 
   function update<K extends keyof EquipmentData>(
     key: K,
-    newValue: EquipmentData[K],
+    newValue: EquipmentData[K] | undefined,
   ) {
-    const next = { ...value };
+    const next = { ...value } as EquipmentPatch;
 
     if (bulk && newValue === undefined) {
-      delete (next as EquipmentPatch)[key];
+      delete next[key];
     } else {
       next[key] = newValue as EquipmentData[K];
     }
@@ -113,13 +113,13 @@
     options={confidenceOptions}
     placeholder="Confidence"
     value={confidenceId}
-    onchange={handleConfidenceChange}
+    onchange={(e) => handleConfidenceChange(e.currentTarget.value)}
   />
   <Select
     options={statusOptions}
     placeholder="Status"
     value={statusId}
-    onchange={handleStatusChange}
+    onchange={(e) => handleStatusChange(e.currentTarget.value)}
   />
 </form>
 

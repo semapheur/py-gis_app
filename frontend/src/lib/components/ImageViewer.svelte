@@ -31,8 +31,6 @@
   const imageViewer = getImageViewerController();
   const viewerOptions = getImageViewerOptions();
   const viewerState = getImageViewerState();
-  viewerState.setActiveSet("annotation");
-  viewerState.setActiveMode("edit");
 
   const initialDateRange = setInitialDateRange(3);
 

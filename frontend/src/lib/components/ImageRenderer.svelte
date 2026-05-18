@@ -19,7 +19,12 @@
 <div
   class="map"
   {@attach (el) => {
-    viewerController.attach(el, viewerOptions);
+    viewerController.attach(
+      el,
+      viewerOptions,
+      viewerState.activeSet,
+      viewerState.activeMode,
+    );
   }}
 ></div>
 

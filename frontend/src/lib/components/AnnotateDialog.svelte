@@ -76,7 +76,7 @@
         placeholder="Geometry"
         options={annotateState.geometryOptions}
         value={annotateState.geometry}
-        onchange={(v) => annotateState.setGeometry(v)}
+        onchange={(e) => annotateState.setGeometry(e.currentTarget.value)}
       />
     {/key}
     <Button
