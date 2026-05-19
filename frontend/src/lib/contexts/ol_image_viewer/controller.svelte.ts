@@ -76,7 +76,7 @@ export class ImageViewerController {
   #labelLayer: VectorLayer | null = null;
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
-  #annotationSources: Record<AnnotateForm, VectorSource>;
+  #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
   #measurementSource = new VectorSource();
 
   #equipmentFeatures = $state<Feature[]>([]);
@@ -288,6 +288,7 @@ export class ImageViewerController {
 
     this.setupAnnotationInteractions();
     this.setupMeasurementInteractions();
+    this.setupGhostInteractions();
 
     this.updateInteraction(interactionSet, interactionMode);
 
@@ -448,6 +449,53 @@ export class ImageViewerController {
     };
   }
 
+  private setupGhostInteractions() {
+    if (this.#map === null || this.#ghostLayer === null) return;
+
+    const modifiable = new Collection<Feature>();
+
+    const hover = new Select({
+      condition: pointerMove,
+      hitTolerance: 5,
+      layers: [this.#ghostLayer],
+      filter: (feature) => !select.getFeatures().getArray().includes(feature),
+    });
+
+    const select: Select = new Select({
+      hitTolerance: 5,
+      layers: [this.#ghostLayer],
+      style: (feature) => styleMeasurement(this.projection, feature, true),
+    });
+
+    select.getFeatures().on("add", (e) => {
+      const g = e.element.getGeometry();
+      if (g instanceof LineString || g instanceof Polygon) {
+        modifiable.push(e.element);
+      }
+    });
+    select.getFeatures().on("remove", (e) => {
+      modifiable.remove(e.element);
+    });
+
+    const modify = new Modify({
+      features: modifiable,
+      style: (feature) => styleMeasurement(this.projection, feature, true),
+    });
+
+    const translate = new Translate({
+      condition: platformModifierKeyOnly,
+      features: select.getFeatures(),
+    });
+
+    this.#interactions.ghost = {
+      hover,
+      select,
+      modify,
+      translate,
+      draw: null,
+    };
+  }
+
   private createDrawAnnotationInteraction(annotateState: AnnotateState) {
     const draw = new Draw({
       source: this.#annotationSources[annotateState.layer],
@@ -571,8 +619,8 @@ export class ImageViewerController {
     if (this.#map === null || this.projection === null) return;
 
     const format = new GeoJSON({
+      dataProjection: "EPSG:4326",
       featureProjection: this.projection,
-      dataProjection: this.projection,
     });
 
     const features: Feature[] = [];
@@ -639,6 +687,7 @@ export class ImageViewerController {
 
   private async persistFeatures(features: Feature[], mode: "draw" | "edit") {
     const format = new WKT();
+    const mapProjection = this.projection;
 
     const payload = features
       .map((feature) => {
@@ -647,6 +696,9 @@ export class ImageViewerController {
 
         const data = feature.get("data");
         const metaData = feature.get("metaData");
+        const geometry4326 = mapProjection
+          ? geometry.clone().transform(mapProjection, "EPSG:4326")
+          : geometry;
 
         return {
           type: feature.get("type"),
@@ -656,7 +708,7 @@ export class ImageViewerController {
             equipment: data.equipment.id,
             confidence: data.confidence.id,
             status: data.status.id,
-            geometry: format.writeGeometry(geometry),
+            geometry: format.writeGeometry(geometry4326),
             createdByUserId: metaData.createdByUserId,
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,

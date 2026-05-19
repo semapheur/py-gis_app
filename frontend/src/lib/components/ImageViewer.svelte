@@ -34,18 +34,6 @@
 
   const initialDateRange = setInitialDateRange(3);
 
-  function openAnnotation() {
-    annotateOpen = true;
-    measurementOpen = false;
-    viewerState.setActiveSet("annotation");
-  }
-
-  function openMeasurement() {
-    measurementOpen = true;
-    annotateOpen = false;
-    viewerState.setActiveSet("measurement");
-  }
-
   function setInitialDateRange(months: number) {
     const dateCollected = startOfDay(
       new Date(viewerOptions.imageInfo.datetime_collected),
@@ -86,6 +74,34 @@
     };
     return images;
   }
+
+  function openAnnotation() {
+    annotateOpen = true;
+    measurementOpen = false;
+    viewerState.setActiveSet("annotation");
+  }
+
+  function openMeasurement() {
+    measurementOpen = true;
+    annotateOpen = false;
+    viewerState.setActiveSet("measurement");
+  }
+
+  function openGhost() {
+    leftSidebarOpen = true;
+    searchOpen = false;
+    ghostsOpen = true;
+    viewerState.setActiveSet("ghost");
+  }
+
+  function openSearch() {
+    leftSidebarOpen = true;
+    ghostsOpen = false;
+    searchOpen = true;
+    searhImagesOnExtent().then((result) => {
+      images = result;
+    });
+  }
 </script>
 
 <div class="container">
@@ -110,23 +126,8 @@
     >
   </div>
   <div class="top-left">
-    <Button
-      onclick={() => {
-        leftSidebarOpen = true;
-        ghostsOpen = false;
-        searchOpen = true;
-        searhImagesOnExtent().then((result) => {
-          images = result;
-        });
-      }}>Extent search</Button
-    >
-    <Button
-      onclick={() => {
-        leftSidebarOpen = true;
-        searchOpen = false;
-        ghostsOpen = true;
-      }}>Ghosts</Button
-    >
+    <Button onclick={() => openSearch()}>Extent search</Button>
+    <Button onclick={() => openGhost()}>Ghosts</Button>
   </div>
   {#if enhancementOpen}
     <div class="enhancement">

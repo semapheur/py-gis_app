@@ -17,16 +17,6 @@ from src.index.catalog import (
 )
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
-from src.models.annotation import (
-  AnnotationUpdate,
-  ConvertAnnotation,
-  GhostSearch,
-  convert_annotation,
-  delete_annotations,
-  get_annotation_ghosts,
-  get_annotations_by_image,
-  update_annotations,
-)
 from src.models.areas import (
   AreaDelete,
   AreaId,
@@ -42,7 +32,17 @@ from src.models.attributes import (
   get_attribute_tables,
   update_attributes,
 )
-from src.models.equipment import get_equipment, search_equipment, update_equipment
+from src.models.equipment_annotation import (
+  AnnotationUpdate,
+  ConvertAnnotation,
+  GhostSearch,
+  convert_annotation,
+  delete_annotations,
+  get_annotation_ghosts,
+  get_annotations_by_image,
+  update_annotations,
+)
+from src.models.equipment_list import get_equipment, search_equipment, update_equipment
 from src.models.update import TableUpdate
 from src.msgpack import decode_msgpack, encode_msgpack
 

@@ -15,7 +15,7 @@
 
   async function searchGhosts() {
     const payload = {
-      wkt: imageViewer.getViewExtentWkt(),
+      polygon_wkt: imageViewer.getViewExtentWkt(),
       datetime_collected: imageInfo.imageInfo.datetime_collected,
       future: future,
     };
