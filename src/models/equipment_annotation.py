@@ -273,6 +273,7 @@ def get_annotation_ghosts_by_geometry(
 
     ghost_result["annotations"].append(
       {
+        "id": uuid_bytes_to_str(r["id"]),
         "geometry": json.loads(r["geometry"]),
         "label": label,
         "data": {
@@ -310,6 +311,7 @@ def get_annotation_ghosts_by_geometry(
   select_sql, params = (
     Query()
     .select(
+      "ea.id AS id",
       "ea.image AS image",
       "i.images.datetime_collected AS datetime",
       "AsGeoJSON(ea.geometry) AS geometry",

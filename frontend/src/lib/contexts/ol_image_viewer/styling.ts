@@ -1,5 +1,5 @@
 import { type FeatureLike } from "ol/Feature";
-import { Point, LineString, Polygon } from "ol/geom";
+import { Point, MultiPoint, LineString, Polygon, MultiPolygon } from "ol/geom";
 import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
@@ -75,10 +75,35 @@ const stretchExpression = (bandR: number, bandG: number, bandB: number) => ({
 export const multibandStyle = stretchExpression(1, 2, 3);
 export const panchromaticStyle = stretchExpression(1, 1, 1);
 
+const vertexCircle = new Circle({
+  radius: 3,
+  fill: new Fill({ color: "white" }),
+  stroke: new Stroke({ color: "black", width: 1 }),
+});
+
+export const vertexStyle = new Style({
+  image: vertexCircle,
+  geometry: (feature: FeatureLike) => {
+    const geometry = feature.getGeometry();
+
+    if (geometry instanceof LineString) {
+      return new MultiPoint(geometry.getCoordinates());
+    }
+
+    if (geometry instanceof Polygon) {
+      return new MultiPoint(geometry.getCoordinates()[0]);
+    }
+
+    if (geometry instanceof MultiPolygon) {
+      return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
+    }
+  },
+});
+
 const equipmentPointStyle = {
   base: {
     "circle-radius": 5,
-    "circle-fill-color": "oklch(57.7% 0.245 27.325 / 0.5)",
+    "circle-fill-color": "oklch(70.4% 0.191 22.216 / 0.5)",
     "circle-stroke-color": "rgba(255 255 255 / 0.5)",
     "circle-stroke-width": 1,
   },
@@ -92,13 +117,14 @@ const equipmentPointStyle = {
 
 const equipmentPolygonStyle = {
   base: {
-    "stroke-color": "oklch(57.7% 0.245 27.325 / 0.5)",
-    "stroke-Width": 2,
+    "stroke-color": "oklch(70.4% 0.191 22.216 / 0.5)",
+    "stroke-width": 2,
+    "fill-color": "rgba(0 0 0 / 0)",
   },
   selected: {
-    "stroke-color": "oklch(57.7% 0.245 27.325)",
-    "stroke-width": 3,
-    "fill-color": "oklch(57.7% 0.245 27.325 / 0.1)",
+    "stroke-color": "oklch(70.4% 0.191 22.216)",
+    "stroke-width": 1,
+    "fill-color": "oklch(70.4% 0.191 22.216 / 0.1)",
   },
 };
 
@@ -144,13 +170,14 @@ const ghostPointStyle = {
 
 const ghostPolygonStyle = {
   base: {
-    "stroke-color": "rgba(255 255 255 / 0.5)",
-    "stroke-Width": 2,
+    "stroke-color": "oklch(58.5% 0.233 277.117 / 0.5)",
+    "stroke-width": 2,
+    "fill-color": "rgba(0 0 0 / 0)",
   },
   selected: {
-    "stroke-color": "oklch(57.7% 0.245 27.325)",
-    "stroke-width": 3,
-    "fill-color": "oklch(0 0 0 / 0.1)",
+    "stroke-color": "oklch(58.5% 0.233 277.117)",
+    "stroke-width": 1,
+    "fill-color": "oklch(58.5% 0.233 277.117 / 0.1)",
   },
 };
 
@@ -209,7 +236,7 @@ export function styleAnnotationLabel(
 
 const measurementStyle = new Style({
   fill: new Fill({
-    color: "rgba(255, 255, 255, 0)",
+    color: "rgba(255 255 255 / 0)",
   }),
   stroke: new Stroke({
     color: "oklch(70.5% 0.213 47.604)",
@@ -222,7 +249,26 @@ const measurementStyle = new Style({
       color: "oklch(68.5% 0.169 237.323)",
     }),
     fill: new Fill({
-      color: "rgba(255, 255, 255, 0.2)",
+      color: "rgba(255 255 255 / 0.2)",
+    }),
+  }),
+});
+
+const measurementActiveStyle = new Style({
+  fill: new Fill({
+    color: "rgba(255 255 255 / 0.1)",
+  }),
+  stroke: new Stroke({
+    color: "oklch(70.5% 0.213 47.604)",
+    width: 2,
+  }),
+  image: new Circle({
+    radius: 5,
+    stroke: new Stroke({
+      color: "oklch(68.5% 0.169 237.323)",
+    }),
+    fill: new Fill({
+      color: "rgba(255 255 255 / 0.2)",
     }),
   }),
 });
@@ -230,10 +276,10 @@ const measurementStyle = new Style({
 const measurementLabelStyle = new Style({
   text: new Text({
     fill: new Fill({
-      color: "rgba(255, 255, 255, 1)",
+      color: "rgba(255 255 255 / 1)",
     }),
     backgroundFill: new Fill({
-      color: "rgba(0, 0, 0, 0.7)",
+      color: "rgba(0 0 0 / 0.7)",
     }),
     padding: [3, 3, 3, 3],
     textBaseline: "bottom",
@@ -245,7 +291,7 @@ const measurementLabelStyle = new Style({
     angle: Math.PI,
     displacement: [0, 10],
     fill: new Fill({
-      color: "rgba(0, 0, 0, 0.7)",
+      color: "rgba(0 0 0 / 0.7)",
     }),
   }),
 });
@@ -253,10 +299,10 @@ const measurementLabelStyle = new Style({
 const measurementSegmentStyle = new Style({
   text: new Text({
     fill: new Fill({
-      color: "rgba(255, 255, 255, 1)",
+      color: "rgba(255 255 255 / 1)",
     }),
     backgroundFill: new Fill({
-      color: "rgba(0, 0, 0, 0.4)",
+      color: "rgba(0 0 0 / 0.4)",
     }),
     padding: [2, 2, 2, 2],
     textBaseline: "bottom",
@@ -268,7 +314,7 @@ const measurementSegmentStyle = new Style({
     angle: Math.PI,
     displacement: [0, 8],
     fill: new Fill({
-      color: "rgba(0, 0, 0, 0.4)",
+      color: "rgba(0 0 0 / 0.4)",
     }),
   }),
 });
@@ -299,8 +345,15 @@ export function styleMeasurement(
   projection: Projection,
   feature: FeatureLike,
   segments: boolean,
+  active: boolean = false,
+  selected: boolean = false,
 ) {
-  const styles = [measurementStyle];
+  const styles = [active ? measurementActiveStyle : measurementStyle];
+
+  if (selected) {
+    styles.push(vertexStyle);
+  }
+
   const geometry = feature.getGeometry();
   if (!geometry) return styles;
 
@@ -338,7 +391,7 @@ export function styleMeasurement(
   if (label && point) {
     const labelStyle = measurementLabelStyle.clone();
     labelStyle.setGeometry(point);
-    labelStyle.getText().setText(label);
+    labelStyle.getText()?.setText(label);
     styles.push(labelStyle);
   }
 

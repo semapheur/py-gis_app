@@ -50,13 +50,13 @@ interface AttributeMetaData {
 }
 
 export interface AnnotationBaseInfo {
+  id: string;
   geometry: GeoJSON.Point | GeoJSON.Polygon;
   label: string;
   data: EquipmentData;
 }
 
 export interface AnnotationInfo extends AnnotationBaseInfo {
-  id: string;
   metaData: AttributeMetaData;
 }
 

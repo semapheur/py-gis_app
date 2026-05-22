@@ -41,8 +41,7 @@
   <Select
     options={measureOptions}
     placeholder="Type"
-    value={measureType}
-    onchange={(v) => (measureType = v as MeasurementType)}
+    bind:value={measureType}
   />
   <Button onclick={() => (isMeasuring = !isMeasuring)}
     >{isMeasuring ? "Stop" : "Start"}</Button

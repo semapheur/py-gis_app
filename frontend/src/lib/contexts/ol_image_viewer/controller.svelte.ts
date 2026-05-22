@@ -33,13 +33,13 @@ import {
   equipmentStyle,
   ghostStyle,
   defaultEnhancement,
+  vertexStyle,
   type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
   //BandStretchManager,
   buildStyleExpression,
 } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
-import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,
@@ -73,7 +73,7 @@ export class ImageViewerController {
   #equipmentLayer: WebGLVectorLayer | null = null;
   #ghostLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
-  #labelLayer: VectorLayer | null = null;
+  #labelLayers: Record<AnnotateForm | "ghost", VectorLayer | null>;
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
@@ -88,6 +88,12 @@ export class ImageViewerController {
       annotation: null,
       ghost: null,
       measurement: null,
+    };
+
+    this.#labelLayers = {
+      equipment: null,
+      //activity: null,
+      ghost: null,
     };
 
     this.#annotationSources = {
@@ -245,8 +251,13 @@ export class ImageViewerController {
       source: this.#annotationSources.activity,
       style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
     });
-    this.#labelLayer = new VectorLayer({
+    this.#labelLayers.equipment = new VectorLayer({
       source: this.#annotationSources.equipment,
+      style: (feature) => styleAnnotationLabel(feature),
+    });
+
+    this.#labelLayers.ghost = new VectorLayer({
+      source: this.#annotationSources.ghost,
       style: (feature) => styleAnnotationLabel(feature),
     });
 
@@ -263,8 +274,8 @@ export class ImageViewerController {
         this.#equipmentLayer,
         this.#ghostLayer,
         this.#activityLayer,
-        this.#labelLayer,
         this.#measurementLayer,
+        ...Object.values(this.#labelLayers),
       ],
       view: new View({
         ...viewOptions,
@@ -298,12 +309,7 @@ export class ImageViewerController {
   }
 
   private setupAnnotationInteractions() {
-    if (
-      this.#map === null ||
-      this.#equipmentLayer === null ||
-      this.#labelLayer === null
-    )
-      return;
+    if (this.#map === null || this.#equipmentLayer === null) return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
       const originalGeometries = features.map((feature) => ({
@@ -334,8 +340,8 @@ export class ImageViewerController {
 
     const hover = new Select({
       condition: pointerMove,
-      hitTolerance: 5,
-      layers: [this.#labelLayer],
+      hitTolerance: 20,
+      layers: [this.#equipmentLayer],
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
       style: (feature) => styleAnnotationLabel(feature, true),
     });
@@ -345,8 +351,8 @@ export class ImageViewerController {
 
     const select: Select = new Select({
       addCondition: shiftKeyOnly,
-      hitTolerance: 5,
-      layers: [this.#labelLayer],
+      hitTolerance: 20,
+      layers: [this.#equipmentLayer],
       style: (feature) => {
         const features = select.getFeatures();
         const index = features.getArray().indexOf(feature);
@@ -412,12 +418,15 @@ export class ImageViewerController {
       hitTolerance: 5,
       layers: [this.#measurementLayer],
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
+      style: (feature) =>
+        styleMeasurement(this.projection, feature, true, true),
     });
 
     const select: Select = new Select({
       hitTolerance: 5,
       layers: [this.#measurementLayer],
-      style: (feature) => styleMeasurement(this.projection, feature, true),
+      style: (feature) =>
+        styleMeasurement(this.projection, feature, true, true, true),
     });
 
     select.getFeatures().on("add", (e) => {
@@ -454,17 +463,32 @@ export class ImageViewerController {
 
     const modifiable = new Collection<Feature>();
 
+    const handleHover = (features: Feature[]) => {
+      const feature = features.length > 0 ? features[0] : null;
+      const hoverId = feature ? feature.get("id") : "";
+
+      this.#ghostLayer?.updateStyleVariables({ hoverId });
+    };
+
     const hover = new Select({
       condition: pointerMove,
-      hitTolerance: 5,
+      hitTolerance: 20,
       layers: [this.#ghostLayer],
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
+      style: (feature) => styleAnnotationLabel(feature, true),
+    });
+    hover.on("select", (e) => {
+      handleHover(e.selected);
     });
 
     const select: Select = new Select({
-      hitTolerance: 5,
+      addCondition: shiftKeyOnly,
+      hitTolerance: 20,
       layers: [this.#ghostLayer],
-      style: (feature) => styleMeasurement(this.projection, feature, true),
+      style: (feature) => {
+        const baseLabel = styleAnnotationLabel(feature, true);
+        return [baseLabel, vertexStyle];
+      },
     });
 
     select.getFeatures().on("add", (e) => {
@@ -477,10 +501,7 @@ export class ImageViewerController {
       modifiable.remove(e.element);
     });
 
-    const modify = new Modify({
-      features: modifiable,
-      style: (feature) => styleMeasurement(this.projection, feature, true),
-    });
+    const modify = new Modify({ features: modifiable });
 
     const translate = new Translate({
       condition: platformModifierKeyOnly,
@@ -654,6 +675,7 @@ export class ImageViewerController {
       const feature = new Feature({ geometry });
 
       feature.setProperties({
+        id: record.id,
         type: "equipment",
         label: record.label,
         data: record.data,
