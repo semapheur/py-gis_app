@@ -3,6 +3,7 @@ from typing import Any, Literal, Optional, TypeAlias, TypedDict
 
 WhereOp: TypeAlias = Literal["AND", "OR"]
 JoinOp: TypeAlias = Literal["INNER", "LEFT", "CROSS"]
+SortOrder: TypeAlias = Literal["asc", "desc"]
 
 
 class OnConflict(TypedDict):
@@ -103,7 +104,7 @@ class Query:
     self._params.extend(values)
     return self
 
-  def order_by(self, col: str, direction: Literal["asc", "desc"] = "asc"):
+  def order_by(self, col: str, direction: SortOrder = "asc"):
     self._order = f"{col} {direction.upper()}"
     return self
 
@@ -165,3 +166,64 @@ class Query:
       sql.extend(("LIMIT -1", f"OFFSET {self._offset}"))
 
     return " ".join(sql), self._params
+
+
+class UnionQuery:
+  def __init__(
+    self,
+    *queries: Query,
+    union_type: Literal["UNION", "UNION ALL"] = "UNION ALL",
+    cte: Optional[Query] = None,
+    cte_name: Optional[str] = None,
+  ):
+    self._queries = queries
+    self._cte = cte
+    self._cte_name = cte_name
+    self._union_type = union_type
+    self._order: Optional[str] = None
+    self._limit: Optional[int] = None
+    self._offset: Optional[int] = None
+
+  def order_by(self, col: str, direction: SortOrder = "asc"):
+    self._order = f"{col} {direction.upper()}"
+    return self
+
+  def limit(self, n: int):
+    self._limit = n
+    return self
+
+  def offset(self, n: int):
+    self._offset = n
+    return self
+
+  def build(self):
+    parts = []
+    all_params = []
+
+    cte_sql = None
+    if self._cte and self._cte_name:
+      cte_sql, cte_params = self._cte.build()
+      all_params.extend(cte_params)
+
+    for query in self._queries:
+      sql, params = query.build()
+      parts.append(sql)
+      all_params.extend(params)
+
+    union_sql = f" {self._union_type} ".join(parts)
+    if self._cte is not None:
+      union_sql = f"WITH {self._cte_name} AS ({cte_sql}) {union_sql}"
+
+    if self._order:
+      union_sql += f" ORDER BY {self._order}"
+
+    if self._limit is not None:
+      union_sql += f" LIMIT {self._limit}"
+
+      if self._offset is not None:
+        union_sql += f" OFFSET {self._offset}"
+
+    elif self._offset is not None:
+      union_sql += f"LIMIT -1 OFFSET {self._offset}"
+
+    return union_sql, all_params

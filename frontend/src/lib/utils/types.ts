@@ -63,3 +63,10 @@ export interface AngleRange {
   start: number;
   end: number;
 }
+
+export interface ColumnDefinition {
+  id: string;
+  label?: string;
+  sortable?: boolean;
+  filterable?: boolean;
+}

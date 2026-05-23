@@ -110,6 +110,7 @@ class GdalWarpOptions(GdalOptions):
   tps: Optional[bool] = None
   rpc: Optional[bool] = None
   geoloc: Optional[bool] = None
+  to: Optional[dict[str, Any]] = None
 
 
 class CogOptions(TypedDict, total=False):
@@ -320,6 +321,13 @@ def gdalwarp(
 
     if options.tr is not None:
       cmd += ["-tr", "square"]
+
+    if options.to is not None:
+      for k, v in options.to.items():
+        if v is None:
+          continue
+
+        cmd += ["-to", f"{k.upper()}={str(v).upper()}"]
 
     if options.output_type is not None:
       cmd += ["-ot", options.output_type]

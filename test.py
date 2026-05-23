@@ -8,7 +8,7 @@ if __name__ == "__main__":
   load_env()
 
   tif = Path(
-    r"C:\Users\danfy\Documents\Projects\py-gis_app\data\BJ3A_NYC_50cm_4bandbundle\BJ3A1_PAN1_20220615155359_L1_1015E3_ST_203_browser.tif"
+    r"C:\Users\danfy\Documents\Projects\py-gis_app\data\CAPELLA_C13_SP_SLC_HH_20241122024652_20241122024723.tif"
   )
 
   test = gdalinfo(tif)

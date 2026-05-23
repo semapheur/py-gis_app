@@ -7,7 +7,7 @@ from typing import Literal, TypedDict, Union
 from src.bootstrap import get_settings
 from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import OnConflict, Query, UnionQuery
 from src.sqlite.table import (
   Field,
   GeometryField,
@@ -135,13 +135,7 @@ def delete_annotations(payload: dict[str, list[str]]):
 
 
 def get_annotations_by_image(image_id: bytes):
-  return [
-    *get_annotations_by_geometry(image_id, "POINT"),
-    *get_annotations_by_geometry(image_id, "POLYGON"),
-  ]
 
-
-def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
   def map_row(row: Row):
     r = dict(row)
 
@@ -179,36 +173,41 @@ def get_annotations_by_geometry(image_id: bytes, geometry: EquipmentGeometry):
       },
     }
 
+  def build_subquery(geometry: EquipmentGeometry):
+    return (
+      Query()
+      .select(
+        "ea.id AS id",
+        "AsGeoJSON(ea.geometry) AS geometry",
+        "ea.equipment AS equipment_id",
+        "ed.equipment.displayName AS equipment_label",
+        "ea.confidence AS confidence_id",
+        "a.observation_confidence.text AS confidence_label",
+        "ea.status AS status_id",
+        "a.equipment_status.text AS status_label",
+        "ea.createdByUserId AS createdByUserId",
+        "ea.modifiedByUserId AS modifiedByUserId",
+        "ea.createdAtTimestamp AS createdAtTimestamp",
+        "ea.modifiedAtTimestamp AS modifiedAtTimestamp",
+      )
+      .from_(f"equipment_{geometry.lower()} ea")
+      .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
+      .inner_join(
+        "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
+      )
+      .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
+      .where("ea.image = ?", image_id)
+    )
+
   attach_sql = (
     f"ATTACH DATABASE '{app_settings.EQUIPMENT_DB}' AS ed",
     f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a",
   )
   detach_sql = ("DETACH DATABASE ed", "DETACH DATABASE a")
-  select_sql, params = (
-    Query()
-    .select(
-      "ea.id AS id",
-      "AsGeoJSON(ea.geometry) AS geometry",
-      "ea.equipment AS equipment_id",
-      "ed.equipment.displayName AS equipment_label",
-      "ea.confidence AS confidence_id",
-      "a.observation_confidence.text AS confidence_label",
-      "ea.status AS status_id",
-      "a.equipment_status.text AS status_label",
-      "ea.createdByUserId AS createdByUserId",
-      "ea.modifiedByUserId AS modifiedByUserId",
-      "ea.createdAtTimestamp AS createdAtTimestamp",
-      "ea.modifiedAtTimestamp AS modifiedAtTimestamp",
-    )
-    .from_(f"equipment_{geometry.lower()} ea")
-    .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
-    .inner_join(
-      "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
-    )
-    .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
-    .where("ea.image = ?", image_id)
-    .build()
-  )
+
+  geometries = ["POINT", "POLYGON"]
+  subqueries = [build_subquery(g) for g in geometries]
+  select_sql, params = UnionQuery(*subqueries).build()
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     db.conn.row_factory = Row
@@ -236,10 +235,7 @@ def get_annotation_ghosts(payload: GhostSearch):
   datetime = payload["datetime_collected"]
   future = payload["future"]
 
-  return [
-    *get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POINT"),
-    *get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future, "POLYGON"),
-  ]
+  return get_annotation_ghosts_by_geometry(polygon_wkt, datetime, future)
 
 
 class GhostResult(TypedDict):
@@ -249,7 +245,7 @@ class GhostResult(TypedDict):
 
 
 def get_annotation_ghosts_by_geometry(
-  polygon_wkt: str, datetime: int, future: bool, geometry: EquipmentGeometry
+  polygon_wkt: str, datetime: int, future: bool
 ) -> list[GhostResult]:
   data: dict[str, GhostResult] = {}
 
@@ -293,6 +289,33 @@ def get_annotation_ghosts_by_geometry(
       }
     )
 
+  def build_subquery(geometry: EquipmentGeometry):
+    return (
+      Query()
+      .select(
+        "ea.id AS id",
+        "ea.image AS image",
+        "i.images.datetime_collected AS datetime",
+        "AsGeoJSON(ea.geometry) AS geometry",
+        "ea.equipment AS equipment_id",
+        "ed.equipment.displayName AS equipment_label",
+        "ea.confidence AS confidence_id",
+        "a.observation_confidence.text AS confidence_label",
+        "ea.status AS status_id",
+        "a.equipment_status.text AS status_label",
+      )
+      .from_(f"equipment_{geometry.lower()} ea")
+      .inner_join("i.images", "i.images.id = ea.image")
+      .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
+      .inner_join(
+        "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
+      )
+      .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
+      .cross_join("poly")
+      .where(f"i.images.datetime_collected {date_op} ?", datetime)
+      .where("ST_Intersects(ea.geometry, poly.geom)")
+    )
+
   date_op = ">" if future else "<"
 
   attach_sql = (
@@ -308,33 +331,9 @@ def get_annotation_ghosts_by_geometry(
     .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
   )
 
-  select_sql, params = (
-    Query()
-    .select(
-      "ea.id AS id",
-      "ea.image AS image",
-      "i.images.datetime_collected AS datetime",
-      "AsGeoJSON(ea.geometry) AS geometry",
-      "ea.equipment AS equipment_id",
-      "ed.equipment.displayName AS equipment_label",
-      "ea.confidence AS confidence_id",
-      "a.observation_confidence.text AS confidence_label",
-      "ea.status AS status_id",
-      "a.equipment_status.text AS status_label",
-    )
-    .from_(f"equipment_{geometry.lower()} ea")
-    .inner_join("i.images", "i.images.id = ea.image")
-    .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
-    .inner_join(
-      "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
-    )
-    .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
-    .with_("poly", polygon_cte)
-    .cross_join("poly")
-    .where(f"i.images.datetime_collected {date_op} ?", datetime)
-    .where("ST_Intersects(ea.geometry, poly.geom)")
-    .build()
-  )
+  geometries = ["POINT", "POLYGON"]
+  subqueries = [build_subquery(g) for g in geometries]
+  select_sql, params = UnionQuery(*subqueries, cte=polygon_cte, cte_name="poly").build()
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     db.conn.row_factory = Row
@@ -352,17 +351,6 @@ def get_annotation_ghosts_by_geometry(
     finally:
       for statement in detach_sql:
         cursor.execute(statement)
-
-
-def get_equipment_count(polygon_wkt: str, datetime: int, future):
-
-  polygon_cte = (
-    Query()
-    .select("geom", "ST_Area(geom) AS area")
-    .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
-  )
-
-  select_sql = Query()
 
 
 class ConvertAnnotation(TypedDict):

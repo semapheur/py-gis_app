@@ -1,21 +1,37 @@
 <script lang="ts">
   import { untrack } from "svelte";
+  import Button from "$lib/components/Button.svelte";
+  import LinkButton from "$lib/components/LinkButton.svelte";
+  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import type {
     AnnotationBaseInfo,
     GhostCollection,
   } from "$lib/contexts/annotate.svelte";
+  import { type ColumnDefinition } from "$lib/utils/types";
   import { formatDatetime } from "$lib/utils/date";
-  import Button from "$lib/components/Button.svelte";
-  import LinkButton from "$lib/components/LinkButton.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import Table from "$lib/components/Table.svelte";
 
   interface Props {
     data: GhostCollection[];
   }
 
-  const { data }: Props = $props();
+  let { data }: Props = $props();
 
   const imageViewer = getImageViewerController();
+
+  const columns: ColumnDefinition[] = [
+    {
+      id: "count",
+      label: "Count",
+      sortable: true,
+    },
+    {
+      id: "label",
+      label: "Equipment",
+      sortable: true,
+      filterable: true,
+    },
+  ];
 
   let equipmentList = $derived(
     untrack(() => data).map((gc) => aggregateEquipment(gc.annotations)),
@@ -25,8 +41,11 @@
     const equipmentCount: Record<string, number> = {};
 
     for (const a of annotations) {
-      equipmentCount[a.label] ??= 0;
-      equipmentCount[a.label]++;
+      const label = a.data.equipment?.label;
+      if (!label) continue;
+
+      equipmentCount[label] ??= 0;
+      equipmentCount[label]++;
     }
 
     const result = [];
@@ -47,13 +66,7 @@
         >Add ghosts</Button
       >
     </header>
-    <ul>
-      {#each equipmentList[i] as countRow}
-        <li>
-          {`${countRow.count}x ${countRow.label}`}
-        </li>
-      {/each}
-    </ul>
+    <Table {columns} data={equipmentList[i]} />
   </div>
 {/each}
 

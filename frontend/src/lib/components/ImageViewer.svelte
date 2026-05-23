@@ -104,7 +104,7 @@
   }
 </script>
 
-<div class="container">
+<div class="image-viewer">
   <div class="bottom-left">
     {#if !annotateOpen}
       <Button onclick={() => openAnnotation()}>Add</Button>
@@ -158,10 +158,11 @@
 </div>
 
 <style>
-  .container {
+  .image-viewer {
     position: relative;
     width: 100%;
     height: 100%;
+    background-color: oklch(var(--color-primary-accent));
   }
 
   .left-sidebar {
@@ -174,7 +175,6 @@
     height: 100%;
     padding: var(--size-md);
     background-color: oklch(var(--color-primary));
-    border-right: 1px solid oklch(var(--color-secondary));
     z-index: 2;
   }
 

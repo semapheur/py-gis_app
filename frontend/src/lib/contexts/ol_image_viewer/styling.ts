@@ -156,13 +156,13 @@ export const equipmentStyle = [
 const ghostPointStyle = {
   base: {
     "circle-radius": 5,
-    "circle-fill-color": "rgba(255 255 255 / 0.5)",
+    "circle-fill-color": "oklch(58.5% 0.233 277.117 / 0.5)",
     "circle-stroke-color": "rgba(0 0 0 / 0.5)",
     "circle-stroke-width": 1,
   },
   selected: {
     "circle-radius": 5,
-    "circle-fill-color": "oklch(57.7% 0.245 27.325)",
+    "circle-fill-color": "oklch(58.5% 0.233 277.117)",
     "circle-stroke-color": "rgba(0 0 0)",
     "circle-stroke-width": 2,
   },

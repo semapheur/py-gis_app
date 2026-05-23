@@ -51,5 +51,13 @@
 
 <style>
   .ghost-search {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--size-md);
+  }
+
+  form {
+    padding-bottom: var(--size-lg);
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
   }
 </style>
