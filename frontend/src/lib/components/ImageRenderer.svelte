@@ -2,6 +2,7 @@
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
   import { getImageViewerOptions } from "$lib/contexts/common.svelte";
+  import ImageViewerContextMenu from "$lib/components/ImageViewerContextMenu.svelte";
 
   const viewerOptions = getImageViewerOptions();
 
@@ -26,7 +27,15 @@
       viewerState.activeMode,
     );
   }}
-></div>
+>
+  {#if viewerController.contextMenu}
+    <ImageViewerContextMenu
+      x={viewerController.contextMenu.x}
+      y={viewerController.contextMenu.y}
+      items={viewerController.contextMenu.items}
+    />
+  {/if}
+</div>
 
 <style>
   .map {

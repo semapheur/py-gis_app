@@ -16,6 +16,8 @@ import {
   pointerMove,
   platformModifierKeyOnly,
   shiftKeyOnly,
+  primaryAction,
+  mouseOnly,
 } from "ol/events/condition";
 import { Style } from "ol/style";
 import WKT from "ol/format/WKT";
@@ -51,6 +53,14 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 import { encode } from "@msgpack/msgpack";
 
+export type ContextMenuItemType = "equipment" | "measurement" | "ghost";
+
+export interface ContextMenuItem {
+  feature: Feature;
+  type: ContextMenuItemType;
+  label: string;
+}
+
 interface ViewerInteractions {
   hover: Select;
   select: Select;
@@ -82,6 +92,15 @@ export class ImageViewerController {
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedFeatures = $state<Feature[]>([]);
   enhancement = $state<Enhancement>({ ...defaultEnhancement });
+  #contextMenu = $state<{
+    x: number;
+    y: number;
+    items: ContextMenuItem[];
+  } | null>(null);
+
+  get contextMenu() {
+    return this.#contextMenu;
+  }
 
   constructor() {
     this.#interactions = {
@@ -127,7 +146,7 @@ export class ImageViewerController {
     return this.#equipmentFeatures;
   }
 
-  private destroy() {
+  #destroy() {
     if (this.#map === null) return;
 
     //this.#bandStretch?.stop();
@@ -180,14 +199,14 @@ export class ImageViewerController {
   ) {
     if (this.#map) return;
 
-    this.setupMap(target, options, interactionSet, interactionMode);
+    this.#setupMap(target, options, interactionSet, interactionMode);
 
     return () => {
-      this.destroy();
+      this.#destroy();
     };
   }
 
-  private async setupMap(
+  async #setupMap(
     target: HTMLElement,
     options: Options,
     interactionSet: InteractionSet,
@@ -297,18 +316,20 @@ export class ImageViewerController {
     //);
     //this.#bandStretch.start();
 
-    this.setupAnnotationInteractions();
-    this.setupMeasurementInteractions();
-    this.setupGhostInteractions();
+    this.#setupAnnotationInteractions();
+    this.#setupMeasurementInteractions();
+    this.#setupGhostInteractions();
 
     this.updateInteraction(interactionSet, interactionMode);
 
     if (options.annotations?.length) {
-      this.loadAnnotations(options.annotations);
+      this.#loadAnnotations(options.annotations);
     }
+
+    this.#setupContextMenu();
   }
 
-  private setupAnnotationInteractions() {
+  #setupAnnotationInteractions() {
     if (this.#map === null || this.#equipmentLayer === null) return;
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
@@ -318,7 +339,7 @@ export class ImageViewerController {
       }));
 
       try {
-        await this.persistFeatures(features, "edit");
+        await this.#persistFeatures(features, "edit");
       } catch (error) {
         originalGeometries.forEach(({ feature, geometry }) => {
           if (geometry) {
@@ -378,12 +399,12 @@ export class ImageViewerController {
         modifiable.push(e.element);
       }
 
-      this.syncSelectedFeatures();
+      this.#syncSelectedFeatures();
     });
     select.getFeatures().on("remove", (e) => {
       e.element.set("selected", 0);
       modifiable.remove(e.element);
-      this.syncSelectedFeatures();
+      this.#syncSelectedFeatures();
     });
 
     const modify = new Modify({ features: modifiable });
@@ -408,7 +429,7 @@ export class ImageViewerController {
     };
   }
 
-  private setupMeasurementInteractions() {
+  #setupMeasurementInteractions() {
     if (this.#map === null || this.#measurementLayer === null) return;
 
     const modifiable = new Collection<Feature>();
@@ -458,7 +479,7 @@ export class ImageViewerController {
     };
   }
 
-  private setupGhostInteractions() {
+  #setupGhostInteractions() {
     if (this.#map === null || this.#ghostLayer === null) return;
 
     const modifiable = new Collection<Feature>();
@@ -517,7 +538,83 @@ export class ImageViewerController {
     };
   }
 
-  private createDrawAnnotationInteraction(annotateState: AnnotateState) {
+  #setupContextMenu() {
+    if (this.#map === null) return;
+
+    this.#map
+      .getViewport()
+      .addEventListener("contextmenu", (e: PointerEvent) => {
+        e.preventDefault();
+
+        const pixel = this.#map?.getEventPixel(e);
+        if (!pixel) return;
+
+        //const rect = (
+        //  this.#map?.getTarget() as HTMLElement
+        //).getBoundingClientRect();
+
+        const layerChecks: Array<{
+          layer: WebGLVectorLayer | VectorLayer | null;
+          type: ContextMenuItemType;
+          getLabel: (f: Feature) => string;
+        }> = [
+          {
+            layer: this.#equipmentLayer,
+            type: "equipment",
+            getLabel: (f) => f.get("label"),
+          },
+          {
+            layer: this.#ghostLayer,
+            type: "ghost",
+            getLabel: (f) => f.get("label"),
+          },
+          {
+            layer: this.#measurementLayer,
+            type: "measurement",
+            getLabel: (f) => {
+              const g = f.getGeometry();
+              if (g instanceof Polygon) return "Area";
+              if (g instanceof LineString) return "Length";
+              return "";
+            },
+          },
+        ];
+
+        const items: ContextMenuItem[] = [];
+
+        for (const { layer, type, getLabel } of layerChecks) {
+          if (!layer) continue;
+          this.#map?.forEachFeatureAtPixel(
+            pixel,
+            (feature) => {
+              items.push({
+                feature: feature as Feature,
+                type,
+                label: getLabel(feature as Feature),
+              });
+            },
+            { layerFilter: (l) => l === layer, hitTolerance: 10 },
+          );
+        }
+
+        if (items.length === 0) {
+          this.#contextMenu = null;
+          return;
+        }
+
+        this.#contextMenu = {
+          x: e.clientX, //- rect.left,
+          y: e.clientY, // - rect.top,
+          items,
+        };
+      });
+
+    this.#map.on("click", () => {
+      this.#contextMenu = null;
+    });
+  }
+
+  #createDrawAnnotationInteraction(annotateState: AnnotateState) {
     const draw = new Draw({
       source: this.#annotationSources[annotateState.layer],
       type: annotateState.geometry,
@@ -540,7 +637,7 @@ export class ImageViewerController {
       });
 
       try {
-        await this.persistFeatures([e.feature], "draw");
+        await this.#persistFeatures([e.feature], "draw");
         e.feature.set("label", annotateState.label);
       } catch (error) {
         source.removeFeature(e.feature);
@@ -550,85 +647,7 @@ export class ImageViewerController {
     return draw;
   }
 
-  public updateDrawAnnotationInteraction(
-    annotateState: AnnotateState,
-    isActive: boolean,
-  ) {
-    if (this.#map === null || this.#interactions.annotation === null) return;
-
-    if (this.#interactions.annotation.draw) {
-      this.#map.removeInteraction(this.#interactions.annotation.draw);
-    }
-
-    const draw = this.createDrawAnnotationInteraction(annotateState);
-
-    this.#interactions.annotation.draw = draw;
-    this.#map.addInteraction(draw);
-    draw.setActive(isActive);
-  }
-
-  public updateDrawMeasurementInteraction(
-    type: MeasurementType,
-    isActive: boolean,
-  ) {
-    if (
-      this.#map === null ||
-      this.projection === null ||
-      this.#interactions.measurement === null
-    )
-      return;
-
-    if (this.#interactions.measurement.draw) {
-      this.#map.removeInteraction(this.#interactions.measurement.draw);
-    }
-
-    const drawType = type === "length" ? "LineString" : "Polygon";
-    const draw = new Draw({
-      source: this.#measurementSource,
-      type: drawType,
-      style: (feature) => styleMeasurement(this.projection!, feature, true),
-    });
-
-    this.#interactions.measurement.draw = draw;
-    this.#map.addInteraction(draw);
-    draw.setActive(isActive);
-  }
-
-  public clearMeasurements() {
-    this.#measurementSource.clear();
-  }
-
-  public updateInteraction(set: InteractionSet, mode: InteractionMode) {
-    if (this.#map === null || this.#interactions === null) return;
-
-    const interactions = this.#interactions[set];
-    const otherSet = set === "annotation" ? "measurement" : "annotation";
-    const otherInteractions = this.#interactions[otherSet];
-
-    if (otherInteractions) {
-      Object.values(otherInteractions).forEach((i) => {
-        if (i) this.#map?.removeInteraction(i);
-      });
-    }
-
-    if (!interactions) return;
-
-    const { draw, ...editInteractions } = interactions;
-
-    if (mode == "draw") {
-      Object.values(editInteractions).forEach((i) => {
-        if (i) this.#map?.removeInteraction(i);
-      });
-      if (draw) this.#map.addInteraction(draw);
-    } else {
-      if (draw) this.#map.removeInteraction(draw);
-      Object.values(editInteractions).forEach((i) => {
-        if (i) this.#map?.addInteraction(i);
-      });
-    }
-  }
-
-  private syncSelectedFeatures() {
+  #syncSelectedFeatures() {
     if (!this.#interactions.annotation?.select) return;
 
     this.#selectedFeatures = [
@@ -636,7 +655,7 @@ export class ImageViewerController {
     ];
   }
 
-  private loadAnnotations(records: AnnotationInfo[]) {
+  #loadAnnotations(records: AnnotationInfo[]) {
     if (this.#map === null || this.projection === null) return;
 
     const format = new GeoJSON({
@@ -661,53 +680,7 @@ export class ImageViewerController {
     this.#annotationSources.equipment.addFeatures(features);
   }
 
-  public addGhosts(records: AnnotationBaseInfo[]) {
-    if (this.#map === null || this.projection === null) return;
-
-    const format = new GeoJSON({
-      featureProjection: this.projection,
-      dataProjection: this.projection,
-    });
-
-    const features: Feature[] = [];
-    for (const record of records) {
-      const geometry = format.readGeometry(record.geometry);
-      const feature = new Feature({ geometry });
-
-      feature.setProperties({
-        id: record.id,
-        type: "equipment",
-        label: record.label,
-        data: record.data,
-      });
-      features.push(feature);
-    }
-    this.#annotationSources.ghost.addFeatures(features);
-  }
-
-  public async acceptGhosts(features: Feature[]) {
-    for (const feature of features) {
-      feature.setProperties({
-        id: crypto.randomUUID(),
-        metaData: {
-          createdByUserId: "",
-          modifiedByUserId: null,
-          createdAtTimestamp: Date.now(),
-          modifiedAtTimestamp: null,
-        },
-      });
-    }
-
-    this.#annotationSources.ghost.removeFeatures(features);
-    this.#annotationSources.equipment.addFeatures(features);
-    await this.persistFeatures(features, "draw");
-  }
-
-  public removeGhosts(features: Feature[]) {
-    this.#annotationSources.ghost.removeFeatures(features);
-  }
-
-  private async persistFeatures(features: Feature[], mode: "draw" | "edit") {
+  async #persistFeatures(features: Feature[], mode: "draw" | "edit") {
     const format = new WKT();
     const mapProjection = this.projection;
 
@@ -754,6 +727,141 @@ export class ImageViewerController {
     }
   }
 
+  public updateInteraction(set: InteractionSet, mode: InteractionMode) {
+    if (this.#map === null || this.#interactions === null) return;
+
+    const interactions = this.#interactions[set];
+    const otherSet = set === "annotation" ? "measurement" : "annotation";
+    const otherInteractions = this.#interactions[otherSet];
+
+    if (otherInteractions) {
+      Object.values(otherInteractions).forEach((i) => {
+        if (i) this.#map?.removeInteraction(i);
+      });
+    }
+
+    if (!interactions) return;
+
+    const { draw, ...editInteractions } = interactions;
+
+    if (mode == "draw") {
+      Object.values(editInteractions).forEach((i) => {
+        if (i) this.#map?.removeInteraction(i);
+      });
+      if (draw) this.#map.addInteraction(draw);
+    } else {
+      if (draw) this.#map.removeInteraction(draw);
+      Object.values(editInteractions).forEach((i) => {
+        if (i) this.#map?.addInteraction(i);
+      });
+    }
+  }
+
+  public updateDrawAnnotationInteraction(
+    annotateState: AnnotateState,
+    isActive: boolean,
+  ) {
+    if (this.#map === null || this.#interactions.annotation === null) return;
+
+    if (this.#interactions.annotation.draw) {
+      this.#map.removeInteraction(this.#interactions.annotation.draw);
+    }
+
+    const draw = this.#createDrawAnnotationInteraction(annotateState);
+
+    this.#interactions.annotation.draw = draw;
+    this.#map.addInteraction(draw);
+    draw.setActive(isActive);
+  }
+
+  public updateDrawMeasurementInteraction(
+    type: MeasurementType,
+    isActive: boolean,
+  ) {
+    if (
+      this.#map === null ||
+      this.projection === null ||
+      this.#interactions.measurement === null
+    )
+      return;
+
+    if (this.#interactions.measurement.draw) {
+      this.#map.removeInteraction(this.#interactions.measurement.draw);
+    }
+
+    const drawType = type === "length" ? "LineString" : "Polygon";
+    const draw = new Draw({
+      source: this.#measurementSource,
+      type: drawType,
+      condition: (e) => primaryAction(e) && mouseOnly(e),
+      style: (feature) => styleMeasurement(this.projection!, feature, true),
+    });
+
+    this.#interactions.measurement.draw = draw;
+    this.#map.addInteraction(draw);
+    draw.setActive(isActive);
+  }
+
+  public removeMeasurements(features: Feature[]) {
+    this.#measurementSource.removeFeatures(features);
+  }
+
+  public clearMeasurements() {
+    this.#measurementSource.clear();
+  }
+
+  public addGhosts(records: AnnotationBaseInfo[]) {
+    if (this.#map === null || this.projection === null) return;
+
+    this.clearGhosts();
+
+    const format = new GeoJSON({
+      featureProjection: this.projection,
+      dataProjection: this.projection,
+    });
+
+    const features: Feature[] = [];
+    for (const record of records) {
+      const geometry = format.readGeometry(record.geometry);
+      const feature = new Feature({ geometry });
+
+      feature.setProperties({
+        id: record.id,
+        type: "equipment",
+        label: record.label,
+        data: record.data,
+      });
+      features.push(feature);
+    }
+    this.#annotationSources.ghost.addFeatures(features);
+  }
+
+  public async acceptGhosts(features: Feature[]) {
+    for (const feature of features) {
+      feature.setProperties({
+        id: crypto.randomUUID(),
+        metaData: {
+          createdByUserId: "",
+          modifiedByUserId: null,
+          createdAtTimestamp: Date.now(),
+          modifiedAtTimestamp: null,
+        },
+      });
+    }
+
+    this.#annotationSources.ghost.removeFeatures(features);
+    this.#annotationSources.equipment.addFeatures(features);
+    await this.#persistFeatures(features, "draw");
+  }
+
+  public removeGhosts(features: Feature[]) {
+    this.#annotationSources.ghost.removeFeatures(features);
+  }
+
+  public clearGhosts() {
+    this.#annotationSources.ghost.clear();
+  }
+
   public applyEnhancement() {
     if (this.#rasterLayer === null) return;
 
@@ -790,8 +898,8 @@ export class ImageViewerController {
     });
     feature.changed();
 
-    this.syncSelectedFeatures();
-    this.persistFeatures([feature], "edit");
+    this.#syncSelectedFeatures();
+    this.#persistFeatures([feature], "edit");
   }
 
   public async convertPointFeatureToPolygon(
@@ -827,7 +935,7 @@ export class ImageViewerController {
     });
     feature.changed();
 
-    this.syncSelectedFeatures();
+    this.#syncSelectedFeatures();
 
     const format = new WKT();
     const payload = {
@@ -851,12 +959,12 @@ export class ImageViewerController {
       feature.setGeometry(point);
       feature.setProperties(oldMetaData);
       feature.changed();
-      this.syncSelectedFeatures();
+      this.#syncSelectedFeatures();
       throw error;
     }
   }
 
-  public removeFeatures(features: Feature[]) {
+  public removeAnnotations(features: Feature[]) {
     if (this.#interactions.annotation === null) return;
 
     const selected = this.#interactions.annotation.select.getFeatures();
@@ -881,7 +989,7 @@ export class ImageViewerController {
       (payload[key] ??= []).push(id);
     }
 
-    this.syncSelectedFeatures();
+    this.#syncSelectedFeatures();
 
     if (Object.keys(payload).length === 0) return;
 
@@ -905,6 +1013,10 @@ export class ImageViewerController {
     const polygon = fromExtent(extent4326);
 
     return new WKT().writeGeometry(polygon);
+  }
+
+  public closeContextMenu() {
+    this.#contextMenu = null;
   }
 }
 

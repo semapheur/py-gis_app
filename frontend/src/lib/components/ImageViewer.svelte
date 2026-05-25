@@ -96,11 +96,22 @@
 
   function openSearch() {
     leftSidebarOpen = true;
-    ghostsOpen = false;
+    if (ghostsOpen) {
+      imageViewer.clearGhosts();
+      ghostsOpen = false;
+    }
     searchOpen = true;
     searhImagesOnExtent().then((result) => {
       images = result;
     });
+  }
+
+  function closeLeftSidebar() {
+    leftSidebarOpen = false;
+    if (ghostsOpen) {
+      imageViewer.clearGhosts();
+      ghostsOpen = false;
+    }
   }
 </script>
 
@@ -146,7 +157,7 @@
   {#if leftSidebarOpen}
     <div class="left-sidebar">
       <div class="left-sidebar-button-group">
-        <CloseButton onclick={() => (leftSidebarOpen = false)} />
+        <CloseButton onclick={closeLeftSidebar} />
       </div>
       {#if searchOpen}
         <ImageExtentSearch {initialDateRange} initialImages={images} />

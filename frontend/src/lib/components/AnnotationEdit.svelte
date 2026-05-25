@@ -68,7 +68,7 @@
   function deleteFeature() {
     if (!selectedFeature) return;
 
-    viewerController.removeFeatures([selectedFeature]);
+    viewerController.removeAnnotations([selectedFeature]);
     selectedIndex = null;
     editData = null;
   }
@@ -151,7 +151,7 @@
     );
     if (!ok) return;
 
-    viewerController.removeFeatures(selectedFeatures);
+    viewerController.removeAnnotations(selectedFeatures);
     selectedIndex = null;
     editData = null;
   }
