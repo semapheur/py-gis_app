@@ -1,22 +1,27 @@
-<script lang="ts">
-  interface Tab<T = string> {
+<script lang="ts" generics="T = string">
+  interface Tab {
     name: string;
     value: T;
   }
 
-  interface Props<T = string> {
-    tabs: readonly Tab<T>[];
+  interface Props {
+    tabs: readonly Tab[];
     selected: T;
-    onselect: (value: T) => void;
+    onselect?: (value: T) => void;
   }
 
-  let { tabs, selected, onselect }: Props = $props();
+  let { tabs, selected = $bindable(), onselect }: Props = $props();
+
+  function handleSelect(value: T) {
+    selected = value;
+    onselect?.(value);
+  }
 </script>
 
 <nav class="tabs">
   {#each tabs as tab}
     <button
-      class:selected={selected === tab.value}
+      class={{ selected: selected === tab.value }}
       onclick={() => onselect(tab.value)}
     >
       {tab.name}

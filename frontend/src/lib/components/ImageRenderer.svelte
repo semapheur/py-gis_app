@@ -47,4 +47,8 @@
     image-rendering: pixelated;
     image-rendering: crisp-edges;
   }
+
+  .map :global(.ol-dragbox) {
+    background-color: oklch(var(--color-secondary) / 0.1);
+  }
 </style>

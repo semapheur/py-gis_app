@@ -1,18 +1,33 @@
 <script lang="ts">
   import FilterOutlineIcon from "@iconify-svelte/mdi/filter-outline";
   import ButtonIcon from "$lib/components/ButtonIcon.svelte";
+  import Input from "$lib/components/Input.svelte";
   import { type ColumnDefinition } from "$lib/utils/types";
-  import Input from "./Input.svelte";
+
+  type RowSelect = "none" | "single" | "multi";
 
   interface Props {
     data: Record<string, string | number>[];
     columns: ColumnDefinition[];
+    selectable?: RowSelect;
+    selected?: Record<string, string | number>[];
+    onselectionchange?: (rows: Record<string, string | number>[]) => void;
   }
 
-  let { data, columns }: Props = $props();
+  let {
+    data,
+    columns,
+    selectable = "none",
+    selected = $bindable([]),
+    onselectionchange,
+  }: Props = $props();
 
   let openFilter = $state<string | null>(null);
   let filterSearch = $state<Record<string, string>>({});
+  let checkedValues = $state<Record<string, Set<string>>>({});
+  let sortKey = $state<string | null>(null);
+  let sortOrder = $state<"asc" | "desc">("asc");
+  let selectedRows = $state<Set<number>>(new Set());
 
   const columnValues = $derived(
     Object.fromEntries(
@@ -24,13 +39,6 @@
         ]),
     ),
   );
-
-  $inspect(columnValues);
-
-  let checkedValues = $state<Record<string, Set<string>>>({});
-
-  let sortKey = $state<string | null>(null);
-  let sortOrder = $state<"asc" | "desc">("asc");
 
   function toggleSort(colId: string) {
     if (sortKey === colId) {
@@ -100,104 +108,211 @@
 
     return rows;
   });
+
+  function toggleRow(index: number) {
+    if (selectable === "none") return;
+
+    const next = new Set(selectedRows);
+
+    if (selectable === "single") {
+      if (next.has(index)) {
+        next.clear();
+      } else {
+        next.clear();
+        next.add(index);
+      }
+    } else {
+      next.has(index) ? next.delete(index) : next.add(index);
+    }
+
+    selectedRows = next;
+    selected = processedData.filter((_, i) => next.has(i));
+    onselectionchange?.(selected);
+  }
+
+  function toggleAllRows() {
+    if (selectedRows.size === processedData.length) {
+      selectedRows = new Set();
+    } else {
+      selectedRows = new Set(processedData.map((_, i) => i));
+    }
+
+    selected = processedData.filter((_, i) => selectedRows.has(i));
+    onselectionchange?.(selected);
+  }
+
+  $effect(() => {
+    processedData;
+    selectedRows = new Set();
+    selected = [];
+  });
 </script>
 
 <svelte:window onclick={closeFilter} />
 
-<table>
-  <thead>
-    <tr>
-      {#each columns as c}
-        <th>
-          {#if c.filterable}
-            <div class="filter-wrap">
-              <ButtonIcon
-                onclick={(e) => {
-                  e.stopPropagation();
-                  openFilter = openFilter === c.id ? null : c.id;
-                }}><FilterOutlineIcon height="1rem" /></ButtonIcon
-              >
-              {#if openFilter === c.id}
-                <div
-                  class="filter-dropdown"
-                  role="presentation"
-                  onclick={(e) => e.stopPropagation()}
-                  onkeydown={() => {}}
+<div class="table-wrap">
+  <table>
+    <thead>
+      <tr>
+        {#if selectable === "multi"}
+          <th class="select-col">
+            <input
+              type="checkbox"
+              checked={processedData.length > 0 &&
+                selectedRows.size === processedData.length}
+              indeterminate={selectedRows.size > 0 &&
+                selectedRows.size < processedData.length}
+              onchange={toggleAllRows}
+            />
+          </th>
+        {:else if selectable === "single"}
+          <th class="select-col"></th>
+        {/if}
+        {#each columns as c}
+          <th>
+            {#if c.filterable}
+              <div class="filter-wrap">
+                <ButtonIcon
+                  onclick={(e) => {
+                    e.stopPropagation();
+                    openFilter = openFilter === c.id ? null : c.id;
+                  }}><FilterOutlineIcon height="1rem" /></ButtonIcon
                 >
-                  <Input
-                    type="text"
-                    placeholder="Search"
-                    bind:value={filterSearch[c.id]}
-                  />
-                  <ul>
-                    <li>
-                      <label>
-                        <input
-                          type="checkbox"
-                          checked={isAllChecked(c.id)}
-                          onchange={() => toggleAll(c.id)}
-                        />
-                        Select all
-                      </label>
-                    </li>
-                    {#each columnValues[c.id].filter((v) => {
-                      !filterSearch[c.id] || v
-                          .toLowerCase()
-                          .includes(filterSearch[c.id].toLowerCase());
-                    }) as value}
+                {#if openFilter === c.id}
+                  <div
+                    class="filter-dropdown"
+                    role="presentation"
+                    onclick={(e) => e.stopPropagation()}
+                    onkeydown={() => {}}
+                  >
+                    <Input
+                      type="text"
+                      placeholder="Search"
+                      bind:value={filterSearch[c.id]}
+                    />
+                    <ul>
                       <li>
                         <label>
                           <input
                             type="checkbox"
-                            checked={getChecked(c.id).has(value)}
-                            onchange={() => toggleValue(c.id, value)}
+                            checked={isAllChecked(c.id)}
+                            onchange={() => toggleAll(c.id)}
                           />
-                          {value}
+                          Select all
                         </label>
                       </li>
-                    {/each}
-                  </ul>
-                </div>
-              {/if}
-            </div>
-          {/if}
-          <span>
-            {c.label}
-          </span>
-          {#if c.sortable}
-            <button class="sort" onclick={() => toggleSort(c.id)}>
-              <span class="arrows">
-                <span
-                  style="opacity: {sortKey === c.id && sortOrder === 'asc'
-                    ? 1
-                    : 0.3}">▲</span
-                >
-                <span
-                  style="opacity: {sortKey === c.id && sortOrder === 'desc'
-                    ? 1
-                    : 0.3}">▼</span
-                >
-              </span>
-            </button>
-          {/if}
-        </th>
-      {/each}
-    </tr>
-  </thead>
-  <tbody>
-    {#each processedData as record}
-      <tr>
-        {#each columns as c}
-          <td>{record[c.id]}</td>
+                      {#each columnValues[c.id].filter((v) => {
+                        !filterSearch[c.id] || v
+                            .toLowerCase()
+                            .includes(filterSearch[c.id].toLowerCase());
+                      }) as value}
+                        <li>
+                          <label>
+                            <input
+                              type="checkbox"
+                              checked={getChecked(c.id).has(value)}
+                              onchange={() => toggleValue(c.id, value)}
+                            />
+                            {value}
+                          </label>
+                        </li>
+                      {/each}
+                    </ul>
+                  </div>
+                {/if}
+              </div>
+            {/if}
+            <span>
+              {c.label}
+            </span>
+            {#if c.sortable}
+              <button class="sort" onclick={() => toggleSort(c.id)}>
+                <span class="arrows">
+                  <span
+                    style="opacity: {sortKey === c.id && sortOrder === 'asc'
+                      ? 1
+                      : 0.3}">▲</span
+                  >
+                  <span
+                    style="opacity: {sortKey === c.id && sortOrder === 'desc'
+                      ? 1
+                      : 0.3}">▼</span
+                  >
+                </span>
+              </button>
+            {/if}
+          </th>
         {/each}
       </tr>
-    {/each}
-  </tbody>
-</table>
+    </thead>
+    <tbody>
+      {#each processedData as record, i}
+        <tr
+          class={{
+            selected: selectedRows.has(i),
+            selectable: selectable !== "none",
+          }}
+          onclick={() => toggleRow(i)}
+        >
+          {#if selectable === "multi"}
+            <td class="select-col">
+              <input
+                type="checkbox"
+                checked={selectedRows.has(i)}
+                onclick={(e) => e.stopPropagation()}
+                onchange={() => toggleRow(i)}
+              />
+            </td>
+          {:else if selectable === "single"}
+            <td class="select-col">
+              <input
+                type="radio"
+                checked={selectedRows.has(i)}
+                onclick={(e) => e.stopPropagation()}
+                onchange={() => toggleRow(i)}
+              />
+            </td>
+          {/if}
+          {#each columns as c}
+            <td>{record[c.id]}</td>
+          {/each}
+        </tr>
+      {/each}
+    </tbody>
+  </table>
+</div>
 
 <style>
+  .table-wrap {
+    overflow: auto;
+    width: 100%;
+    height: 100%;
+  }
+
   table {
+    width: max-content;
+    min-width: 100%;
+    border-collapse: collapse;
     font-size: var(--text-sm);
+  }
+
+  th {
+    position: sticky;
+    top: 0;
+    background-color: oklch(var(--color-primary));
+    z-index: 1;
+  }
+
+  tr.selectable {
+    cursor: pointer;
+  }
+
+  tr.selectable:hover td {
+    background: oklch(var(--color--secondary-accent) / 0.1);
+  }
+
+  tr.selected td {
+    background: oklch(var(--color-secondary-accent));
   }
 
   .filter-wrap {

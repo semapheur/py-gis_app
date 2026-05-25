@@ -7,7 +7,7 @@ import VectorSource from "ol/source/Vector";
 import WebGLTileLayer from "ol/layer/WebGLTile";
 import WebGLVectorLayer from "ol/layer/WebGLVector";
 import GeoTIFF from "ol/source/GeoTIFF";
-import { Draw, Modify, Select, Translate } from "ol/interaction";
+import { DragBox, Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature from "ol/Feature";
 import { Point, LineString, Polygon, MultiPolygon } from "ol/geom";
@@ -67,6 +67,7 @@ interface ViewerInteractions {
   modify: Modify;
   translate: Translate;
   draw: Draw | null;
+  dragBox: DragBox | null;
 }
 
 interface Options {
@@ -90,13 +91,28 @@ export class ImageViewerController {
   #measurementSource = new VectorSource();
 
   #equipmentFeatures = $state<Feature[]>([]);
-  #selectedFeatures = $state<Feature[]>([]);
+  #selectedAnnotations = $state<Record<AnnotateForm, Feature[]>>({
+    equipment: [],
+    activity: [],
+  });
   enhancement = $state<Enhancement>({ ...defaultEnhancement });
   #contextMenu = $state<{
     x: number;
     y: number;
     items: ContextMenuItem[];
   } | null>(null);
+
+  get projection() {
+    return this.#map?.getView().getProjection() ?? null;
+  }
+
+  get selectedAnnotations() {
+    return this.#selectedAnnotations;
+  }
+
+  get equipmentFeatures() {
+    return this.#equipmentFeatures;
+  }
 
   get contextMenu() {
     return this.#contextMenu;
@@ -132,18 +148,6 @@ export class ImageViewerController {
         .getFeatures()
         .slice();
     });
-  }
-
-  get projection() {
-    return this.#map?.getView().getProjection() ?? null;
-  }
-
-  get selectedFeatures() {
-    return this.#selectedFeatures;
-  }
-
-  get equipmentFeatures() {
-    return this.#equipmentFeatures;
   }
 
   #destroy() {
@@ -187,7 +191,10 @@ export class ImageViewerController {
     this.#activityLayer = null;
     this.#measurementLayer = null;
     this.#equipmentFeatures = [];
-    this.#selectedFeatures = [];
+    this.#selectedAnnotations = {
+      equipment: [],
+      activity: [],
+    };
     this.#image = null;
   }
 
@@ -371,7 +378,7 @@ export class ImageViewerController {
     });
 
     const select: Select = new Select({
-      addCondition: shiftKeyOnly,
+      addCondition: platformModifierKeyOnly,
       hitTolerance: 20,
       layers: [this.#equipmentLayer],
       style: (feature) => {
@@ -399,12 +406,29 @@ export class ImageViewerController {
         modifiable.push(e.element);
       }
 
-      this.#syncSelectedFeatures();
+      this.#syncSelectedAnnotations();
     });
     select.getFeatures().on("remove", (e) => {
       e.element.set("selected", 0);
       modifiable.remove(e.element);
-      this.#syncSelectedFeatures();
+      this.#syncSelectedAnnotations();
+    });
+
+    const dragBox = new DragBox({
+      condition: shiftKeyOnly,
+    });
+
+    dragBox.on("boxend", () => {
+      const extent = dragBox.getGeometry().getExtent();
+
+      [this.#annotationSources.equipment, this.#annotationSources.activity]
+        .flatMap((source) => source.getFeaturesInExtent(extent))
+        //.filter((f) => !select.getFeatures().getArray().includes(f));
+        .forEach((f) => select.getFeatures().push(f));
+    });
+
+    dragBox.on("boxstart", () => {
+      select.getFeatures().clear();
     });
 
     const modify = new Modify({ features: modifiable });
@@ -426,6 +450,7 @@ export class ImageViewerController {
       modify,
       translate,
       draw: null,
+      dragBox,
     };
   }
 
@@ -476,6 +501,7 @@ export class ImageViewerController {
       modify,
       translate,
       draw: null,
+      dragBox: null,
     };
   }
 
@@ -535,6 +561,7 @@ export class ImageViewerController {
       modify,
       translate,
       draw: null,
+      dragBox: null,
     };
   }
 
@@ -647,12 +674,25 @@ export class ImageViewerController {
     return draw;
   }
 
-  #syncSelectedFeatures() {
+  #syncSelectedAnnotations() {
     if (!this.#interactions.annotation?.select) return;
 
-    this.#selectedFeatures = [
-      ...this.#interactions.annotation.select.getFeatures().getArray(),
-    ];
+    const selectedAnnotations: Record<AnnotateForm, Feature[]> = {
+      equipment: [],
+      activity: [],
+    };
+
+    for (const feature of this.#interactions.annotation.select
+      .getFeatures()
+      .getArray()) {
+      const annotationType = feature.get("type") as AnnotateForm;
+
+      if (!(annotationType in this.#selectedAnnotations)) continue;
+
+      selectedAnnotations[annotationType].push(feature);
+    }
+
+    this.#selectedAnnotations = selectedAnnotations;
   }
 
   #loadAnnotations(records: AnnotationInfo[]) {
@@ -898,7 +938,7 @@ export class ImageViewerController {
     });
     feature.changed();
 
-    this.#syncSelectedFeatures();
+    this.#syncSelectedAnnotations();
     this.#persistFeatures([feature], "edit");
   }
 
@@ -935,7 +975,7 @@ export class ImageViewerController {
     });
     feature.changed();
 
-    this.#syncSelectedFeatures();
+    this.#syncSelectedAnnotations();
 
     const format = new WKT();
     const payload = {
@@ -959,7 +999,7 @@ export class ImageViewerController {
       feature.setGeometry(point);
       feature.setProperties(oldMetaData);
       feature.changed();
-      this.#syncSelectedFeatures();
+      this.#syncSelectedAnnotations();
       throw error;
     }
   }
@@ -989,7 +1029,7 @@ export class ImageViewerController {
       (payload[key] ??= []).push(id);
     }
 
-    this.#syncSelectedFeatures();
+    this.#syncSelectedAnnotations();
 
     if (Object.keys(payload).length === 0) return;
 

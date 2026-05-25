@@ -1,63 +1,136 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
-  import KebabMenu from "$lib/components/KebabMenu.svelte";
   import Button from "$lib/components/Button.svelte";
+  import EquipmentForm from "$lib/components/EquipmentForm.svelte";
+  import KebabMenu from "$lib/components/KebabMenu.svelte";
+  import SplitPanes from "$lib/components/SplitPanes.svelte";
+  import Table from "$lib/components/Table.svelte";
+  import Tabs from "$lib/components/Tabs.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import type {
-    EquipmentData,
-    CompleteEquipmentData,
+  import {
+    type AnnotateForm,
+    type EquipmentData,
+    type CompleteEquipmentData,
+    annotateTabs,
   } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
+  import type { ColumnDefinition } from "$lib/utils/types";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
   const viewerController = getImageViewerController();
 
-  let selectedIndex = $state<number | null>(null);
+  const equipmentColumns: ColumnDefinition[] = [
+    {
+      id: "id",
+      label: "#",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: "equipment",
+      label: "Equipment",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: "confidence",
+      label: "Confidence",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: "status",
+      label: "Status",
+      sortable: true,
+      filterable: true,
+    },
+  ] as const;
+
+  const activityColumns = [];
+
+  const tableColumns = {
+    equipment: equipmentColumns,
+    activity: activityColumns,
+  };
+
+  const tableSelectable = {
+    equipment: "multi",
+    activity: "single",
+  } as const;
+
+  let activeTableTab = $state<AnnotateForm>("equipment");
+  let selectedRows = $state<number[]>([]);
+
   let validForm = $state<boolean>(true);
   let editData = $state<EquipmentData | null>(null);
   let bulkEdit = $state<boolean>(false);
   let bulkPatch = $state<BulkEquipmentPatch>({});
   let validBulkForm = $state(true);
 
-  const selectedFeatures = $derived(viewerController.selectedFeatures);
-  const selectedFeature = $derived(
-    selectedIndex !== null ? (selectedFeatures[selectedIndex] ?? null) : null,
-  );
-  const selectedType = $derived(selectedFeature?.get("type") ?? null);
-  const selectedTypes = $derived(
-    Array.from(new Set(selectedFeatures.map((f) => f.get("type")))),
-  );
-  const selectedGeometry = $derived(
-    selectedFeature?.getGeometry()?.getType() ?? null,
-  );
-  const canBulkEdit = $derived(
-    selectedFeatures.length > 1 && selectedTypes.length === 1,
-  );
-  const labels = $derived(
-    selectedFeatures.map((f) => f.get("label")?.replaceAll("\n", ", ")),
+  const selectedAnnotations = $derived(viewerController.selectedAnnotations);
+  const hasSelectedAnnotations = $derived.by(() => {
+    const totalLength =
+      selectedAnnotations.equipment.length +
+      selectedAnnotations.activity.length;
+    return totalLength > 0;
+  });
+
+  const tableData = $derived({
+    equipment: selectedAnnotations.equipment
+      .map((f, i) => {
+        const data = f.get("data") as EquipmentData | undefined;
+        if (!data) return null;
+
+        return {
+          id: i + 1,
+          equipment: data.equipment?.label,
+          confidence: data.confidence?.label,
+          status: data.status?.label,
+        };
+      })
+      .filter(Boolean),
+    activity: [],
+  });
+
+  const selectedFeatures = $derived(
+    selectedRows
+      .map((i) => selectedAnnotations[activeTableTab][i])
+      .filter(Boolean),
   );
 
+  const selectedFeature = $derived(
+    selectedFeatures.length === 1 ? selectedFeatures[0] : null,
+  );
+
+  const selectedType = $derived(selectedFeature?.get("type") ?? null);
+  const selectedGeometry = $derived(selectedFeature?.getGeometryName() ?? null);
+
+  const canBulkEdit = $derived(selectedFeatures.length > 1);
+
   $effect(() => {
-    if (!selectedFeature) {
+    if (selectedFeatures.length > 1) {
+      bulkEdit = true;
       editData = null;
-      selectedIndex = null;
+      bulkPatch = getCommonValues(selectedFeatures);
       return;
     }
 
-    editData = selectedFeature.get("data") ?? null;
-  });
+    bulkEdit = false;
+    bulkPatch = {};
 
-  $effect(() => {
-    if (selectedIndex !== null && selectedIndex >= selectedFeatures.length) {
-      selectedIndex = null;
+    if (selectedFeature) {
+      editData = selectedFeature.get("data");
+
+      return;
     }
+
+    editData = null;
   });
 
   function saveEdits() {
-    if (!editData || !validForm || !selectedFeature) return;
+    if (!selectedFeature || !editData || !validForm) return;
 
     viewerController.updateFeatureData(
       selectedFeature,
@@ -69,8 +142,71 @@
     if (!selectedFeature) return;
 
     viewerController.removeAnnotations([selectedFeature]);
-    selectedIndex = null;
-    editData = null;
+  }
+
+  function getCommonValues(
+    features: typeof selectedFeatures,
+  ): BulkEquipmentPatch {
+    if (!features.length) return {};
+
+    const commonValues: BulkEquipmentPatch = {};
+
+    const firstData = features[0].get("data") as CompleteEquipmentData | null;
+    if (!firstData) return {};
+
+    for (const key in firstData) {
+      const typedKey = key as keyof CompleteEquipmentData;
+      const firstValue = firstData[typedKey];
+
+      const isCommon = features.every((feature) => {
+        const data = feature.get("data") as CompleteEquipmentData | null;
+
+        if (!data) return false;
+
+        return data[typedKey]?.id === firstValue?.id;
+      });
+
+      if (isCommon) {
+        commonValues[typedKey] = firstValue;
+      }
+    }
+
+    return commonValues;
+  }
+
+  function applyBulkEdit() {
+    if (!validBulkForm) return;
+
+    for (const feature of selectedFeatures) {
+      const data = feature.get("data") as EquipmentData;
+      if (!data) continue;
+
+      viewerController.updateFeatureData(feature, {
+        ...data,
+        ...bulkPatch,
+      });
+    }
+
+    bulkEdit = false;
+    bulkPatch = {};
+  }
+
+  function bulkDelete() {
+    const count = selectedFeatures.length;
+    if (!count) return;
+
+    const confirmed = confirm(
+      `Delete ${count} selected annotation${count > 1 ? "s" : ""}?`,
+    );
+    if (!confirmed) return;
+
+    viewerController.removeAnnotations(selectedFeatures);
+  }
+
+  function polygonize() {
+    if (!selectedFeature) return;
+
+    viewerController.convertPointFeatureToPolygon(selectedFeature, 2);
   }
 
   function exportFeaturesToGeoJson() {
@@ -89,121 +225,58 @@
     const fileName = `annotations_${new Date().toISOString().split("T")[0]}.json`;
     exportFile(blob, fileName);
   }
-
-  function findCommonValues() {
-    const commonValues: BulkEquipmentPatch = {};
-    const firstFeatureData = selectedFeatures[0].get(
-      "data",
-    ) as CompleteEquipmentData;
-    if (!firstFeatureData) return;
-
-    for (const key in firstFeatureData) {
-      const firstValue = firstFeatureData[key as keyof CompleteEquipmentData];
-      const isCommon = selectedFeatures.every((feature) => {
-        const data = feature.get("data") as CompleteEquipmentData;
-
-        if (!data) return false;
-
-        return data[key as keyof CompleteEquipmentData].id === firstValue.id;
-      });
-
-      if (isCommon) {
-        commonValues[key as keyof EquipmentData] = firstValue;
-      }
-    }
-
-    bulkPatch = commonValues;
-  }
-
-  function startBulkEdit() {
-    if (!canBulkEdit) return;
-
-    findCommonValues();
-
-    bulkEdit = true;
-    selectedIndex = null;
-    editData = null;
-  }
-
-  function applyBulkEdit() {
-    if (!validBulkForm) return;
-
-    for (const feature of selectedFeatures) {
-      const data = feature.get("data") as EquipmentData;
-      if (!data) continue;
-
-      viewerController.updateFeatureData(feature, {
-        ...structuredClone(data),
-        ...bulkPatch,
-      });
-    }
-
-    bulkEdit = false;
-    bulkPatch = {};
-  }
-
-  function bulkDelete() {
-    const numFeatures = selectedFeatures.length;
-    if (!numFeatures) return;
-
-    const ok = confirm(
-      `Delete ${numFeatures} selected annotation${numFeatures > 1 ? "s" : ""}?`,
-    );
-    if (!ok) return;
-
-    viewerController.removeAnnotations(selectedFeatures);
-    selectedIndex = null;
-    editData = null;
-  }
-
-  function polygonize() {
-    if (!selectedFeature) return;
-
-    viewerController.convertPointFeatureToPolygon(selectedFeature, 2000);
-  }
 </script>
 
-{#if selectedFeatures.length > 0}
-  <aside class="edit-sidebar">
-    <header class="edit-header">
+{#snippet topPane()}
+  <div class="edit-table">
+    <header class="edit-table-header">
       <KebabMenu>
-        <button role="menuitem" onclick={exportFeaturesToGeoJson}
-          >Export to GeoJSON</button
-        >
-        {#if selectedFeatures.length > 1}
-          <button
-            role="menuitem"
-            disabled={!canBulkEdit}
-            onclick={startBulkEdit}>Bulk edit</button
+        {#if activeTableTab === "equipment"}
+          <button role="menuitem" onclick={() => {}}
+            >Select all annotations</button
+          >
+          <button role="menuitem" onclick={exportFeaturesToGeoJson}
+            >Export to GeoJSON</button
+          >
+          {#if selectedAnnotations.equipment.length > 1}
+            <button
+              role="menuitem"
+              disabled={!canBulkEdit}
+              onclick={startBulkEdit}>Bulk edit</button
+            >
+          {/if}
+          <button role="menuitem" onclick={bulkDelete}>Bulk delete</button>
+        {:else if activeTableTab === "activity"}
+          <button role="menuitem" onclick={() => {}}
+            >Select all annotations</button
           >
         {/if}
-        <button role="menuitem" onclick={bulkDelete}>Bulk delete</button>
       </KebabMenu>
-      <span class="edit-heading">Selected annotations</span>
+      <Tabs tabs={annotateTabs} bind:selected={activeTableTab} />
     </header>
-    <ol class="selected-list">
-      {#each selectedFeatures as _, i}
-        <li>
-          <label>
-            <input type="radio" value={i} bind:group={selectedIndex} />
-            {labels[i]}
-          </label>
-        </li>
-      {/each}
-    </ol>
+    <Table
+      data={tableData[activeTableTab]}
+      columns={tableColumns[activeTableTab]}
+      selectable={tableSelectable[activeTableTab]}
+      onselectionchange={(rows) =>
+        (selectedRows = rows.map((r) => Number(r.id) - 1))}
+    />
+  </div>
+{/snippet}
+
+{#snippet bottomPane()}
+  <div>
     {#if editData}
-      {#key selectedIndex}
-        {#if selectedType === "equipment"}
-          <EquipmentForm
-            value={editData}
-            onchange={(v) => (editData = v)}
-            onvalid={(v) => (validForm = v)}
-          />
-        {:else if selectedType === "activity"}
-          <ActivityForm />
-        {/if}
-      {/key}
-      <footer class="edit-footer">
+      {#if selectedType === "equipment"}
+        <EquipmentForm
+          value={editData}
+          onchange={(v) => (editData = v)}
+          onvalid={(v) => (validForm = v)}
+        />
+      {:else if selectedType === "activity"}
+        <ActivityForm />
+      {/if}
+      <footer class="edit-form-footer">
         <Button
           background="oklch(var(--color-positive))"
           disabled={!validForm}
@@ -227,7 +300,7 @@
         onvalid={(v) => (validBulkForm = v)}
       />
 
-      <footer class="edit-footer">
+      <footer class="edit-form-footer">
         <Button
           background="oklch(var(--color-positive))"
           disabled={!validBulkForm}
@@ -244,6 +317,12 @@
         </Button>
       </footer>
     {/if}
+  </div>
+{/snippet}
+
+{#if hasSelectedAnnotations}
+  <aside class="edit-sidebar">
+    <SplitPanes panes={[topPane, bottomPane]} direction="column" />
   </aside>
 {/if}
 
@@ -253,7 +332,7 @@
     flex-direction: column;
     gap: var(--size-md);
     height: 100%;
-    width: clamp(200px, 25%, 600px);
+    width: clamp(200px, 30%, 600px);
     position: absolute;
     top: 0;
     right: 0;
@@ -262,19 +341,19 @@
     z-index: 1;
   }
 
-  .edit-header {
+  .edit-table {
+    display: grid;
+    grid-template-rows: auto 1fr;
+    gap: var(--size-md);
+    height: 100%;
+    overflow: hidden;
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
+  }
+
+  .edit-table-header {
     display: flex;
     gap: var(--size-md);
-    border-bottom: 1px solid oklch(var(--color-text));
-  }
-
-  .edit-heading {
-    margin: 0;
-    font-size: var(--text-lg);
-    font-weight: var(--font-bold);
-  }
-
-  .selected-list {
-    margin: 0;
+    padding-bottom: var(--size-md);
+    border-bottom: 1px solid oklch(var(--color-secondary-accent));
   }
 </style>
