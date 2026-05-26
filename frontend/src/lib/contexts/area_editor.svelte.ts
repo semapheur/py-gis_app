@@ -1,4 +1,5 @@
 import { getContext, setContext } from "svelte";
+import { encode } from "@msgpack/msgpack";
 import type { Polygon } from "ol/geom";
 import WKT from "ol/format/WKT";
 import GeoJSON from "ol/format/GeoJSON";
@@ -84,8 +85,8 @@ export class AreaEditorState {
 
     const response = await fetch("/api/update-area", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify(payload),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode(payload),
     });
 
     if (!response.ok) {

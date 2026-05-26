@@ -11,7 +11,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
 
   const response = await fetch("/api/get-area", {
     method: "POST",
-    headers: { "Content-Type": "application/json" },
+    headers: { "Content-Type": "application/msgpack" },
     body: encode({ id }),
   });
 

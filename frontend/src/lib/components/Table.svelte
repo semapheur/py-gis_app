@@ -28,6 +28,7 @@
   let sortKey = $state<string | null>(null);
   let sortOrder = $state<"asc" | "desc">("asc");
   let selectedRows = $state<Set<number>>(new Set());
+  let lastSelectedIndex = $state<number | null>(null);
 
   const columnValues = $derived(
     Object.fromEntries(
@@ -109,10 +110,12 @@
     return rows;
   });
 
-  function toggleRow(index: number) {
+  function toggleRow(index: number, event?: MouseEvent) {
     if (selectable === "none") return;
 
     const next = new Set(selectedRows);
+    const ctrl = event?.ctrlKey || event?.metaKey;
+    const shift = event?.shiftKey;
 
     if (selectable === "single") {
       if (next.has(index)) {
@@ -122,7 +125,20 @@
         next.add(index);
       }
     } else {
-      next.has(index) ? next.delete(index) : next.add(index);
+      if (shift && lastSelectedIndex !== null) {
+        const fromRow = Math.min(lastSelectedIndex, index);
+        const toRow = Math.max(lastSelectedIndex, index);
+        for (let i = fromRow; i <= toRow; i++) {
+          next.add(i);
+        }
+      } else if (ctrl) {
+        next.has(index) ? next.delete(index) : next.add(index);
+        lastSelectedIndex = index;
+      } else {
+        next.clear();
+        next.add(index);
+        lastSelectedIndex = index;
+      }
     }
 
     selectedRows = next;
@@ -145,6 +161,7 @@
     processedData;
     selectedRows = new Set();
     selected = [];
+    lastSelectedIndex = null;
   });
 </script>
 
@@ -252,7 +269,7 @@
             selected: selectedRows.has(i),
             selectable: selectable !== "none",
           }}
-          onclick={() => toggleRow(i)}
+          onclick={(e) => toggleRow(i, e)}
         >
           {#if selectable === "multi"}
             <td class="select-col">
@@ -260,7 +277,6 @@
                 type="checkbox"
                 checked={selectedRows.has(i)}
                 onclick={(e) => e.stopPropagation()}
-                onchange={() => toggleRow(i)}
               />
             </td>
           {:else if selectable === "single"}
@@ -269,7 +285,6 @@
                 type="radio"
                 checked={selectedRows.has(i)}
                 onclick={(e) => e.stopPropagation()}
-                onchange={() => toggleRow(i)}
               />
             </td>
           {/if}

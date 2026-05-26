@@ -1,8 +1,9 @@
 <script lang="ts">
-  import Button from "$lib/components/Button.svelte";
   import type { PageData } from "./$types";
+  import { encode } from "@msgpack/msgpack";
   import { toast } from "$lib/stores/toast.svelte";
   import { formatDatetime } from "$lib/utils/date";
+  import Button from "$lib/components/Button.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
 
   interface CatalogData {
@@ -33,8 +34,8 @@
 
     const response = await fetch("/api/index-catalog", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ id }),
+      headers: { "Content-Type": "application/mspgack" },
+      body: encode({ id }),
     });
 
     if (!response.ok) {

@@ -5,7 +5,6 @@
     type ContextMenuItem,
   } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import { portal } from "$lib/actions/portal";
-  import Feature from "ol/Feature";
 
   interface Props {
     x: number;

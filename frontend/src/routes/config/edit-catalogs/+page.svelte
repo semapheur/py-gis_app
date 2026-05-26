@@ -1,13 +1,14 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { browser } from "$app/environment";
+  import { encode } from "@msgpack/msgpack";
   import DataGrid from "$lib/components/DataGrid.svelte";
 
   async function validateCatalogPath(path: string) {
     const response = await fetch("/api/validate-catalog-dir", {
       method: "POST",
-      headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({ path }),
+      headers: { "Content-Type": "application/msgpack" },
+      body: encode({ path }),
     });
 
     if (response.ok) return true;

@@ -1,8 +1,9 @@
 import { type FeatureLike } from "ol/Feature";
-import { Point, MultiPoint, LineString, Polygon, MultiPolygon } from "ol/geom";
+import { Point, LineString, Polygon } from "ol/geom";
 import { Projection } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
+import { vertexStyle } from "$lib/utils/ol_styles";
 
 export interface Enhancement {
   brightness: number;
@@ -74,31 +75,6 @@ const stretchExpression = (bandR: number, bandG: number, bandB: number) => ({
 
 export const multibandStyle = stretchExpression(1, 2, 3);
 export const panchromaticStyle = stretchExpression(1, 1, 1);
-
-const vertexCircle = new Circle({
-  radius: 3,
-  fill: new Fill({ color: "white" }),
-  stroke: new Stroke({ color: "black", width: 1 }),
-});
-
-export const vertexStyle = new Style({
-  image: vertexCircle,
-  geometry: (feature: FeatureLike) => {
-    const geometry = feature.getGeometry();
-
-    if (geometry instanceof LineString) {
-      return new MultiPoint(geometry.getCoordinates());
-    }
-
-    if (geometry instanceof Polygon) {
-      return new MultiPoint(geometry.getCoordinates()[0]);
-    }
-
-    if (geometry instanceof MultiPolygon) {
-      return new MultiPoint(geometry.getCoordinates().flatMap((p) => p[0]));
-    }
-  },
-});
 
 const equipmentPointStyle = {
   base: {

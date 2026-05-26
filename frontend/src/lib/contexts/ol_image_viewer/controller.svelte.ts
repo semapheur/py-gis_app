@@ -1,4 +1,5 @@
 import { getContext, setContext } from "svelte";
+import { encode } from "@msgpack/msgpack";
 import Map from "ol/Map";
 import View from "ol/View";
 import { transformExtent } from "ol/proj";
@@ -35,13 +36,13 @@ import {
   equipmentStyle,
   ghostStyle,
   defaultEnhancement,
-  vertexStyle,
   type Enhancement,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
   //BandStretchManager,
   buildStyleExpression,
 } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
+import { vertexStyle } from "$lib/utils/ol_styles";
 import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,
@@ -51,7 +52,6 @@ import type {
   ActivityData,
   AnnotationBaseInfo,
 } from "$lib/contexts/annotate.svelte";
-import { encode } from "@msgpack/msgpack";
 
 export type ContextMenuItemType = "equipment" | "measurement" | "ghost";
 
