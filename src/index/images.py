@@ -19,6 +19,7 @@ from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_
 from src.index.radiometric import RadiometricParamsTable, make_radiometric_row
 from src.models.areas import get_area_wkt
 from src.parse.bj3_metadata import get_bj3_info
+from src.parse.capella_metadata import get_capella_info
 from src.parse.iceye_metadata import get_iceye_info
 from src.parse.image_metadata import (
   BandStatistics,
@@ -154,10 +155,14 @@ def parse_image_info(
       data |= extractor(gdal_info, file_path)
       return make_index_row(data), None
 
-  sicd_obj = parse_gdalinfo_json_field(gdal_info, "SICD_METADATA")
-  if sicd_obj is not None:
-    sicd_data = parse_sicd_info(gdal_info, cast(SicdObject, sicd_obj))
-    data |= sicd_data
+  if file_path.name.lower().startswith("capella"):
+    sicd_obj = parse_gdalinfo_json_field(gdal_info, "SICD_METADATA")
+    data |= (
+      get_capella_info(gdal_info)
+      if sicd_obj is None
+      else parse_sicd_info(gdal_info, cast(SicdObject, sicd_obj))
+    )
+
     index_row = make_index_row(data)
 
     if image_type != ImageryType.SLC:
@@ -165,6 +170,8 @@ def parse_image_info(
 
     radiometric_row = make_radiometric_row(sicd_obj["metadata"], hash)
     return index_row, radiometric_row
+
+  raise ValueError(f"Unable to parse image metadata for {str(file_path)}")
 
 
 def generate_cog(image_path: Path, cog_path: Path):

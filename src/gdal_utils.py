@@ -195,6 +195,7 @@ def parse_gdalinfo_json_field(gdal_info: dict, field: str) -> dict:
   metadata_json = gdal_info.get("metadata", {}).get("", {}).get(field)
 
   if metadata_json is None:
+    return None
     raise ValueError(f"'{field}' missing in gdalinfo")
 
   try:
