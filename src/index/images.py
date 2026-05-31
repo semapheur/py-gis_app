@@ -19,6 +19,7 @@ from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_
 from src.index.radiometric import RadiometricParamsTable, make_radiometric_row
 from src.models.areas import get_area_wkt
 from src.parse.bj3_metadata import get_bj3_info
+from src.parse.iceye_metadata import get_iceye_info
 from src.parse.image_metadata import (
   BandStatistics,
   get_band_statistics,
@@ -127,6 +128,12 @@ def parse_image_info(
   relative_directory: Path,
 ) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
 
+  sensor_extractors = {
+    "isd": lambda gdal_info, _: get_isd_info(_, gdal_info["isd"]),
+    "bj3": lambda gdal_info, _: get_bj3_info(gdal_info["bj3"]),
+    "iceye": lambda gdal_info, _: get_iceye_info(gdal_info["iceye"]),
+  }
+
   band_statistics = get_band_statistics(gdal_info)
   sensor_type, image_type = detect_image_type(band_statistics, gdal_info)
 
@@ -141,19 +148,11 @@ def parse_image_info(
     "band_statistics": band_statistics,
   }
 
-  isd = gdal_info.get("isd")
-  if isd is not None:
-    isd_data = get_isd_info(file_path, isd)
-    data |= isd_data
-    index_row = make_index_row(data)
-    return index_row, None
-
-  bj3 = gdal_info.get("bj3")
-  if bj3 is not None:
-    bj3_data = get_bj3_info(bj3)
-    data |= bj3_data
-    index_row = make_index_row(data)
-    return index_row, None
+  for sensor_key, extractor in sensor_extractors.items():
+    sensor_data = gdal_info.get(sensor_key)
+    if sensor_data is not None:
+      data |= extractor(gdal_info, file_path)
+      return make_index_row(data), None
 
   sicd_obj = parse_gdalinfo_json_field(gdal_info, "SICD_METADATA")
   if sicd_obj is not None:

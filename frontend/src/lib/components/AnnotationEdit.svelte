@@ -355,5 +355,6 @@
     gap: var(--size-md);
     padding-bottom: var(--size-md);
     border-bottom: 1px solid oklch(var(--color-secondary-accent));
+    z-index: 2;
   }
 </style>

@@ -35,11 +35,13 @@ def bj3_polygon_wkt(bj3: dict) -> str:
   return f"POLYGON(({', '.join(points)}))"
 
 
-def get_bj3_info(bj3: dict):
-  datetime_collected = dt.fromisoformat(bj3["Product_Information"]["IMAGING_TIME_UTC"])
-  footprint = bj3_polygon_wkt(bj3)
+def get_bj3_info(bj3_data: dict):
+  datetime_collected = dt.fromisoformat(
+    bj3_data["Product_Information"]["IMAGING_TIME_UTC"]
+  )
+  footprint = bj3_polygon_wkt(bj3_data)
 
-  center_geodata = find_geometric_data(bj3, "Center")
+  center_geodata = find_geometric_data(bj3_data, "Center")
   if center_geodata is None:
     raise ValueError("bj3 metadata is missing Geometric_Data field")
 
@@ -48,7 +50,7 @@ def get_bj3_info(bj3: dict):
   return {
     "classification": "UNCLASSIFIED",
     "datetime_collected": datetime_collected,
-    "sensor_name": bj3["General_Information"]["IMAGING_SATELLITE"],
+    "sensor_name": bj3_data["General_Information"]["IMAGING_SATELLITE"],
     "footprint": footprint,
     "look_angle": acquisition_angles["VIEW_ANGLE"],
     "azimuth_angle": acquisition_angles["SATELLITE_AZIMUTH"],

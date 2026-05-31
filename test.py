@@ -12,5 +12,8 @@ if __name__ == "__main__":
   )
 
   test = gdalinfo(tif)
+  # metadata = info["metadata"][""]["TIFFTAG_IMAGEDESCRIPTION"]
+  # test = json.loads(metadata)
+
   with open("data/test.json", "w") as f:
     json.dump(test, f)

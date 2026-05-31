@@ -276,7 +276,10 @@
               <input
                 type="checkbox"
                 checked={selectedRows.has(i)}
-                onclick={(e) => e.stopPropagation()}
+                onclick={(e) => {
+                  e.stopPropagation();
+                  e.preventDefault();
+                }}
               />
             </td>
           {:else if selectable === "single"}

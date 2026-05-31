@@ -4,6 +4,7 @@ from typing import Optional, TypedDict, Union, cast
 
 from src.gdal_utils import Band, gdalinfo
 from src.parse.bj3_metadata import parse_bj3_xml
+from src.parse.iceye_metadata import parse_iceye_xml
 from src.parse.isd_metadata import parse_isd_xml
 
 
@@ -57,6 +58,13 @@ def parse_xml_metadata(tif_path: Path) -> Optional[dict]:
       return None
 
     return parse_bj3_xml(xml_path)
+
+  elif tif_path.name.lower().startswith("iceye"):
+    xml_path = tif_path.with_suffix(".xml")
+    if not xml_path.exists():
+      return None
+
+    return parse_iceye_xml(xml_path)
 
   aux_suffixes = {".aux", ".xml"}
   for f in tif_path.parent.glob("*.XML"):
