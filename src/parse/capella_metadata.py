@@ -40,7 +40,7 @@ def rpc_pixel_to_latlon(
 
 
 def capella_polygon_wkt(gdal_info: dict):
-  rpc = gdal_info["RPC"]
+  rpc = gdal_info["metadata"]["RPC"]
   width = gdal_info["size"][0]
   height = gdal_info["size"][1]
 
@@ -84,7 +84,7 @@ def get_capella_info(gdal_info: dict):
 
   datetime_collected = dt.fromisoformat(capella_data["collect"]["stop_timestamp"])
 
-  footprint = capella_polygon_wkt(capella_data)
+  footprint = capella_polygon_wkt(gdal_info)
 
   center_pixel = capella_data["collect"]["image"]["center_pixel"]
 

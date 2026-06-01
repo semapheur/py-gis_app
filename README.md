@@ -34,7 +34,7 @@ Run from the `frontend` directory:
 pnpm dev
 ```
 
-The Vite development server runs is available at `http://localhost:5173`.
+The Vite development server is available at `http://localhost:5173`.
 
 ### Specify map servers
 

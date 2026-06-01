@@ -113,6 +113,28 @@ class GdalWarpOptions(GdalOptions):
   to: Optional[dict[str, Any]] = None
 
 
+@dataclass
+class GdalTransformOptions:
+  s_srs: Optional[str] = None
+  s_coord_epoch: Optional[int] = None
+  t_srs: Optional[str] = None
+  t_coord_epoch: Optional[int] = None
+  ct: Optional[str] = None
+  to: Optional[dict[str, str]] = None
+  order: Optional[int] = None
+  tps: bool = False
+  rpc: bool = False
+  geoloc: bool = False
+  inverse: bool = False
+  gcp: Optional[str] = None
+  output_xy: bool = False
+  ignore_extra_input: bool = False
+  echo: bool = False
+  field_sep: Optional[str] = None
+  srcfile: Optional[str] = None
+  dstfile: Optional[str] = None
+
+
 class CogOptions(TypedDict, total=False):
   # https://gdal.org/en/stable/drivers/raster/cog.html
   blocksize: Optional[int]
@@ -191,12 +213,11 @@ def gdalinfo(
   return json.loads(process.stdout)
 
 
-def parse_gdalinfo_json_field(gdal_info: dict, field: str) -> dict:
+def parse_gdalinfo_json_field(gdal_info: dict, field: str) -> Union[dict, None]:
   metadata_json = gdal_info.get("metadata", {}).get("", {}).get(field)
 
   if metadata_json is None:
     return None
-    raise ValueError(f"'{field}' missing in gdalinfo")
 
   try:
     return json.loads(metadata_json)
@@ -305,7 +326,7 @@ def gdal_translate(
 def gdalwarp(
   input_path: Path,
   output_path: Path,
-  options: GdalWarpOptions,
+  options: Optional[GdalWarpOptions] = None,
   create_aux: bool = False,
 ):
   gdalwarp_path = os.environ["GDAL_PATH"] + "/gdalwarp.exe"
@@ -357,6 +378,84 @@ def gdalwarp(
     raise RuntimeError(
       f"gdalwarp failed for {input_path}\n"
       f"STDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+    )
+
+
+def gdaltransform(
+  srcfile: Union[Path, list[str]],
+  dstfile: Union[Path, list[str]],
+  options: Optional[GdalTransformOptions] = None,
+):
+
+  gdaltransform_path = os.environ["GDAL_PATH"] + "/gdaltransform.exe"
+
+  cmd = [gdaltransform_path]
+
+  if options is not None:
+    if options.s_srs is not None:
+      cmd += ["-s_srs", options.s_srs]
+
+    if options.s_coord_epoch is not None:
+      cmd += ["-s_coord_epoch", options.s_coord_epoch]
+
+    if options.t_srs is not None:
+      cmd += ["-t_srs", options.t_srs]
+
+    if options.t_coord_epoch is not None:
+      cmd += ["-t_coord_epoch", options.t_coord_epoch]
+
+    if options.ct is not None:
+      cmd += ["-ct", options.ct]
+
+    if options.to is not None:
+      for k, v in options.to.items():
+        if v is None:
+          continue
+
+        cmd += ["-to", f"{k.upper()}={str(v).upper()}"]
+
+    if options.order is not None:
+      cmd += ["-order", options.order]
+
+    if options.tps:
+      cmd += ["-tps"]
+
+    if options.rpc:
+      cmd += ["-rpc"]
+
+    if options.inverse:
+      cmd += ["-i"]
+
+    if options.gcp is not None:
+      cmd += ["-gcp", options.gcp]
+
+    if options.output_xy:
+      cmd += ["-output_xy"]
+
+    if options.ignore_extra_input:
+      cmd += ["ignore_extra_input"]
+
+    if options.echo:
+      cmd += ["-E"]
+
+    if options.field_sep is not None:
+      cmd += ["-field_sep", options.field_sep]
+
+  if isinstance(srcfile, list):
+    cmd += [",".join(srcfile)]
+  else:
+    cmd += [str(srcfile)]
+
+  if isinstance(dstfile, list):
+    cmd += [",".join(dstfile)]
+  else:
+    cmd += [str(srcfile)]
+
+  result = subprocess.run(cmd, capture_output=True, text=True)
+
+  if result.returncode != 0:
+    raise RuntimeError(
+      f"gdaltransfor failed for {cmd}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
     )
 
 
