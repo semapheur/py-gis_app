@@ -382,8 +382,8 @@ def gdalwarp(
 
 
 def gdaltransform(
-  srcfile: Union[Path, list[str]],
-  dstfile: Union[Path, list[str]],
+  srcfile: str,
+  dstfile: Optional[str] = None,
   options: Optional[GdalTransformOptions] = None,
 ):
 
@@ -433,7 +433,7 @@ def gdaltransform(
       cmd += ["-output_xy"]
 
     if options.ignore_extra_input:
-      cmd += ["ignore_extra_input"]
+      cmd += ["-ignore_extra_input"]
 
     if options.echo:
       cmd += ["-E"]
@@ -441,22 +441,55 @@ def gdaltransform(
     if options.field_sep is not None:
       cmd += ["-field_sep", options.field_sep]
 
-  if isinstance(srcfile, list):
-    cmd += [",".join(srcfile)]
-  else:
-    cmd += [str(srcfile)]
+  cmd += [srcfile]
 
-  if isinstance(dstfile, list):
-    cmd += [",".join(dstfile)]
-  else:
-    cmd += [str(srcfile)]
+  if dstfile is not None:
+    cmd += [dstfile]
 
-  result = subprocess.run(cmd, capture_output=True, text=True)
+  process = subprocess.run(cmd, capture_output=True, text=True)
 
-  if result.returncode != 0:
+  if process.returncode != 0:
     raise RuntimeError(
-      f"gdaltransfor failed for {cmd}\nSTDOUT: {result.stdout}\nSTDERR: {result.stderr}"
+      f"gdaltransform failed for {cmd}\nSTDOUT: {process.stdout}\nSTDERR: {process.stderr}"
     )
+
+  result = [
+    tuple(map(float, line.split())) for line in process.stdout.strip().split("\n")
+  ]
+  return result
+
+
+def corner_coordinates_from_geotransform(gdal_info: dict, wkt: bool = True):
+  stac = gdal_info.get("stac")
+  if stac is None:
+    return None
+
+  height, width = stac["proj:shape"]
+  px_w, row_rot, x_origin, col_rot, px_h, y_origin = stac["proj:transform"]
+  source_srs = stac["proj:epsg"]
+
+  corners_utm = (
+    (x_origin, y_origin),  # top left
+    (x_origin + width * px_w, y_origin + width * col_rot),  # top right
+    (x_origin + height * row_rot, y_origin + height * px_h),  # bottom left
+    (
+      x_origin + width * px_w + height * row_rot,
+      y_origin + width * col_rot + height * px_h,
+    ),
+  )
+
+  srcfile = "\n".join(f"{x} {y}" for x, y in corners_utm)
+
+  options = GdalTransformOptions(s_srs=f"EPSG:{source_srs}", t_srs="EPSG:4326")
+  result = gdaltransform(srcfile, options=options)
+
+  if not wkt:
+    return result
+
+  points = [f"{lon} {lat}" for lon, lat, _, _ in result]
+  points.append(points[0])
+
+  return f"POLYGON(({', '.join(points)}))"
 
 
 def geotiff_to_thumbnail(
