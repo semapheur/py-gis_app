@@ -475,7 +475,7 @@ def corner_coordinates_from_geotransform(gdal_info: dict, wkt: bool = True):
     (
       x_origin + width * px_w + height * row_rot,
       y_origin + width * col_rot + height * px_h,
-    ),
+    ),  # bottom_right
   )
 
   srcfile = "\n".join(f"{x} {y}" for x, y in corners_utm)

@@ -1,5 +1,4 @@
 import xml.etree.ElementTree as ET
-from curses import meta
 from datetime import datetime as dt
 from pathlib import Path
 
@@ -34,24 +33,23 @@ def iceye_polygon_wkt(iceye_data: dict):
 
 
 def get_iceye_info(iceye_data: dict):
-  metadata = iceye_data["Metadata"]
 
-  datetime_collected = dt.fromisoformat(metadata["acquisition_end_utc"])
+  datetime_collected = dt.fromisoformat(iceye_data["acquisition_end_utc"])
   footprint = iceye_polygon_wkt(iceye_data)
 
-  heading = metadata["heading"]
-  look_side = metadata["look_side"]
+  heading = iceye_data["heading"]
+  look_side = iceye_data["look_side"]
   offset = -90 if look_side == "left" else 90
   azimuth_angle = (heading + offset) % 360
 
   return {
     "classification": "UNCLASSIFIED",
     "datetime_collected": datetime_collected,
-    "sensor_name": metadata["satellite_name"],
+    "sensor_name": iceye_data["satellite_name"],
     "footprint": footprint,
-    "look_angle": metadata["satellite_look_angle"],
+    "look_angle": iceye_data["satellite_look_angle"],
     "azimuth_angle": azimuth_angle,
-    "ground_sample_distance_row": metadata["azimuth_resolution"],
-    "ground_sample_distance_col": metadata["range_resolution_center"],
+    "ground_sample_distance_row": iceye_data["azimuth_resolution"],
+    "ground_sample_distance_col": iceye_data["range_resolution_center"],
     "interpretation_rating": None,
   }
