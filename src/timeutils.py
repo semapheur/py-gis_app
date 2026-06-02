@@ -12,6 +12,13 @@ class TimeUnit(Enum):
 EPOCH = datetime(1970, 1, 1, tzinfo=timezone.utc)
 
 
+def parse_utc(ts: str) -> datetime:
+  parsed = datetime.fromisoformat(ts)
+  if parsed.tzinfo is None:
+    parsed = parsed.replace(tzinfo=timezone.utc)
+  return parsed
+
+
 def datetime_to_unix(dt: datetime, unit: TimeUnit = TimeUnit.MILLISECONDS) -> int:
   if dt.tzinfo is None:
     raise ValueError("datetime must be timezone-aware")

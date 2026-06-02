@@ -1,4 +1,5 @@
 import json
+import logging
 import mimetypes
 import os
 import uuid
@@ -50,6 +51,8 @@ P = TypeVar("P")
 R = TypeVar("R")
 
 app_settings = get_settings()
+
+logger = logging.getLogger(__name__)
 
 
 class Handler(SimpleHTTPRequestHandler):
@@ -286,7 +289,7 @@ class Handler(SimpleHTTPRequestHandler):
       result: R = fn(payload_in)
       self._api_response(result)
     except Exception as e:
-      print(e)
+      logger.exception("Error in _handle_post_stream")
       self._error_response(500, f"Server error: {str(e)}")
 
   def _handle_post_stream(self, fn: Callable[[P], None]):
@@ -295,6 +298,7 @@ class Handler(SimpleHTTPRequestHandler):
       body = self.rfile.read(content_length)
       payload_in = decode_msgpack(body)
     except Exception as e:
+      logger.exception("Error in _handle_post_stream")
       self._error_response(400, f"Bad request: {str(e)}")
       return
 
@@ -313,7 +317,7 @@ class Handler(SimpleHTTPRequestHandler):
       fn(payload_in, send_event)
       send_event("done", {"message": "OK"})
     except Exception as e:
-      print(e)
+      logger.exception("Error in _handle_post_stream")
       send_event("error", {"message": str(e)})
 
   def _post_query_images(self):

@@ -1,5 +1,6 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime as dt
+from datetime import timezone
 from pathlib import Path
 
 from src.xml_utils import xml_to_dict
@@ -16,25 +17,21 @@ def iceye_polygon_wkt(iceye_data: dict):
   corner_fields = (
     "coord_first_near",
     "coord_first_far",
-    "coord_last_near",
     "coord_last_far",
+    "coord_last_near",
   )
 
-  metadata = iceye_data["Metadata"]
-  points = []
-  for key in corner_fields:
-    parts = metadata[key].split()
-    lon = parts[3]
-    lat = parts[2]
-    points.append(f"{lon} {lat}")
-
+  points = [f"{iceye_data[k][3]} {iceye_data[k][2]}" for k in corner_fields]
   points.append(points[0])
+
   return f"POLYGON(({', '.join(points)}))"
 
 
 def get_iceye_info(iceye_data: dict):
 
-  datetime_collected = dt.fromisoformat(iceye_data["acquisition_end_utc"])
+  datetime_collected = dt.fromisoformat(iceye_data["acquisition_end_utc"]).replace(
+    tzinfo=timezone.utc
+  )
   footprint = iceye_polygon_wkt(iceye_data)
 
   heading = iceye_data["heading"]
@@ -49,7 +46,7 @@ def get_iceye_info(iceye_data: dict):
     "footprint": footprint,
     "look_angle": iceye_data["satellite_look_angle"],
     "azimuth_angle": azimuth_angle,
-    "ground_sample_distance_row": iceye_data["azimuth_resolution"],
-    "ground_sample_distance_col": iceye_data["range_resolution_center"],
+    "ground_sample_distance_row": iceye_data["azimuth_spacing"],
+    "ground_sample_distance_col": iceye_data["range_spacing"],
     "interpretation_rating": None,
   }

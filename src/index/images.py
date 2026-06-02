@@ -412,7 +412,8 @@ def index_images(
     update_index_time(db, catalog_id, current_timestamp)
 
     if radiometric_index:
-      db.insert_models(radiometric_index)
+      on_conflict = OnConflict(index="id", action="NOTHING")
+      db.insert_models(radiometric_index, on_conflict)
 
 
 class ImageQuery(TypedDict, total=False):
