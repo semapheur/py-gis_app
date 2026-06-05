@@ -19,7 +19,7 @@ class AnnotationSchema(Table):
   _table_name = "schema"
   id = uuid_field(True, False)
   name = Field(str, unique=True, nullable=False)
-  descriptions = Field(str)
+  description = Field(str)
   createdByUserId = Field(str)
   modifiedByUserId = Field(str)
   createdAtTimestamp = datetime_field(False)

@@ -11,9 +11,12 @@ from typing import Any, Callable, TypedDict, TypeVar
 from src.bootstrap import get_settings
 from src.hashing import decode_sha256_from_b64
 from src.index.catalog import (
+  InsertCatalog,
+  UpdateCatalog,
   get_catalog_edit_data,
   get_catalog_index_data,
-  update_catalogs,
+  insert_catalog,
+  update_catalog,
   validate_catalog_dir,
 )
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
@@ -180,10 +183,16 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_update_equipment()
       return
 
-    prefix = "/api/update-attributes/"
+    prefix = "/api/insert-attribute/"
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
-      self._post_update_attributes(table)
+      self._post_insert_attribute(table)
+      return
+
+    prefix = "/api/update-attribute/"
+    if self.path.startswith(prefix):
+      table = self.path[len(prefix) :]
+      self._post_update_attribute(table)
       return
 
     if self.path == "/api/update-annotations":
@@ -214,8 +223,12 @@ class Handler(SimpleHTTPRequestHandler):
       self._post_delete_areas()
       return
 
-    if self.path == "/api/update-catalogs":
-      self._post_update_catalogs()
+    if self.path == "/api/insert-catalog":
+      self._post_insert_catalog()
+      return
+
+    if self.path == "/api/update-catalog":
+      self._post_update_catalog()
       return
 
     if self.path == "/api/validate-catalog-dir":
@@ -362,7 +375,7 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def _post_update_attributes(self, table: str):
+  def _post_update_attribute(self, table: str):
     def logic(payload: TableUpdate):
       return update_attributes(table, payload)
 
@@ -419,9 +432,17 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
-  def _post_update_catalogs(self):
-    def logic(payload: TableUpdate):
-      return update_catalogs(payload)
+  def _post_insert_catalog(self):
+    def logic(payload: InsertCatalog):
+      result = insert_catalog(payload)
+      return {"inserted_row": result}
+
+    self._handle_post(logic)
+
+  def _post_update_catalog(self):
+    def logic(payload: UpdateCatalog):
+      result = update_catalog(payload)
+      return {"updated_row": result}
 
     self._handle_post(logic)
 

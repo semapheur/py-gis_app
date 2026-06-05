@@ -20,7 +20,6 @@
   }
 
   const columns = [
-    { id: "id", header: "ID", flexgrow: 1 },
     { id: "name", header: "Name", editor: "text", flexgrow: 1, unique: true },
     {
       id: "path",
@@ -36,5 +35,11 @@
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.catalogs} saveApi="/api/update-catalogs" />
+  <DataGrid
+    {columns}
+    data={data.catalogs}
+    insertApi="/api/insert-catalog"
+    updateApi="/api/update-catalog"
+    deleteApi=""
+  />
 {/if}

@@ -13,10 +13,15 @@
   import Button from "$lib/components/Button.svelte";
   import TextArea from "$lib/components/TextArea.svelte";
   import { toast } from "$lib/stores/toast.svelte";
-  import { fetchMsgpack } from "$lib/utils/fetch";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
 
   type FormMode = "add" | "edit";
+
+  interface CUD {
+    create: Record<string, Record<string, string | number>>[];
+    update: Record<string, Record<string, string | number>>[];
+    delete: Set<string>;
+  }
 
   interface FormState {
     open: boolean;
@@ -32,13 +37,13 @@
   interface Props {
     columns: Column[];
     data: Record<string, string>[];
-    insertApi: string;
-    updateApi: string;
-    deleteApi: string;
+    addFill?: Record<string, () => any>;
+    editFill?: Record<string, () => any>;
     inputIds?: Set<string>;
+    saveApi?: string;
   }
 
-  let { columns, data, insertApi, updateApi, deleteApi }: Props = $props();
+  let { columns, data, addFill, editFill, saveApi }: Props = $props();
   let gridWrapper: HTMLElement | null = null;
   let fileInput: HTMLInputElement | null = null;
   let isDragging = $state<boolean>(false);
@@ -51,8 +56,13 @@
   });
 
   let selectedRows = $state([]);
-  let inputRow = $state<Record<string, string | number | null | undefined>>({});
+  let editRow = $state<Record<string, string | number | null | undefined>>({});
   let validationErrors = $state<Record<string, string>>({});
+  let cud = $state<CUD>({
+    create: {} as Record<string, Record<string, string | number>>[],
+    update: {} as Record<string, Record<string, string | number>>[],
+    delete: new Set<string>(),
+  });
 
   let history = $derived(api?.getReactiveState().history);
   let numSelectedRows = $derived(selectedRows.length);
@@ -81,70 +91,66 @@
     form.open = true;
     form.mode = "edit";
     form.rowId = id;
-    inputRow = row;
+    editRow = row;
   }
 
   function openAdd() {
     form.open = true;
     form.mode = "add";
     form.rowId = null;
-    inputRow = {};
+    editRow = {};
   }
 
   function resetAddForm() {
-    inputRow = {};
+    editRow = {};
   }
 
   function closeForm() {
     form.open = false;
     form.rowId = null;
-    inputRow = {};
+    editRow = {};
     validationErrors = {};
   }
 
-  async function addRow() {
-    const result = await fetchMsgpack(insertApi, {
-      method: "POST",
-      body: inputRow,
-    });
-
-    if (!result.ok) {
-      toast.error(
-        `Failed to insert row: ${result.error.message} (${result.error.status})`,
-      );
-      return;
+  function addRow() {
+    if (addFill !== undefined) {
+      Object.entries(addFill).forEach(([c, fn]) => {
+        editRow[c] = fn();
+      });
     }
 
+    const addRow = $state.snapshot(editRow);
     api.exec("add-row", {
-      row: result.data.inserted_row,
+      row: structuredClone(addRow),
     });
+    const tempId = api.getState().data.at(-1)?.id;
+
+    if (tempId) {
+      cud.create[tempId] = { id: tempId, ...addRow };
+    }
   }
 
-  async function updateRow() {
+  function saveEdit() {
     if (!form.rowId) return;
 
-    const result = await fetchMsgpack(updateApi, {
-      method: "POST",
-      body: inputRow,
-    });
-
-    if (!result.ok) {
-      toast.error(
-        `Failed to update row: ${result.error.message} (${result.error.status})`,
-      );
-      return;
+    if (editFill !== undefined) {
+      Object.entries(editFill).forEach(([c, fn]) => {
+        editRow[c] = fn();
+      });
     }
 
-    api.exec("update-row", {
-      id: result.data.updated_row.id,
-      row: result.data.updated_row,
-    });
-  }
+    const saveRow = $state.snapshot(editRow);
 
-  function deleteRow() {
-    const ids = api.getState().selectedRows;
-    if (!ids) return;
-    return;
+    api.exec("update-row", {
+      id: form.rowId,
+      row: saveRow,
+    });
+
+    if (cud.create.hasOwnProperty(form.rowId)) {
+      cud.create[form.rowId] = saveRow;
+    } else if (cud.update.hasOwnProperty(form.rowId)) {
+      cud.update[form.rowId] = saveRow;
+    }
   }
 
   async function validateColumn(
@@ -182,7 +188,7 @@
 
     const errors = await Promise.all(
       editColumns.map((column) =>
-        validateColumn(column, inputRow[column.id], form.rowId).then(
+        validateColumn(column, editRow[column.id], form.rowId).then(
           (error) => [column.id, error] as const,
         ),
       ),
@@ -202,8 +208,8 @@
     if (form.mode === "add") {
       addRow();
       resetAddForm();
-    } else if (form.mode === "edit") {
-      updateRow();
+    } else {
+      saveEdit();
       closeForm();
     }
   }
@@ -214,6 +220,76 @@
       api.exec("select-row", { id: row.id, toggle: true, mode: true });
     });
     updateSelected();
+  }
+
+  function deleteRow() {
+    const ids = api.getState().selectedRows;
+    if (!ids) return;
+
+    ids.forEach((id) => {
+      api.exec("delete-row", { id });
+
+      if (cud.create.hasOwnProperty(id)) {
+        delete cud.create[id];
+      } else if (cud.update.hasOwnProperty(id)) {
+        delete cud.update[id];
+        cud.delete.add(id);
+      }
+    });
+
+    updateSelected();
+  }
+
+  async function saveChanges() {
+    if (!saveApi) return;
+
+    if (
+      Object.keys(cud.create).length === 0 &&
+      Object.keys(cud.update).length === 0 &&
+      cud.delete.size === 0
+    ) {
+      return;
+    }
+
+    const payload = {
+      create: Object.values(cud.create),
+      update: Object.values(cud.update),
+      delete: Array.from(cud.delete),
+    };
+
+    const response = await fetch(saveApi, {
+      method: "POST",
+      headers: {
+        "Content-Type": "application/msgpack",
+      },
+      body: encode(payload),
+    });
+
+    if (!response.ok) {
+      const buffer = await response.arrayBuffer();
+      const { detail } = decode(buffer);
+      toast.error(detail ?? `Failed to save changes (${response.status})`);
+      return;
+    }
+
+    const buffer = await response.arrayBuffer();
+    const { created } = decode(buffer) as {
+      created: { client_id: string; server_id: string }[];
+    };
+
+    for (const { client_id, server_id } of created) {
+      const row = api.getRow(client_id);
+      if (row) {
+        api.exec("update-row", {
+          id: client_id,
+          row: { ...row, id: server_id },
+        });
+      }
+    }
+
+    cud.create = {} as Record<string, Record<string, string | number>>[];
+    cud.update = {} as Record<string, Record<string, string | number>>[];
+    cud.delete = new Set<string>();
   }
 
   function exportToJson() {
@@ -276,6 +352,7 @@
         );
 
         api.exec("add-row", { row: filteredRow });
+        cud.create[filteredRow.id] = filteredRow;
       });
 
       console.log(`Successfully imported ${importedRows.length} rows`);
@@ -354,6 +431,9 @@
     <Button onclick={openAdd}>Add</Button>
     <Button onclick={selectAllRows}>Select all</Button>
     <Button onclick={deleteRow} disabled={!selectedRows.length}>Delete</Button>
+    {#if saveApi}
+      <Button onclick={saveChanges}>Save</Button>
+    {/if}
     <DropdownMenu label="Export">
       <Button onclick={exportToJson}>JSON</Button>
       <Button onclick={exportToCsv}>CSV</Button>
@@ -411,12 +491,9 @@
   <form class="grid-form" onsubmit={saveForm}>
     {#each editColumns as column}
       {#if column.editor === "text"}
-        <Input bind:value={inputRow[column.id]} placeholder={column.header} />
+        <Input bind:value={editRow[column.id]} placeholder={column.header} />
       {:else if column.editor === "textarea"}
-        <TextArea
-          bind:value={inputRow[column.id]}
-          placeholder={column.header}
-        />
+        <TextArea bind:value={editRow[column.id]} placeholder={column.header} />
       {/if}
       {#if validationErrors[column.id]}
         <span class="error">

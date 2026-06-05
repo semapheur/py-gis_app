@@ -1,13 +1,13 @@
+import uuid
 from datetime import datetime
 from pathlib import Path
-from typing import Optional, Union
-from uuid import UUID
+from typing import Optional, TypedDict, Union
 
 from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
 from src.path_utils import verify_dir
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
   Table,
@@ -49,37 +49,6 @@ def validate_catalog_dir(path: Path, check_db_presence: bool = False):
 
   if result:
     raise ValueError(f"Catalog path already exists: {str(path)}")
-
-
-def insert_catalog(
-  db: SqliteDatabase,
-  path: Path,
-  name: str,
-):
-  if db.conn is None:
-    raise RuntimeError("Database not connected")
-
-  cursor = db.conn.cursor()
-  full_path = str(path.resolve())
-
-  cursor.execute("SELECT id FROM catalog WHERE name = ?", (name,))
-  row = cursor.fetchone()
-  if row:
-    raise ValueError(f"Catalog name already exists: {name}")
-
-  cursor.execute("SELECT id FROM catalog WHERE path = ?", (full_path,))
-  row = cursor.fetchone()
-  if row:
-    raise ValueError(f"Catalog path already exists: {path}")
-
-  cursor.execute(
-    """
-    INSERT INTO catalog (path, name)
-    VALUES (?, ?)
-  """,
-    (full_path, name),
-  )
-  db.conn.commit()
 
 
 def update_catalog_entry(
@@ -146,11 +115,65 @@ def update_catalogs(payload: TableUpdate):
   return update_table(app_settings.INDEX_DB, CatalogTable, payload, update_sql)
 
 
-def add_calatog(path: Path, name: str):
+def parse_id_name_path_record(row: tuple[bytes, str, str]):
+  return {
+    "id": str(uuid.UUID(bytes=row[0])),
+    "path": row[1],
+    "name": row[2],
+  }
+
+
+class InsertCatalog(TypedDict):
+  path: str
+  name: str
+
+
+def insert_catalog(payload: InsertCatalog):
+  path = Path(payload["path"])
   verify_dir(path)
 
+  model = CatalogTable.from_dict(
+    {"id": uuid.uuid4(), "path": path, "name": payload["name"], "last_indexed": None}
+  )
+
+  returning_sql = "id, path, name"
+
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    insert_catalog(db, path, name)
+    result = db.insert_models([model], returning=returning_sql)
+
+  return parse_id_name_path_record(result[0])
+
+
+class UpdateCatalog(TypedDict):
+  id: str
+  path: str
+  name: str
+
+
+def update_catalog(payload: UpdateCatalog):
+  path = Path(payload["path"])
+  verify_dir(path)
+
+  model = CatalogTable.from_dict(
+    {
+      "id": uuid.UUID(payload["id"]),
+      "path": path,
+      "name": payload["name"],
+    }
+  )
+
+  update_sql = """UPDATE SET
+    path = excluded.path,
+    name = excluded.name
+  """
+  on_conflict = OnConflict(index="id", action=update_sql)
+
+  returning_sql = "id, path, name"
+
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    result = db.insert_models([model], on_conflict, returning_sql)
+
+  return parse_id_name_path_record(result[0])
 
 
 def get_catalog_edit_data():

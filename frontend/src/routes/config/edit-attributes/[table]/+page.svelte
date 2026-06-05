@@ -6,7 +6,7 @@
   import { formatDatetime } from "$lib/utils/date";
 
   const columns = [
-    { id: "id", header: "ID" },
+    { id: "schema", header: "Schema", editor: "text" },
     { id: "text", header: "Text", editor: "text", unique: true },
     { id: "description", header: "Description", editor: "textarea" },
     { id: "createdByUserId", header: "Created by" },
@@ -26,21 +26,11 @@
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
 
-  let saveApi = $derived(table ? `/api/update-attributes/${table}` : undefined);
-
-  const addFill = {
-    createdByUserId: () => "",
-    createdAtTimestamp: () => Date.now(),
-    modifiedByUserId: () => null,
-    modifiedAtTimestamp: () => null,
-  };
-
-  const editFill = {
-    modifiedByUserId: () => "",
-    modifiedAtTimestamp: () => Date.now(),
-  };
+  let insertApi = $derived(`/api/insert-attribute/${table}`);
+  let updateApi = $derived(`/api/update-attribute/${table}`);
+  let deleteApi = $derived(`/api/delete-attribute/${table}`);
 </script>
 
 {#if browser}
-  <DataGrid {columns} data={data.data} {addFill} {editFill} {saveApi} />
+  <DataGrid {columns} data={data.data} {insertApi} {updateApi} {deleteApi} />
 {/if}
