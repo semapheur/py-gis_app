@@ -15,12 +15,13 @@ FTS_COLUMNS = (
 )
 
 
-class AnnotationSchema(Table):
+class AnnotationSchemaTable(Table):
   _table_name = "schema"
   id = uuid_field(True, False)
   name = Field(str, unique=True, nullable=False)
   description = Field(str)
-  createdByUserId = Field(str)
-  modifiedByUserId = Field(str)
-  createdAtTimestamp = datetime_field(False)
-  modifiedAtTimestamp = datetime_field(True)
+
+
+def create_schema_table():
+  with SqliteDatabase(app_settings.INDEX_DB) as db:
+    db.create_table(AnnotationSchemaTable)

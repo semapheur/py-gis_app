@@ -1,7 +1,4 @@
 import uuid
-from datetime import datetime as dt
-from datetime import timezone
-from getpass import getuser
 from typing import TypedDict
 
 from src.bootstrap import get_settings
@@ -11,10 +8,8 @@ from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import (
   Field,
   Table,
-  datetime_field,
   uuid_field,
 )
-from src.timeutils import datetime_to_unix
 
 app_settings = get_settings()
 
@@ -47,10 +42,6 @@ def make_attribute_model(table_name: str) -> type[Table]:
     schema = uuid_field(False, False)
     text = Field(str, nullable=False, unique=True)
     description = Field(str)
-    created_by_user = Field(str, nullable=False)
-    modified_by_user = Field(str)
-    created_at_timestamp = datetime_field(False)
-    modified_at_timestamp = datetime_field(True)
 
   AttributeTable.__name__ = f"{table_name.title().replace('_', '')}Table"
   return AttributeTable
@@ -107,10 +98,6 @@ def make_attribute_query(table: str):
       "s.name AS schema_name",
       "a.text AS text",
       "a.description AS description",
-      "a.created_by_user AS created_by_user",
-      "a.created_at_timestamp AS created_at_timestamp",
-      "a.modified_by_user AS modified_by_user",
-      "a.modified_at_timestamp AS modified_at_timestamp",
     )
     .from_(f"{table} a")
     .join(
@@ -154,18 +141,12 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   table_model = make_attribute_model(table_name)
 
   new_id = uuid.uuid4()
-  username = getuser()
-  created_timestamp = datetime_to_unix(dt.now(timezone.utc))
 
   record = {
     "id": new_id,
     "schema": uuid.UUID(payload["schema"]["value"]),
     "text": payload["text"],
     "description": payload["description"],
-    "created_by_user_id": username,
-    "created_at_timestamp": created_timestamp,
-    "modified_by_user_id": None,
-    "modified_at_timestamp": None,
   }
 
   table_row = table_model.from_dict(record)
@@ -173,10 +154,12 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row])
 
-  record["id"] = str(new_id)
-  record["schema"] = payload["schema"]
-
-  return record
+  return {
+    "id": str(new_id),
+    "schema": payload["schema"],
+    "text": payload["text"],
+    "description": payload["description"],
+  }
 
 
 class UpdateAttribute(TypedDict):
@@ -190,9 +173,6 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
   validate_attribute_table(table_name)
   table_model = make_attribute_model(table_name)
 
-  username = getuser()
-  modified_timestamp = datetime_to_unix(dt.now(timezone.utc))
-
   update_id = uuid.UUID(payload["id"])
 
   update_fields = {
@@ -200,8 +180,6 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
     "schema": uuid.UUID(payload["schema"]["value"]),
     "text": payload["text"],
     "description": payload["description"],
-    "modified_by_user": username,
-    "modified_at_timestamp": modified_timestamp,
   }
 
   table_row = table_model.from_dict(update_fields)
@@ -210,30 +188,17 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
     schema = excluded.schema,
     text = excluded.text,
     description = excluded.description,
-    modified_by_user = excluded.modified_by_user,
-    modified_at_timestamp = excluded.modified_at_timestamp
   """
   on_conflict = OnConflict(index="id", action=update_sql)
 
-  query = (
-    Query()
-    .select("created_by_user", "created_at_timestamp")
-    .from_(table_name)
-    .where("id = ?", update_id.bytes)
-  )
-
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], on_conflict)
-    rest_record = db.select_records(table_model, query)[0]
 
   return {
     "id": str(update_id),
     "schema": payload["schema"],
     "text": payload["text"],
     "description": payload["description"],
-    "modified_by_user": username,
-    "modified_at_timestamp": modified_timestamp,
-    **rest_record,
   }
 
 
@@ -244,8 +209,6 @@ def update_attributes(table: str, payload: TableUpdate):
   update_sql = """UPDATE SET
     text = excluded.text,
     description = excluded.description,
-    modifiedByUserId = excluded.modifiedByUserId,
-    modifiedAtTimestamp = excluded.modifiedAtTimestamp
   """
 
   return update_table(app_settings.ATTRIBUTE_DB, model, payload, update_sql)
