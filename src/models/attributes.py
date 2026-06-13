@@ -40,7 +40,7 @@ def make_attribute_model(table_name: str) -> type[Table]:
 
     id = uuid_field(True, False)
     schema = uuid_field(False, False)
-    text = Field(str, nullable=False, unique=True)
+    name = Field(str, nullable=False, unique=True)
     description = Field(str)
 
   AttributeTable.__name__ = f"{table_name.title().replace('_', '')}Table"
@@ -79,7 +79,7 @@ def get_attribute_options(table: str):
   validate_attribute_table(table)
   model = make_attribute_model(table)
 
-  query = Query().select("text AS label", "id AS value").from_(table)
+  query = Query().select("name AS label", "id AS value").from_(table)
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     result = db.select_records(model, query, True)
 
@@ -96,7 +96,7 @@ def make_attribute_query(table: str):
       "a.id AS id",
       "a.schema AS schema",
       "s.name AS schema_name",
-      "a.text AS text",
+      "a.name AS name",
       "a.description AS description",
     )
     .from_(f"{table} a")
@@ -132,7 +132,7 @@ class SchemaValue(TypedDict):
 
 class InsertAttribute(TypedDict):
   schema: SchemaValue
-  text: str
+  name: str
   description: str
 
 
@@ -145,7 +145,7 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   record = {
     "id": new_id,
     "schema": uuid.UUID(payload["schema"]["value"]),
-    "text": payload["text"],
+    "name": payload["name"],
     "description": payload["description"],
   }
 
@@ -156,16 +156,13 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
 
   return {
     "id": str(new_id),
-    "schema": payload["schema"],
-    "text": payload["text"],
-    "description": payload["description"],
   }
 
 
 class UpdateAttribute(TypedDict):
   id: str
   schema: SchemaValue
-  text: str
+  name: str
   description: str
 
 
@@ -178,7 +175,7 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
   update_fields = {
     "id": update_id,
     "schema": uuid.UUID(payload["schema"]["value"]),
-    "text": payload["text"],
+    "name": payload["name"],
     "description": payload["description"],
   }
 
@@ -186,7 +183,7 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
 
   update_sql = """UPDATE SET
     schema = excluded.schema,
-    text = excluded.text,
+    name = excluded.name,
     description = excluded.description,
   """
   on_conflict = OnConflict(index="id", action=update_sql)
@@ -194,20 +191,13 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], on_conflict)
 
-  return {
-    "id": str(update_id),
-    "schema": payload["schema"],
-    "text": payload["text"],
-    "description": payload["description"],
-  }
-
 
 def update_attributes(table: str, payload: TableUpdate):
   validate_attribute_table(table)
 
   model = make_attribute_model(table)
   update_sql = """UPDATE SET
-    text = excluded.text,
+    name = excluded.name,
     description = excluded.description,
   """
 

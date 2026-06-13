@@ -21,6 +21,12 @@ from src.index.catalog import (
 )
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
+from src.models.annotation_schema import (
+  InsertSchema,
+  UpdateSchema,
+  insert_schema,
+  update_schema,
+)
 from src.models.areas import (
   AreaDelete,
   AreaId,
@@ -32,9 +38,12 @@ from src.models.areas import (
 )
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
+  InsertAttribute,
+  UpdateAttribute,
   get_attribute_data,
   get_attribute_tables,
-  update_attributes,
+  insert_attribute,
+  update_attribute,
 )
 from src.models.equipment_annotation import (
   AnnotationUpdate,
@@ -186,12 +195,20 @@ class Handler(SimpleHTTPRequestHandler):
     prefix = "/api/insert-attribute/"
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
+      if table == "schema":
+        self._post_insert_schema()
+        return
+
       self._post_insert_attribute(table)
       return
 
     prefix = "/api/update-attribute/"
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
+      if table == "schema":
+        self._post_update_schema()
+        return
+
       self._post_update_attribute(table)
       return
 
@@ -375,9 +392,33 @@ class Handler(SimpleHTTPRequestHandler):
 
     self._handle_post(logic)
 
+  def _post_insert_schema(self):
+    def logic(payload: InsertSchema):
+      inserted_row = insert_schema(payload)
+      return {"inserted_row": inserted_row}
+
+    self._handle_post(logic)
+
+  def _post_update_schema(self):
+    def logic(payload: UpdateSchema):
+      return update_schema(payload)
+
+    self._handle_post(logic)
+
+  def _post_insert_attribute(self, table: str):
+    def logic(payload: InsertAttribute):
+      inserted_row = insert_attribute(table, payload)
+      return {"inserted_row": inserted_row}
+
+    if not table or table not in ATTRIBUTE_TABLES:
+      self.send_error(404, "Invalid POST endpoint")
+      return
+
+    self._handle_post(logic)
+
   def _post_update_attribute(self, table: str):
-    def logic(payload: TableUpdate):
-      return update_attributes(table, payload)
+    def logic(payload: UpdateAttribute):
+      return update_attribute(table, payload)
 
     if not table or table not in ATTRIBUTE_TABLES:
       self.send_error(404, "Invalid POST endpoint")

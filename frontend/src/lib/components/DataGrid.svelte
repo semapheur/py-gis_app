@@ -115,8 +115,13 @@
       return;
     }
 
+    const baseRow = $state.snapshot(inputRow);
+    const newRow = result.data?.inserted_row
+      ? { ...baseRow, ...result.data.inserted_row }
+      : baseRow;
+
     api.exec("add-row", {
-      row: result.data.inserted_row,
+      row: newRow,
     });
   }
 
@@ -135,9 +140,14 @@
       return;
     }
 
+    const baseRow = $state.snapshot(inputRow);
+    const newRow = result.data?.updated_row
+      ? { ...baseRow, ...result.data.updated_row }
+      : baseRow;
+
     api.exec("update-row", {
-      id: result.data.updated_row.id,
-      row: result.data.updated_row,
+      id: form.rowId,
+      row: newRow,
     });
   }
 
@@ -200,10 +210,10 @@
     }
 
     if (form.mode === "add") {
-      addRow();
+      await addRow();
       resetAddForm();
     } else if (form.mode === "edit") {
-      updateRow();
+      await updateRow();
       closeForm();
     }
   }
