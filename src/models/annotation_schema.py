@@ -3,7 +3,7 @@ from typing import TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict
+from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import Field, Table, uuid_field
 
 app_settings = get_settings()
@@ -28,6 +28,12 @@ class AnnotationSchemaTable(Table):
 def create_schema_table():
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.create_table(AnnotationSchemaTable)
+
+
+def get_schema_data():
+  query = Query().select("*").from_(AnnotationSchemaTable._table_name)
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    return db.select_records(AnnotationSchemaTable, query)
 
 
 class InsertSchema(TypedDict):

@@ -24,6 +24,7 @@ from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation_schema import (
   InsertSchema,
   UpdateSchema,
+  get_schema_data,
   insert_schema,
   update_schema,
 )
@@ -94,6 +95,10 @@ class Handler(SimpleHTTPRequestHandler):
     prefix = "/api/attribute-data/"
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
+      if table == "schema":
+        self._get_schema_data()
+        return
+
       self._get_attribute_data(table)
       return
 
@@ -531,6 +536,15 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       tables = get_attribute_tables()
       result = {"tables": tables}
+      self._api_response(result)
+
+    except Exception as e:
+      self.send_error(500, f"Server error: {str(e)}")
+
+  def _get_schema_data(self):
+    try:
+      schema_data = get_schema_data()
+      result = {"data": schema_data}
       self._api_response(result)
 
     except Exception as e:
