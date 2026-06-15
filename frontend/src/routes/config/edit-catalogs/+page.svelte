@@ -21,14 +21,22 @@
   }
 
   const columns = [
-    { id: "name", header: "Name", editor: "text", flexgrow: 1, unique: true },
+    {
+      id: "name",
+      header: "Name",
+      nullable: false,
+      unique: true,
+      editor: "text",
+      flexgrow: 1,
+    },
     {
       id: "path",
       header: "Folder path",
+      nullable: false,
+      unique: true,
       editor: "text",
       flexgrow: 1,
       validate: validateCatalogPath,
-      unique: true,
     },
   ];
 

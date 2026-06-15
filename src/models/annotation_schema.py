@@ -1,5 +1,5 @@
 import uuid
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
@@ -62,19 +62,19 @@ def get_schema_data_options():
     return db.select_records(AnnotationSchemaTable, query)
 
 
-class InsertSchema(TypedDict):
+class InsertSchema(TypedDict, total=False):
   name: str
-  description: str
+  description: Optional[str]
 
 
 def insert_schema(payload: InsertSchema):
   new_id = uuid.uuid4()
-  print(payload)
 
+  schema_description = payload.get("description")
   record = {
     "id": new_id,
     "name": payload["name"],
-    "description": payload["description"],
+    "description": schema_description,
   }
 
   table_row = AnnotationSchemaTable.from_dict(record)
@@ -85,7 +85,7 @@ def insert_schema(payload: InsertSchema):
   return {
     "id": str(new_id),
     "name": payload["name"],
-    "description": payload["description"],
+    "description": schema_description,
   }
 
 

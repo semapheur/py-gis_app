@@ -134,7 +134,7 @@
 
     viewerController.updateFeatureData(
       selectedFeature,
-      structuredClone($state.snapshot(editData)),
+      $state.snapshot(editData),
     );
   }
 

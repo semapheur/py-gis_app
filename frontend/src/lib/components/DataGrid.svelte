@@ -26,6 +26,7 @@
   }
 
   interface Column extends IColumnConfig {
+    nullable: boolean;
     validate?: (input: T) => Promise<boolean>;
     unique?: boolean;
     selectOptions?: SelectOption[];
@@ -107,7 +108,7 @@
   async function addRow() {
     const result = await fetchMsgpack(insertApi, {
       method: "POST",
-      body: inputRow,
+      body: $state.snapshot(inputRow),
     });
 
     if (!result.ok) {
@@ -184,6 +185,10 @@
       if (duplicate) {
         return "Value already exists in data grid";
       }
+    }
+
+    if (!column.nullable && value == null) {
+      return "Value cannot be nullish";
     }
 
     return null;

@@ -13,16 +13,25 @@
           {
             id: "schema",
             header: "Schema",
+            nullable: false,
             editor: "select",
-            options: data.schemaOptions,
+            selectOptions: data.schemaOptions,
             flexgrow: 1,
           },
         ]
       : []),
-    { id: "name", header: "Name", editor: "text", unique: true, flexgrow: 1 },
+    {
+      id: "name",
+      header: "Name",
+      nullable: false,
+      unique: true,
+      editor: "text",
+      flexgrow: 1,
+    },
     {
       id: "description",
       header: "Description",
+      nullable: true,
       editor: "textarea",
       flexgrow: 1,
     },
