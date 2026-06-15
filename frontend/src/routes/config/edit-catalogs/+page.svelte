@@ -1,22 +1,23 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { browser } from "$app/environment";
-  import { encode } from "@msgpack/msgpack";
   import DataGrid from "$lib/components/DataGrid.svelte";
+  import { fetchMsgpack } from "$lib/utils/fetch";
 
   async function validateCatalogPath(path: string) {
-    const response = await fetch("/api/validate-catalog-dir", {
-      method: "POST",
-      headers: { "Content-Type": "application/msgpack" },
-      body: encode({ path }),
-    });
+    const result = await fetchMsgpack<void, { path: string }>(
+      "/api/validate-catalog-dir",
+      {
+        method: "POST",
+        body: { path },
+      },
+    );
 
-    if (response.ok) return true;
+    if (result.ok) return true;
 
-    let message = `Validation failed (${response.status})`;
-    const body = await response.json().catch(() => null);
-    if (body.detail) message = body.detail;
-    throw new Error(message);
+    throw new Error(
+      result.error.message ?? `Validation failed (${result.error.status})`,
+    );
   }
 
   const columns = [

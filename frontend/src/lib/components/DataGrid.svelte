@@ -1,5 +1,4 @@
 <script lang="ts" generics="T">
-  import { encode, decode } from "@msgpack/msgpack";
   import {
     Grid,
     HeaderMenu,
@@ -7,14 +6,16 @@
     Willow,
     type IColumnConfig,
   } from "@svar-ui/svelte-grid";
-  import Modal from "$lib/components/Modal.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import Button from "$lib/components/Button.svelte";
+  import DropdownMenu from "$lib/components/DropdownMenu.svelte";
+  import Input from "$lib/components/Input.svelte";
+  import Modal from "$lib/components/Modal.svelte";
+  import Select from "$lib/components/Select.svelte";
   import TextArea from "$lib/components/TextArea.svelte";
   import { toast } from "$lib/stores/toast.svelte";
   import { fetchMsgpack } from "$lib/utils/fetch";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
+  import type { SelectOption } from "$lib/utils/types";
 
   type FormMode = "add" | "edit";
 
@@ -27,6 +28,7 @@
   interface Column extends IColumnConfig {
     validate?: (input: T) => Promise<boolean>;
     unique?: boolean;
+    selectOptions?: SelectOption[];
   }
 
   interface Props {
@@ -425,6 +427,12 @@
       {:else if column.editor === "textarea"}
         <TextArea
           bind:value={inputRow[column.id]}
+          placeholder={column.header}
+        />
+      {:else if column.editor === "select"}
+        <Select
+          bind:value={inputRow[column.id]}
+          options={column.selectOptions}
           placeholder={column.header}
         />
       {/if}

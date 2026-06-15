@@ -16,6 +16,7 @@ from typing import (
 
 from src.sqlite.query_builder import OnConflict, Query
 from src.sqlite.table import GeometryField, SqliteValue, Table
+from src.sqlite.utils import uuid_blob_to_str
 
 
 class SqliteDatabase:
@@ -33,6 +34,8 @@ class SqliteDatabase:
       raise ValueError(f"Invalid db path: {self.db_path}")
 
     self.conn = sqlite3.connect(self.db_path, timeout=10)
+    self.conn.create_function("uuid_blob_to_str", 1, uuid_blob_to_str)
+
     if self.wal:
       self.conn.execute("PRAGMA journal_mode=WAL")
       self.conn.execute("PRAGMA synchronous=NORMAL")

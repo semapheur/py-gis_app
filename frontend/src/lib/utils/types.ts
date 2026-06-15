@@ -1,3 +1,5 @@
+import type { AttributeId, ImageId, SchemaId } from "$lib/utils/brand";
+
 export interface BandStatistics {
   data_type: string;
   color_interpretation: string;
@@ -8,7 +10,7 @@ export interface BandStatistics {
 }
 
 export interface ImageInfo {
-  id: string;
+  id: ImageId;
   filename: string;
   datetime_collected: number;
   classification: string;
@@ -52,6 +54,27 @@ export interface RadiometricParams {
 export interface SelectOption<T = string> {
   label: string;
   value: T;
+}
+
+export interface SchemaBaseData {
+  id: SchemaId;
+  name: string;
+}
+
+export interface SchemaData extends SchemaBaseData {
+  description: string;
+}
+
+export interface SchemaDataOption {
+  label: string;
+  value: SchemaBaseData;
+}
+
+export interface AttributeData {
+  id: AttributeId;
+  schema: SchemaBaseData;
+  name: string;
+  description: string;
 }
 
 export interface AttributeTableInfo {

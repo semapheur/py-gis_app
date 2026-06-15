@@ -36,6 +36,32 @@ def get_schema_data():
     return db.select_records(AnnotationSchemaTable, query)
 
 
+def get_schema_options():
+  query = (
+    Query()
+    .select(
+      "name AS label",
+      "uuid_blob_to_str(id) AS value",
+    )
+    .from_(AnnotationSchemaTable._table_name)
+  )
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    return db.select_records(AnnotationSchemaTable, query)
+
+
+def get_schema_data_options():
+  query = (
+    Query()
+    .select(
+      "name AS label",
+      "json_object('id', uuid_blob_to_str(id), 'name', name) AS value",
+    )
+    .from_(AnnotationSchemaTable._table_name)
+  )
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    return db.select_records(AnnotationSchemaTable, query)
+
+
 class InsertSchema(TypedDict):
   name: str
   description: str
@@ -43,6 +69,7 @@ class InsertSchema(TypedDict):
 
 def insert_schema(payload: InsertSchema):
   new_id = uuid.uuid4()
+  print(payload)
 
   record = {
     "id": new_id,

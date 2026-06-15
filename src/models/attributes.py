@@ -79,14 +79,9 @@ def get_attribute_options(table: str):
   validate_attribute_table(table)
   model = make_attribute_model(table)
 
-  query = Query().select("name AS label", "id AS value").from_(table)
+  query = Query().select("name AS label", "uuid_blob_to_str(id) AS value").from_(table)
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    result = db.select_records(model, query, True)
-
-    for option in result:
-      option["value"] = str(uuid.UUID(bytes=option["value"]))
-
-  return result
+    return db.select_records(model, query)
 
 
 def make_attribute_query(table: str):

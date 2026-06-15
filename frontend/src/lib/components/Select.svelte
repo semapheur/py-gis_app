@@ -62,10 +62,11 @@
   label {
     position: absolute;
     left: var(--size-sm);
-    font-size: var(--text-2xs);
     top: var(--top-float);
     transform: translateY(-50%);
     transition: all 0.15s ease;
+    font-size: var(--text-2xs);
+    color: oklch(var(--color-text));
     text-shadow: var(--text-shadow);
     pointer-events: none;
   }

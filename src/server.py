@@ -25,6 +25,7 @@ from src.models.annotation_schema import (
   InsertSchema,
   UpdateSchema,
   get_schema_data,
+  get_schema_data_options,
   insert_schema,
   update_schema,
 )
@@ -106,6 +107,11 @@ class Handler(SimpleHTTPRequestHandler):
     if self.path.startswith(prefix):
       table = self.path[len(prefix) :]
       self._get_attributes(table)
+      return
+
+    prefix = "/api/schema-data-options"
+    if self.path.startswith(prefix):
+      self._get_schema_data_options()
       return
 
     prefix = "/api/get-equipment"
@@ -571,6 +577,17 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       attribute_data = get_attribute_data(table)
       result = {"data": attribute_data}
+      self._api_response(result)
+
+    except Exception as e:
+      self.send_error(500, f"Server error: {str(e)}")
+
+  def _get_schema_data_options(
+    self,
+  ):
+    try:
+      options = get_schema_data_options()
+      result = {"options": options}
       self._api_response(result)
 
     except Exception as e:
