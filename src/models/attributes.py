@@ -1,5 +1,5 @@
 import uuid
-from typing import TypedDict
+from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
@@ -89,8 +89,7 @@ def make_attribute_query(table: str):
     Query()
     .select(
       "a.id AS id",
-      "a.schema AS schema",
-      "s.name AS schema_name",
+      "json_object('value', uuid_blob_to_str(a.schema), 'label', s.name) as schema",
       "a.name AS name",
       "a.description AS description",
     )
@@ -109,7 +108,7 @@ def get_attribute_data(table: str):
 
   query = make_attribute_query(table)
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(model, query)
+    return db.select_records(model, query)
 
   return [
     {
@@ -128,7 +127,7 @@ class SchemaValue(TypedDict):
 class InsertAttribute(TypedDict):
   schema: SchemaValue
   name: str
-  description: str
+  description: Optional[str]
 
 
 def insert_attribute(table_name: str, payload: InsertAttribute):
@@ -136,12 +135,14 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   table_model = make_attribute_model(table_name)
 
   new_id = uuid.uuid4()
-
+  attribute_description = payload.get("description")
+  print(payload)
+  schema_id = uuid.UUID(payload["schema"]["value"])
   record = {
     "id": new_id,
-    "schema": uuid.UUID(payload["schema"]["value"]),
+    "schema": schema_id,
     "name": payload["name"],
-    "description": payload["description"],
+    "description": attribute_description,
   }
 
   table_row = table_model.from_dict(record)
@@ -150,7 +151,10 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
     db.insert_models([table_row])
 
   return {
-    "id": str(new_id),
+    "id": new_id,
+    "schema": payload["schema"],
+    "name": payload["name"],
+    "description": attribute_description,
   }
 
 

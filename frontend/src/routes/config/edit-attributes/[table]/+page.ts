@@ -32,7 +32,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
     ? (decode(schemaBuffer) as { options: SchemaDataOption[] }).options
     : null;
 
-  const { data } = decode(attributeBuffer) as { data: AttributeData[] };
+  const { data } = decode(attributeBuffer) as {
+    data: AttributeData[];
+  };
+
+  console.log(data);
 
   return {
     data,

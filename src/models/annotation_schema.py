@@ -1,3 +1,4 @@
+import json
 import uuid
 from typing import Optional, TypedDict
 
@@ -31,9 +32,14 @@ def create_schema_table():
 
 
 def get_schema_data():
-  query = Query().select("*").from_(AnnotationSchemaTable._table_name)
+  query = (
+    Query()
+    .select(*AnnotationSchemaTable.column_names())
+    .from_(AnnotationSchemaTable._table_name)
+  )
+  print(query.build())
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(AnnotationSchemaTable, query)
+    return db.select_records(AnnotationSchemaTable, query, to_json=True)
 
 
 def get_schema_options():
@@ -59,10 +65,12 @@ def get_schema_data_options():
     .from_(AnnotationSchemaTable._table_name)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(AnnotationSchemaTable, query)
+    records = db.select_records(AnnotationSchemaTable, query)
+
+  return [{**r, "value": json.loads(r["value"])} for r in records]
 
 
-class InsertSchema(TypedDict, total=False):
+class InsertSchema(TypedDict):
   name: str
   description: Optional[str]
 
