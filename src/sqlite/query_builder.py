@@ -11,7 +11,121 @@ class OnConflict(TypedDict):
   action: str
 
 
-class Query:
+class InsertQuery:
+  def __init__(self):
+    self._table: Optional[str] = None
+    self._columns: list[str] = []
+    self._value_rows: list[str] = []
+    self._value_params: list[Any] = []
+    self.conflict_target: list[str] = []
+    self._action: Optional[Literal["NOTHING", "UPDATE"]] = None
+    self._update_set: list[str] = []
+    self._update_params: list[Any] = []
+    self._update_where: list[tuple[str, WhereOp]] = []
+    self._update_where_params: list[Any] = []
+    self._returning: list[str] = []
+
+    def into(self, table: str):
+      self._table = table
+      return self
+
+    def columns(self, *cols: str):
+      self._columns.extend(cols)
+      return self
+
+    def values(self, *values: Any):
+      if self._columns and len(values) != len(self._columns):
+        raise ValueError(f"Expected {len(self._columns)} values, got {len(values)}")
+
+      placeholders = ", ".join(["?"] * len(values))
+      self._value_rows.append(f"({placeholders})")
+      self._value_params.extend(values)
+      return self
+
+    def on_conflict(self, *target_cols: str, where: Optional[str] = None):
+      self._conflict_target.extend(target_cols)
+      self._conflict_where = where
+      return self
+
+    def do_nothing(self):
+      self._action = "NOTHING"
+      return self
+
+    def do_update(self, *assignments: str):
+      self._action = "UPDATE"
+      self._update_set.extend(assignments)
+      return self
+
+    def self_value(self, column: str, value: Any):
+      self._action = "UPDATE"
+      self._update_set.append(f"{column} = ?")
+      self._update_params.append(value)
+      return self
+
+    def where(self, condition: str, *values: Any, op: WhereOp = "AND"):
+      self._update_where.append((condition, op))
+      self._update_where_params.extend(values)
+      return self
+
+    def returning(self, *cols, str):
+      self._returning.extend(cols)
+      return self
+
+    def build(self) -> tuple[str, list[Any]]:
+      if not self._table:
+        raise ValueError("No table specified")
+
+      if not self._columns:
+        raise ValueError("No columns specified")
+
+      if not self._value_rows:
+        raise ValueError("No values specified")
+
+      sql = [
+        "INSERT INTO",
+        self._table,
+        f"({', '.join(self._columns)})",
+        "VALUES",
+        ", ".join(self._value_rows),
+      ]
+      params = list(self._value_params)
+
+      if self._conflict_target or self._action:
+        conflict_clause = "ON CONFLICT"
+        if self._conflict_target:
+          conflict_clause += f" ({', '.join(self._conflict_target)})"
+        if self._conflict_where:
+          conflict_clause += f" WHERE {self._conflict_where}"
+        sql.append(conflict_clause)
+
+        if self._action == "NOTHING":
+          sql.append("DO NOTHING")
+
+        elif self._action == "UPDATE":
+          if not self._update_set:
+            raise ValueError("DO UPDATE requires at least one SET assignment")
+
+          sql.append("DO UPDATE SET " + ", ".join(self._update_set))
+          params.extend(self._update_params)
+
+          if self._update_where:
+            clauses = [self._update_where[0][0]]
+            for condition, op in self._update_where[1:]:
+              clauses.append(f"{op} {condition}")
+            sql.append("WHERE" + " ".join(clauses))
+            params.extend(self._update_where_params)
+          else:
+            raise ValueError(
+              "on_conflict() requires do_nothing() or do_update() to be called"
+            )
+
+      if self._returning:
+        sql.append("RETURNING " + ", ".join(self._returning))
+
+      return " ".join(sql), params
+
+
+class SelectQuery:
   def __init__(self):
     self._ctes: list[tuple[str, str]] = []
     self._select: list[str] = []

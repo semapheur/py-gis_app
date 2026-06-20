@@ -37,7 +37,6 @@ def get_schema_data():
     .select(*AnnotationSchemaTable.column_names())
     .from_(AnnotationSchemaTable._table_name)
   )
-  print(query.build())
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_records(AnnotationSchemaTable, query, to_json=True)
 
@@ -116,7 +115,7 @@ def update_schema(payload: UpdateSchema):
 
   update_sql = """UPDATE SET
     name = excluded.name,
-    description = excluded.description,
+    description = excluded.description"
   """
   on_conflict = OnConflict(index="id", action=update_sql)
 

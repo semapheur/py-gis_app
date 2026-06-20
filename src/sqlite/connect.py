@@ -220,6 +220,8 @@ class SqliteDatabase:
       sql_parts.append(f"RETURNING {returning}")
 
     sql = " ".join(sql_parts)
+    print(sql)
+    print(rows)
     cursor = self.conn.cursor()
 
     if returning is not None:

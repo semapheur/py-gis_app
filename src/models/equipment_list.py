@@ -2,7 +2,7 @@ from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import Query
-from src.sqlite.table import Field, Table, datetime_field, uuid_field
+from src.sqlite.table import Field, Table, uuid_field
 
 app_settings = get_settings()
 
@@ -28,10 +28,6 @@ class EquipmentList(Table):
   alternativeNames = Field(str)
   source = Field(str)
   sourceData = Field(str)
-  createdByUserId = Field(str)
-  modifiedByUserId = Field(str)
-  createdAtTimestamp = datetime_field(False)
-  modifiedAtTimestamp = datetime_field(True)
 
 
 class EquipmentSearch(Table):
@@ -79,8 +75,6 @@ def update_equipment(payload: TableUpdate):
     alternativeNames = excluded.alternativeNames,
     source = excluded.source,
     sourceData = excluded.sourceData,
-    modifiedByUserId = excluded.modifiedByUserId,
-    modifiedAtTimestamp = excluded.modifiedAtTimestamp
   """
 
   return update_table(app_settings.EQUIPMENT_DB, EquipmentList, payload, update_sql)
