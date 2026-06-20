@@ -3,7 +3,7 @@ from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, SelectQuery, UpdateQuery
+from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
   GeometryField,

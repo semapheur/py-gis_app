@@ -14,7 +14,7 @@ from typing import (
   Union,
 )
 
-from src.sqlite.query_builder import InsertQuery, OnConflict, SelectQuery, UpdateQuery
+from src.sqlite.query_builder import InsertQuery, SelectQuery, UpdateQuery
 from src.sqlite.table import GeometryField, SqliteValue, Table
 from src.sqlite.utils import uuid_blob_to_str
 

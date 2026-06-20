@@ -4,7 +4,7 @@ from typing import Optional, TypedDict, cast
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict
+from src.sqlite.query_builder import UpdateQuery
 from src.sqlite.table import SqliteValue, Table
 
 app_settings = get_settings()
@@ -43,7 +43,7 @@ def resolve_ids(records: list[dict]) -> list[IdMap]:
 
 
 def update_table(
-  db_path: Path, model: type[Table], payload: TableUpdate, update_sql: str
+  db_path: Path, model: type[Table], payload: TableUpdate, update_query: UpdateQuery
 ) -> CreatedRows:
 
   created_ids = resolve_ids(payload["create"])
@@ -53,7 +53,7 @@ def update_table(
 
   with SqliteDatabase(db_path) as db:
     if update_models:
-      db.insert_models(update_models, OnConflict(index="id", action=update_sql))
+      db.insert_models(update_models, "id", update_query)
 
     if delete_ids:
       db.delete_by_ids(model, delete_ids)

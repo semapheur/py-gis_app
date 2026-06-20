@@ -1,14 +1,9 @@
 import re
-from typing import Any, Literal, Optional, TypeAlias, TypedDict
+from typing import Any, Literal, Optional, TypeAlias
 
 WhereOp: TypeAlias = Literal["AND", "OR"]
 JoinOp: TypeAlias = Literal["INNER", "LEFT", "CROSS"]
 SortOrder: TypeAlias = Literal["asc", "desc"]
-
-
-class OnConflict(TypedDict):
-  index: str
-  action: str
 
 
 class DeleteQuery:

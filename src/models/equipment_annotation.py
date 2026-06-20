@@ -7,7 +7,12 @@ from typing import Literal, TypedDict, Union
 from src.bootstrap import get_settings
 from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import DeleteQuery, OnConflict, SelectQuery, UnionQuery
+from src.sqlite.query_builder import (
+  DeleteQuery,
+  SelectQuery,
+  UnionQuery,
+  UpdateQuery,
+)
 from src.sqlite.table import (
   Field,
   GeometryField,
@@ -60,16 +65,15 @@ def update_annotations(payloads: list[AnnotationUpdate]):
 
   upsert_models: dict[str, list[type[Table]]] = {"equipment": [], "activity": []}
 
-  update_sql = """UPDATE SET
-    equipment = excluded.equipment,
-    confidence = excluded.confidence,
-    status = excluded.status,
-    geometry = excluded.geometry,
-    modifiedByUserId = excluded.modifiedByUserId,
-    modifiedAtTimestamp = excluded.modifiedAtTimestamp
-  """
-
-  on_conflict = OnConflict(index="id", action=update_sql)
+  update_query = (
+    UpdateQuery()
+    .set_raw("equipment = excluded.equipment")
+    .set_raw("confidence = excluded.confidence")
+    .set_raw("status = excluded.status")
+    .set_raw("geometry = excluded.geometry")
+    .set_raw("modifiedByUserId = excluded.modifiedByUserId")
+    .set_raw("modifiedAtTimestamp = excluded.modifiedAtTimestamp")
+  )
 
   for payload in payloads:
     annotation_type = payload.get("type")
@@ -95,7 +99,7 @@ def update_annotations(payloads: list[AnnotationUpdate]):
       if not models:
         continue
 
-      db.insert_models(models, on_conflict)
+      db.insert_models(models, "id", update_query)
 
 
 def delete_annotations(payload: dict[str, list[str]]):
