@@ -152,6 +152,7 @@
     width: 100%;
     height: 100%;
     min-height: 0;
+    color: oklch(var(--color-text));
   }
 
   .editor {
@@ -167,6 +168,10 @@
       height: 100%;
       max-height: 100%;
       overflow: auto;
+    }
+
+    & :global(.cm-cursor) {
+      border-color: oklch(var(--color-text));
     }
   }
 

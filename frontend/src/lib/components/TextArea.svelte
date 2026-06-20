@@ -1,4 +1,6 @@
 <script lang="ts">
+  import MdiTextBoxEditOutline from "@iconify-svelte/mdi/text-box-edit-outline";
+  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
   import TextEditor from "$lib/components/TextEditor.svelte";
   import Window from "$lib/components/Window.svelte";
   import type { HTMLTextareaAttributes } from "svelte/elements";
@@ -26,32 +28,22 @@
   let editorTitle = $derived(`Edit: ${placeholder}`);
   let openEditor = $state<boolean>(false);
 
-  let internal = $state(value ?? "");
-
-  $effect(() => {
-    internal = value ?? "";
-  });
-
   const uid = $props.id();
 </script>
 
 <div class="text-area">
-  <textarea
-    id={uid}
-    {placeholder}
-    bind:value={internal}
-    {rows}
-    style:resize
-    {...rest}
+  <textarea id={uid} {placeholder} bind:value {rows} style:resize {...rest}
   ></textarea>
 
-  <button
-    class="editor-button"
-    title="Open in editor"
-    onclick={() => (openEditor = true)}
-  >
-    ✎
-  </button>
+  <div class={["editor-button", { "editor-open": openEditor }]}>
+    <ButtonIcon
+      type="button"
+      title="Open in editor"
+      onclick={() => (openEditor = true)}
+    >
+      <MdiTextBoxEditOutline height="1rem" />
+    </ButtonIcon>
+  </div>
 
   {#if placeholder}
     <label for={uid}>{placeholder}</label>
@@ -60,7 +52,7 @@
 
 {#if openEditor}
   <Window bind:open={openEditor} title={editorTitle}>
-    <TextEditor bind:value={internal} />
+    <TextEditor bind:value />
   </Window>
 {/if}
 
@@ -73,13 +65,20 @@
     position: relative;
     display: flex;
     flex-direction: column;
+
+    &:hover .editor-button:not(.editor-open) {
+      opacity: 1;
+      visibility: visible;
+    }
   }
 
   .editor-button {
     position: absolute;
-    right: 0;
+    right: var(--size-sm);
     bottom: 0;
-    font-size: var(--text-2xs);
+    opacity: 0;
+    visibility: hidden;
+    transition: opacity 0.15s ease;
   }
 
   label {
@@ -98,7 +97,8 @@
     width: 100%;
     padding: var(--size-sm);
     color: oklch(var(--color-text));
-    background-color: oklch(var(--color-secondary-accent));
+    background-color: oklch(var(--color-primary-accent));
+    border: 1px solid oklch(var(--color-secondary));
     border-radius: var(--size-sm);
 
     &::placeholder {

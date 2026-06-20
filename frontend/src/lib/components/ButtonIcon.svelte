@@ -19,5 +19,6 @@
     cursor: pointer;
     display: inline-flex;
     align-items: center;
+    color: oklch(var(--color-text));
   }
 </style>

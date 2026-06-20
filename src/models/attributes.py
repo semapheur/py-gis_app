@@ -136,7 +136,6 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
 
   new_id = uuid.uuid4()
   attribute_description = payload.get("description")
-  print(payload)
   schema_id = uuid.UUID(payload["schema"]["value"])
   record = {
     "id": new_id,
