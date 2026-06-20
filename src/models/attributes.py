@@ -7,6 +7,7 @@ from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
+  Index,
   Table,
   uuid_field,
 )
@@ -37,10 +38,11 @@ class AttributeTableList(Table):
 def make_attribute_model(table_name: str) -> type[Table]:
   class AttributeTable(Table):
     _table_name = table_name
+    _indexes = [Index(("schema", "name"), unique=True)]
 
     id = uuid_field(True, False)
     schema = uuid_field(False, False)
-    name = Field(str, nullable=False, unique=True)
+    name = Field(str, nullable=False)
     description = Field(str)
 
   AttributeTable.__name__ = f"{table_name.title().replace('_', '')}Table"

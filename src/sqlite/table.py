@@ -149,6 +149,23 @@ class GeometryField(Field):
     return value
 
 
+@dataclass(slots=True)
+class Index:
+  columns: tuple[str, ...]
+  unique: bool = False
+  name: Optional[str] = None
+
+  def sql(self, table_name: str) -> str:
+    index_name = self.name or f"ix_{table_name}_{'_'.join(self.columns)}"
+    unique_kw = "UNIQUE " if self.unique else ""
+    columns_sql = ", ".join(self.columns)
+
+    return (
+      f"CREATE {unique_kw}INDEX IF NOT EXISTS {index_name} "
+      f"ON {table_name} ({columns_sql})"
+    )
+
+
 class TableMeta(type):
   def __new__(cls, name, bases, attributes):
     fields: dict[str, Union[Field, GeometryField]] = {}
@@ -164,6 +181,7 @@ class TableMeta(type):
 class Table(metaclass=TableMeta):
   _table_name: Optional[str] = None
   _fields: dict[str, Union[Field, GeometryField]] = {}
+  _indexes: list[Index] = []
 
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
@@ -220,6 +238,13 @@ class Table(metaclass=TableMeta):
 
     columns_sql = ", ".join(columns)
     return f"CREATE TABLE IF NOT EXISTS {cls._table_name} ({columns_sql})"
+
+  @classmethod
+  def create_index_sql(cls) -> list[str]:
+    if not cls._table_name:
+      raise ValueError(f"{cls.__name__} must define table_name")
+
+    return [index.sql(cls._table_name) for index in cls._indexes]
 
   @classmethod
   def add_geometry_sql(cls, dimension: str = "XY") -> list[str]:
