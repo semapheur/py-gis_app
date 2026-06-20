@@ -74,7 +74,7 @@ def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors
   )
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    rows = db.select_records(RadiometricParamsTable, query, True)
+    rows = db.select_model_records(RadiometricParamsTable, query, True)
     return rows[0]
 
 

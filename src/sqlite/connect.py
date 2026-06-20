@@ -15,7 +15,7 @@ from typing import (
 )
 
 from src.sqlite.query_builder import InsertQuery, SelectQuery, UpdateQuery
-from src.sqlite.table import GeometryField, SqliteValue, Table
+from src.sqlite.table import Field, GeometryField, SqliteValue, Table
 from src.sqlite.utils import uuid_blob_to_str
 
 
@@ -242,38 +242,57 @@ class SqliteDatabase:
     self.conn.commit()
     return
 
-  def select_records(
+  def select_records(self, query: SelectQuery) -> list[dict[srt, SqliteValue]]:
+    sql, params = query.build()
+    cursor = self.conn.cursor()
+    cursor.row_factory = sqlite3.Row
+    rows = cursor.execute(sql, params).fetchall()
+    return [dict(row) for row in rows]
+
+  def select_model_records(
     self, table: type[Table], query: SelectQuery, to_json: bool = False
   ) -> list[dict[str, SqliteValue]]:
     columns = query.columns
     sql, params = query.build()
     cursor = self.conn.cursor()
     rows = cursor.execute(sql, params).fetchall()
+    geo_regex = re.compile("^As(GeoJSON|Text)")
 
-    results: list[dict[str, SqliteValue]] = []
+    column_info: list[tuple[str, Union[Field, GeometryField, None], bool, str]] = []
+    for name, alias in columns:
+      col = alias or name
+      field = table._fields.get(col)
+      is_geo = isinstance(field, GeometryField)
+      geo_format = ""
+      if not is_geo:
+        column_info.append((col, field, is_geo, geo_format))
+        continue
+
+      regex_match = geo_regex.search(name)
+      if regex_match is not None:
+        geo_format = regex_match.group()
+
+      column_info.append((col, field, is_geo, geo_format))
+
+    result: list[dict[str, SqliteValue]] = []
     for row in rows:
       result_row = {}
-      for i, (name, alias) in enumerate(columns):
-        col = alias or name
-        field = table._fields.get(col)
+      for i, (col, field, is_geo, geo_format) in enumerate(column_info):
+        raw = row[i]
         if field is None:
-          result_row[col] = row[i]
+          result_row[col] = raw
           continue
 
-        if isinstance(field, GeometryField):
-          geo_regex = re.compile("^As(GeoJSON|Text)")
-          match = geo_regex.search(name)
-          geo_format = "" if match is None else match.group()
-
-          value = json.loads(row[i]) if geo_format == "AsGeoJSON" else row[i]
+        if is_geo:
+          value = json.loads(raw) if geo_format == "AsGeoJSON" else raw
         else:
-          value = field.deserialize_from_sql(row[i])
+          value = field.deserialize_from_sql(raw)
 
         result_row[col] = field.serialize_to_json(value) if to_json else value
 
-      results.append(result_row)
+      result.append(result_row)
 
-    return results
+    return result
 
   def delete_by_ids(self, table: type[Table], ids: list[Any]) -> int:
     self._check_connection()

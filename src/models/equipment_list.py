@@ -49,7 +49,7 @@ def get_equipment():
 
   with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
     query = query.select("*")
-    return db.select_records(EquipmentList, query, True)
+    return db.select_model_records(EquipmentList, query, True)
 
 
 def search_equipment(search_query: str):
@@ -62,7 +62,7 @@ def search_equipment(search_query: str):
   )
 
   with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
-    return db.select_records(EquipmentSearch, query, True)
+    return db.select_model_records(EquipmentSearch, query, True)
 
 
 class InsertEquipment(TypedDict):

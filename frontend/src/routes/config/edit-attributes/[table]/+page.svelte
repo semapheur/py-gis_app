@@ -3,6 +3,7 @@
   import { page } from "$app/state";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
+  import type { SchemaBaseData } from "$lib/utils/types";
 
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
@@ -15,6 +16,7 @@
             header: "Schema",
             nullable: false,
             editor: "select",
+            template: (v: SchemaBaseData) => v.name,
             selectOptions: data.schemaOptions,
             flexgrow: 1,
           },

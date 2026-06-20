@@ -48,7 +48,7 @@ def validate_catalog_dir(path: Path, check_db_presence: bool = False):
     .where("path = ?", str(path))
   )
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    result = db.select_records(CatalogTable, query, True)
+    result = db.select_model_records(CatalogTable, query, True)
 
   if result:
     raise ValueError(f"Catalog path already exists: {str(path)}")
@@ -180,7 +180,7 @@ def get_catalog_edit_data():
   query = SelectQuery().select(*columns).from_(CatalogTable._table_name)
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    return db.select_records(CatalogTable, query, True)
+    return db.select_model_records(CatalogTable, query, True)
 
 
 def get_catalog_index_data():
@@ -211,7 +211,7 @@ def get_catalog_index_data():
   )
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    return db.select_records(CatalogTable, query, True)
+    return db.select_model_records(CatalogTable, query, True)
 
 
 def edit_catalog(

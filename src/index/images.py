@@ -251,7 +251,7 @@ def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, 
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    result = db.select_records(ImageIndexTable, query)
+    result = db.select_model_records(ImageIndexTable, query)
 
   if not result:
     return (IndexAction.NOT_INDEXED, None)
@@ -361,7 +361,7 @@ def index_images(
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    catalog_record = db.select_records(CatalogTable, query)
+    catalog_record = db.select_model_records(CatalogTable, query)
     if not catalog_record:
       from pprint import pformat
 
@@ -505,7 +505,7 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
     query.order_by(order_by, ordering)
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    results = db.select_records(ImageIndexTable, query, True)
+    results = db.select_model_records(ImageIndexTable, query, True)
 
   return {"wkt": polygon_wkt, "images": results}
 
@@ -525,5 +525,5 @@ def get_image_info(id: bytes) -> dict:
   )
 
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as db:
-    info = db.select_records(ImageIndexTable, query, to_json=True)
+    info = db.select_model_records(ImageIndexTable, query, to_json=True)
     return info[0]

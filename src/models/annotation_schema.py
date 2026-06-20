@@ -38,7 +38,7 @@ def get_schema_data():
     .from_(AnnotationSchemaTable._table_name)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(AnnotationSchemaTable, query, to_json=True)
+    return db.select_model_records(AnnotationSchemaTable, query, to_json=True)
 
 
 def get_schema_options():
@@ -51,7 +51,7 @@ def get_schema_options():
     .from_(AnnotationSchemaTable._table_name)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_records(AnnotationSchemaTable, query)
+    return db.select_model_records(AnnotationSchemaTable, query)
 
 
 def get_schema_data_options():
@@ -64,7 +64,7 @@ def get_schema_data_options():
     .from_(AnnotationSchemaTable._table_name)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(AnnotationSchemaTable, query)
+    records = db.select_model_records(AnnotationSchemaTable, query)
 
   return [{**r, "value": json.loads(r["value"])} for r in records]
 

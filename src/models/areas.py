@@ -56,7 +56,7 @@ def update_area(payload: AreaUpdate):
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    found_name = db.select_records(AreasTable, query)
+    found_name = db.select_model_records(AreasTable, query)
 
     if found_name:
       return found_name
@@ -78,7 +78,7 @@ def get_area(payload: AreaId):
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    area = db.select_records(AreasTable, query, True)
+    area = db.select_model_records(AreasTable, query, True)
     return area[0]
 
 
@@ -91,7 +91,7 @@ def get_area_wkt(area_id: str):
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    area = db.select_records(AreasTable, query, True)
+    area = db.select_model_records(AreasTable, query, True)
     return area[0]
 
 
@@ -103,7 +103,7 @@ def get_areas():
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
-    areas = db.select_records(AreasTable, query, True)
+    areas = db.select_model_records(AreasTable, query, True)
     return areas
 
 

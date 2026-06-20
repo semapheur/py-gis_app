@@ -36,8 +36,6 @@ export const load: PageLoad = async ({ params, fetch }) => {
     data: AttributeData[];
   };
 
-  console.log(data);
-
   return {
     data,
     schemaOptions,
