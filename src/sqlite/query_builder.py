@@ -71,6 +71,10 @@ class UpdateQuery:
     self._set_params.extend(values)
     return self
 
+  def set_excluded(self, *cols: str):
+    self._set.extend(f"{c} = excluded.{c}" for c in cols)
+    return self
+
   def from_(self, table: str):
     self._from = table
     return self
@@ -290,7 +294,7 @@ class SelectQuery:
 
     return result
 
-  def with_(self, name: str, query: "Query"):
+  def with_(self, name: str, query: "SelectQuery"):
     cte_sql, cte_params = query.build()
     self._ctes.append((name, cte_sql))
     self._params = cte_params + self._params

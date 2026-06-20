@@ -397,12 +397,8 @@ def index_images(
       if radiometric_row is not None:
         radiometric_index.append(radiometric_row)
 
-    update_query = (
-      UpdateQuery()
-      .set_raw("catalog = excluded.catalog")
-      .set_raw("relative_path = excluded.relative_path")
-      .set_raw("filename = excluded.filename")
-      .set_raw("filetype = excluded.filetype")
+    update_query = UpdateQuery().set_excluded(
+      "catalog", "relative_path", "filename", "filetype"
     )
 
     db.insert_models(image_index, "id", update_query)

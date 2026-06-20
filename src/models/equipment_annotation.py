@@ -65,14 +65,13 @@ def update_annotations(payloads: list[AnnotationUpdate]):
 
   upsert_models: dict[str, list[type[Table]]] = {"equipment": [], "activity": []}
 
-  update_query = (
-    UpdateQuery()
-    .set_raw("equipment = excluded.equipment")
-    .set_raw("confidence = excluded.confidence")
-    .set_raw("status = excluded.status")
-    .set_raw("geometry = excluded.geometry")
-    .set_raw("modifiedByUserId = excluded.modifiedByUserId")
-    .set_raw("modifiedAtTimestamp = excluded.modifiedAtTimestamp")
+  update_query = UpdateQuery().set_excluded(
+    "equipment",
+    "confidence",
+    "status",
+    "geometry",
+    "modifiedByUserId",
+    "modifiedAtTimestamp",
   )
 
   for payload in payloads:

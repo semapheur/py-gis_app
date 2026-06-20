@@ -2,7 +2,6 @@ import uuid
 from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
-from src.models.update import TableUpdate, update_table
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
@@ -138,10 +137,9 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
 
   new_id = uuid.uuid4()
   attribute_description = payload.get("description")
-  schema_id = uuid.UUID(payload["schema"]["value"])
   record = {
     "id": new_id,
-    "schema": schema_id,
+    "schema": uuid.UUID(payload["schema"]["value"]),
     "name": payload["name"],
     "description": attribute_description,
   }
@@ -152,7 +150,7 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
     db.insert_models([table_row])
 
   return {
-    "id": new_id,
+    "id": str(new_id),
     "schema": payload["schema"],
     "name": payload["name"],
     "description": attribute_description,
@@ -170,35 +168,20 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
   validate_attribute_table(table_name)
   table_model = make_attribute_model(table_name)
 
-  update_id = uuid.UUID(payload["id"])
+  update_id = payload["id"]
 
   update_fields = {
     "id": update_id,
-    "schema": uuid.UUID(payload["schema"]["value"]),
+    "schema": payload["schema"]["value"],
     "name": payload["name"],
     "description": payload["description"],
   }
 
   table_row = table_model.from_dict(update_fields)
 
-  update_query = (
-    UpdateQuery()
-    .set_raw("schema = excluded.schema")
-    .set_raw("name = excluded.name")
-    .set_raw("description = excluded.description")
-  )
+  update_query = UpdateQuery().set_excluded("schema", "name", "description")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], "id", update_query)
 
-
-def update_attributes(table: str, payload: TableUpdate):
-  validate_attribute_table(table)
-
-  model = make_attribute_model(table)
-  update_sql = """UPDATE SET
-    name = excluded.name,
-    description = excluded.description,
-  """
-
-  return update_table(app_settings.ATTRIBUTE_DB, model, payload, update_sql)
+  return {"id": update_id, "schema": payload["schema"], "name": payload["name"]}

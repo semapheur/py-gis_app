@@ -165,9 +165,7 @@ def update_catalog(payload: UpdateCatalog):
     }
   )
 
-  update_query = (
-    UpdateQuery().set_raw("path = excluded.path").set_raw("name = excluded.name")
-  )
+  update_query = UpdateQuery().set_excluded("path", "name")
 
   returning_sql = "id, path, name"
 

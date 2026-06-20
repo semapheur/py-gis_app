@@ -43,13 +43,8 @@ class AreaUpdate(TypedDict):
 
 def update_area(payload: AreaUpdate):
 
-  update_query = (
-    UpdateQuery()
-    .set_raw("name = excluded.name")
-    .set_raw("description = excluded.description")
-    .set_raw("geometry = excluded.geometry")
-    .set_raw("modifiedByUserId = excluded.modifiedByUserId")
-    .set_raw("modifiedAtTimestamp = excluded.modifiedAtTimestamp")
+  update_query = UpdateQuery().set_excluded(
+    "name", "description", "geometry", "modifiedByUserId", "modifiedAtTimestamp"
   )
 
   query = (

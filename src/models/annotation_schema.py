@@ -76,24 +76,19 @@ class InsertSchema(TypedDict):
 
 def insert_schema(payload: InsertSchema):
   new_id = uuid.uuid4()
-
   schema_description = payload.get("description")
   record = {
-    "id": new_id,
-    "name": payload["name"],
-    "description": schema_description,
-  }
-
-  table_row = AnnotationSchemaTable.from_dict(record)
-
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    db.insert_models([table_row])
-
-  return {
     "id": str(new_id),
     "name": payload["name"],
     "description": schema_description,
   }
+
+  table_row = AnnotationSchemaTable.from_dict(record, True)
+
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    db.insert_models([table_row])
+
+  return record
 
 
 class UpdateSchema(TypedDict):
@@ -103,7 +98,7 @@ class UpdateSchema(TypedDict):
 
 
 def update_schema(payload: UpdateSchema):
-  update_id = uuid.UUID(payload["id"])
+  update_id = str(uuid.UUID(payload["id"]))
 
   update_fields = {
     "id": update_id,
@@ -111,19 +106,11 @@ def update_schema(payload: UpdateSchema):
     "description": payload["description"],
   }
 
-  table_row = AnnotationSchemaTable.from_dict(update_fields)
+  table_row = AnnotationSchemaTable.from_dict(update_fields, True)
 
-  update_query = (
-    UpdateQuery()
-    .set_raw("name = excluded.raw")
-    .set_raw("description = excluded.description")
-  )
+  update_query = UpdateQuery().set_excluded("name", "description")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], "id", update_query)
 
-  return {
-    "id": str(update_id),
-    "name": payload["name"],
-    "description": payload["description"],
-  }
+  return update_fields
