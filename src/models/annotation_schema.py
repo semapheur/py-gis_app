@@ -4,7 +4,7 @@ from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import Field, Table, uuid_field
 
 app_settings = get_settings()
@@ -33,7 +33,7 @@ def create_schema_table():
 
 def get_schema_data():
   query = (
-    Query()
+    SelectQuery()
     .select(*AnnotationSchemaTable.column_names())
     .from_(AnnotationSchemaTable._table_name)
   )
@@ -43,7 +43,7 @@ def get_schema_data():
 
 def get_schema_options():
   query = (
-    Query()
+    SelectQuery()
     .select(
       "name AS label",
       "uuid_blob_to_str(id) AS value",
@@ -56,7 +56,7 @@ def get_schema_options():
 
 def get_schema_data_options():
   query = (
-    Query()
+    SelectQuery()
     .select(
       "name AS label",
       "json_object('id', uuid_blob_to_str(id), 'name', name) AS value",
@@ -113,14 +113,14 @@ def update_schema(payload: UpdateSchema):
 
   table_row = AnnotationSchemaTable.from_dict(update_fields)
 
-  update_sql = """UPDATE SET
-    name = excluded.name,
-    description = excluded.description"
-  """
-  on_conflict = OnConflict(index="id", action=update_sql)
+  update_query = (
+    UpdateQuery()
+    .set_raw("name = excluded.raw")
+    .set_raw("description = excluded.description")
+  )
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    db.insert_models([table_row], on_conflict)
+    db.insert_models([table_row], "id", update_query)
 
   return {
     "id": str(update_id),

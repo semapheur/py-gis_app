@@ -30,7 +30,7 @@ from src.parse.isd_metadata import get_isd_info
 from src.parse.sicd_metadata import parse_sicd_info
 from src.parse.sicd_model import SicdObject
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
   ColumnType,
   Field,
@@ -241,7 +241,7 @@ class IndexAction(Enum):
 
 def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, None]]:
   query = (
-    Query()
+    SelectQuery()
     .select(
       "concat(c.path, '/', i.relative_path, '/', i.filename, '.', i.filetype) AS path"
     )
@@ -354,7 +354,7 @@ def index_images(
 ):
   extensions = {".tif", ".tiff"}
   query = (
-    Query()
+    SelectQuery()
     .select("path")
     .from_(CatalogTable._table_name)
     .where("id = ?", catalog_id.bytes)
@@ -397,23 +397,21 @@ def index_images(
       if radiometric_row is not None:
         radiometric_index.append(radiometric_row)
 
-    # Upsert index
-    update_sql = """
-      UPDATE SET
-        catalog = excluded.catalog,
-        relative_path = excluded.relative_path,
-        filename = excluded.filename,
-        filetype = excluded.filetype
-    """
-    on_conflict = OnConflict(index="id", action=update_sql)
-    db.insert_models(image_index, on_conflict)
+    update_query = (
+      UpdateQuery()
+      .set_raw("catalog = excluded.catalog")
+      .set_raw("relative_path = excluded.relative_path")
+      .set_raw("filename = excluded.filename")
+      .set_raw("filetype = excluded.filetype")
+    )
+
+    db.insert_models(image_index, "id", update_query)
 
     current_timestamp = datetime.now(timezone.utc)
     update_index_time(db, catalog_id, current_timestamp)
 
     if radiometric_index:
-      on_conflict = OnConflict(index="id", action="NOTHING")
-      db.insert_models(radiometric_index, on_conflict)
+      db.insert_models(radiometric_index, "id")
 
 
 class ImageQuery(TypedDict, total=False):
@@ -444,7 +442,7 @@ def search_images(payload: ImageQuery):
 
 def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
   columns = ImageIndexTable.column_sql()
-  query = Query().from_(ImageIndexTable._table_name).select(*columns)
+  query = SelectQuery().from_(ImageIndexTable._table_name).select(*columns)
 
   filename = payload.get("filename")
   if filename is not None:
@@ -496,7 +494,7 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
 
   if polygon_wkt is not None:
     polygon_cte = (
-      Query()
+      SelectQuery()
       .select("geom", "ST_Area(geom) AS area")
       .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
     )
@@ -518,7 +516,7 @@ def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
 
 def get_image_info(id: bytes) -> dict:
   query = (
-    Query()
+    SelectQuery()
     .select(
       "filename",
       "datetime_collected",

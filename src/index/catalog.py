@@ -7,7 +7,7 @@ from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
 from src.path_utils import verify_dir
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
   Table,
@@ -42,7 +42,10 @@ def validate_catalog_dir(path: Path, check_db_presence: bool = False):
     return
 
   query = (
-    Query().select("id").from_(CatalogTable._table_name).where("path = ?", str(path))
+    SelectQuery()
+    .select("id")
+    .from_(CatalogTable._table_name)
+    .where("path = ?", str(path))
   )
   with SqliteDatabase(app_settings.INDEX_DB) as db:
     result = db.select_records(CatalogTable, query, True)
@@ -162,23 +165,21 @@ def update_catalog(payload: UpdateCatalog):
     }
   )
 
-  update_sql = """UPDATE SET
-    path = excluded.path,
-    name = excluded.name
-  """
-  on_conflict = OnConflict(index="id", action=update_sql)
+  update_query = (
+    UpdateQuery().set_raw("path = excluded.path").set_raw("name = excluded.name")
+  )
 
   returning_sql = "id, path, name"
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
-    result = db.insert_models([model], on_conflict, returning_sql)
+    result = db.insert_models([model], "id", update_query, returning_sql)
 
   return parse_id_name_path_record(result[0])
 
 
 def get_catalog_edit_data():
   columns = ("id", "path", "name")
-  query = Query().select(*columns).from_(CatalogTable._table_name)
+  query = SelectQuery().select(*columns).from_(CatalogTable._table_name)
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
     return db.select_records(CatalogTable, query, True)
@@ -200,7 +201,7 @@ def get_catalog_index_data():
   )
 
   query = (
-    Query()
+    SelectQuery()
     .select(*columns)
     .from_(f"{table_c} {table_c_as}")
     .join(
@@ -233,7 +234,7 @@ def edit_catalog(
     update_catalog_entry(db, id, new_path, new_name)
 
 
-def update_index_time(db: SqliteDatabase, id: UUID, index_time: datetime):
+def update_index_time(db: SqliteDatabase, id: uuid.UUID, index_time: datetime):
   timestamp = datetime_to_unix(index_time)
 
   if db.conn is None:

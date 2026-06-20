@@ -7,7 +7,7 @@ from typing import Literal, TypedDict, Union
 from src.bootstrap import get_settings
 from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query, UnionQuery
+from src.sqlite.query_builder import DeleteQuery, OnConflict, SelectQuery, UnionQuery
 from src.sqlite.table import (
   Field,
   GeometryField,
@@ -175,7 +175,7 @@ def get_annotations_by_image(image_id: bytes):
 
   def build_subquery(geometry: EquipmentGeometry):
     return (
-      Query()
+      SelectQuery()
       .select(
         "ea.id AS id",
         "AsGeoJSON(ea.geometry) AS geometry",
@@ -291,7 +291,7 @@ def get_annotation_ghosts_by_geometry(
 
   def build_subquery(geometry: EquipmentGeometry):
     return (
-      Query()
+      SelectQuery()
       .select(
         "ea.id AS id",
         "ea.image AS image",
@@ -326,7 +326,7 @@ def get_annotation_ghosts_by_geometry(
   detach_sql = ("DETACH i", "DETACH DATABASE ed", "DETACH DATABASE a")
 
   polygon_cte = (
-    Query()
+    SelectQuery()
     .select("geom", "ST_Area(geom) AS area")
     .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
   )
@@ -387,17 +387,10 @@ def convert_annotation(payload: ConvertAnnotation):
     WHERE id = :id;
   """
 
-  delete_sql = """
-    DELETE FROM equipment_point
-    WHERE id = :id;
-  """
-
-  # point_table = equipment_annotation_model("POINT")
-  # polygon_table = equipment_annotation_model("POLYGON")
+  delete_query = DeleteQuery().from_("equipment_point").where("id = ?", payload["id"])
+  delete_sql, delete_params = delete_query.build()
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     cursor = db.conn.cursor()
     cursor.execute(insert_sql, payload)
-    cursor.execute(delete_sql, payload)
-
-    # db.convert_geometry(point_table, polygon_table, payload["id"], payload["geometry"])
+    cursor.execute(delete_sql, delete_params)

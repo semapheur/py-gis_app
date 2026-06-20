@@ -14,7 +14,7 @@ from typing import (
   Union,
 )
 
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import InsertQuery, OnConflict, SelectQuery, UpdateQuery
 from src.sqlite.table import GeometryField, SqliteValue, Table
 from src.sqlite.utils import uuid_blob_to_str
 
@@ -175,7 +175,8 @@ class SqliteDatabase:
   def insert_models(
     self,
     models: Sequence[Table],
-    on_conflict: Optional[OnConflict] = None,
+    conflict_index: Optional[str] = None,
+    update_query: Optional[UpdateQuery] = None,
     returning: Optional[str] = None,
   ) -> Union[list[Any], None]:
     self._check_connection()
@@ -207,21 +208,26 @@ class SqliteDatabase:
       for col in columns
     ]
 
-    columns_sql = ", ".join(columns)
-    placeholder_sql = ", ".join(placeholders)
-    sql_parts = [f"INSERT INTO {table_name} ({columns_sql}) VALUES ({placeholder_sql})"]
+    query = (
+      InsertQuery()
+      .into(table_name)
+      .columns(*columns)
+      .values_placeholders(*placeholders)
+    )
 
-    if on_conflict is not None:
-      sql_parts.append(
-        f"ON CONFLICT ({on_conflict['index']}) DO {on_conflict['action']}"
-      )
+    if conflict_index is not None:
+      query.on_conflict(conflict_index)
+
+      if update_query is None:
+        query.do_nothing()
+      else:
+        query.do_update(update_query)
 
     if returning is not None:
-      sql_parts.append(f"RETURNING {returning}")
+      query.returning(returning)
 
-    sql = " ".join(sql_parts)
-    print(sql)
-    print(rows)
+    sql, _ = query.build()
+
     cursor = self.conn.cursor()
 
     if returning is not None:
@@ -237,7 +243,7 @@ class SqliteDatabase:
     return
 
   def select_records(
-    self, table: type[Table], query: Query, to_json: bool = False
+    self, table: type[Table], query: SelectQuery, to_json: bool = False
   ) -> list[dict[str, SqliteValue]]:
     columns = query.columns
     sql, params = query.build()

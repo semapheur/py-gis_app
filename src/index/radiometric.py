@@ -3,7 +3,7 @@ from typing import Literal, TypeAlias, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import Query
+from src.sqlite.query_builder import SelectQuery
 from src.sqlite.table import Table, hash_field, json_field
 
 app_settings = get_settings()
@@ -67,7 +67,7 @@ def make_radiometric_row(
 
 def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors, ...]):
   query = (
-    Query()
+    SelectQuery()
     .select(*factors)
     .from_(RadiometricParamsTable._table_name)
     .where("id = ?", hash_id)

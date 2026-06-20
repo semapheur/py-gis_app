@@ -3,7 +3,7 @@ from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import OnConflict, SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
   GeometryField,
@@ -43,18 +43,17 @@ class AreaUpdate(TypedDict):
 
 def update_area(payload: AreaUpdate):
 
-  update_sql = """UPDATE SET
-    name = excluded.name,
-    description = excluded.description,
-    geometry = excluded.geometry,
-    modifiedByUserId = excluded.modifiedByUserId,
-    modifiedAtTimestamp = excluded.modifiedAtTimestamp
-  """
-
-  on_conflict = OnConflict(index="id", action=update_sql)
+  update_query = (
+    UpdateQuery()
+    .set_raw("name = excluded.name")
+    .set_raw("description = excluded.description")
+    .set_raw("geometry = excluded.geometry")
+    .set_raw("modifiedByUserId = excluded.modifiedByUserId")
+    .set_raw("modifiedAtTimestamp = excluded.modifiedAtTimestamp")
+  )
 
   query = (
-    Query()
+    SelectQuery()
     .select("name")
     .from_(AreasTable._table_name)
     .where("name = ?", payload["name"])
@@ -68,7 +67,7 @@ def update_area(payload: AreaUpdate):
       return found_name
 
     model = AreasTable.from_dict(payload, json=True)
-    db.insert_models((model,), on_conflict=on_conflict)
+    db.insert_models((model,), "id", update_query)
 
 
 class AreaId(TypedDict):
@@ -77,7 +76,7 @@ class AreaId(TypedDict):
 
 def get_area(payload: AreaId):
   query = (
-    Query()
+    SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
     .from_(AreasTable._table_name)
     .where("id = ?", uuid.UUID(payload["id"]).bytes)
@@ -90,7 +89,7 @@ def get_area(payload: AreaId):
 
 def get_area_wkt(area_id: str):
   query = (
-    Query()
+    SelectQuery()
     .select("AsText(geometry) AS geometry")
     .from_(AreasTable._table_name)
     .where("id = ?", uuid.UUID(area_id).bytes)
@@ -103,7 +102,7 @@ def get_area_wkt(area_id: str):
 
 def get_areas():
   query = (
-    Query()
+    SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
     .from_(AreasTable._table_name)
   )

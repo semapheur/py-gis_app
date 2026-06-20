@@ -4,7 +4,7 @@ from typing import Optional, TypedDict
 from src.bootstrap import get_settings
 from src.models.update import TableUpdate, update_table
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import OnConflict, Query
+from src.sqlite.query_builder import OnConflict, SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
   Table,
@@ -64,7 +64,7 @@ def create_attribute_tables():
 
 
 def get_attribute_tables():
-  query = Query().select("name", "label").from_(AttributeTableList._table_name)
+  query = SelectQuery().select("name", "label").from_(AttributeTableList._table_name)
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_records(AttributeTableList, query)
@@ -79,14 +79,16 @@ def get_attribute_options(table: str):
   validate_attribute_table(table)
   model = make_attribute_model(table)
 
-  query = Query().select("name AS label", "uuid_blob_to_str(id) AS value").from_(table)
+  query = (
+    SelectQuery().select("name AS label", "uuid_blob_to_str(id) AS value").from_(table)
+  )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_records(model, query)
 
 
 def make_attribute_query(table: str):
   return (
-    Query()
+    SelectQuery()
     .select(
       "a.id AS id",
       "json_object('value', uuid_blob_to_str(a.schema), 'label', s.name) as schema",
@@ -179,15 +181,15 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
 
   table_row = table_model.from_dict(update_fields)
 
-  update_sql = """UPDATE SET
-    schema = excluded.schema,
-    name = excluded.name,
-    description = excluded.description,
-  """
-  on_conflict = OnConflict(index="id", action=update_sql)
+  update_query = (
+    UpdateQuery()
+    .set_raw("schema = excluded.schema")
+    .set_raw("name = excluded.name")
+    .set_raw("description = excluded.description")
+  )
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    db.insert_models([table_row], on_conflict)
+    db.insert_models([table_row], "id", update_query)
 
 
 def update_attributes(table: str, payload: TableUpdate):
