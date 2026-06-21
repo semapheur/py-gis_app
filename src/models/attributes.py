@@ -57,6 +57,7 @@ def create_attribute_tables():
       is_created = db.create_table(model)
 
       if is_created:
+        db.create_table_indexes(model)
         row = {"name": table, "label": table.capitalize().replace("_", " ")}
         table_list.append(AttributeTableList.from_dict(row))
 

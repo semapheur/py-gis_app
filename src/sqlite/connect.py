@@ -172,6 +172,18 @@ class SqliteDatabase:
     cursor.execute(sql)
     return [row[0] for row in cursor.fetchall()]
 
+  def create_table_indexes(self, table: type[Table]):
+    if not table._indexes:
+      raise ValueError(f"Table {table._table_name} has no specified indexes")
+
+    if self.conn is None:
+      raise RuntimeError("Database not connected")
+
+    cursor = self.conn.cursor()
+
+    for sql in table.create_index_sql():
+      cursor.execute(sql)
+
   def insert_models(
     self,
     models: Sequence[Table],
