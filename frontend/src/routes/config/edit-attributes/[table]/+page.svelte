@@ -37,6 +37,13 @@
       editor: "textarea",
       flexgrow: 1,
     },
+    {
+      id: "ordering",
+      header: "Ordering",
+      nullable: false,
+      editor: "number",
+      flexgrow: 1,
+    },
   ]);
 
   let insertApi = $derived(`/api/insert-attribute/${table}`);

@@ -24,6 +24,7 @@ class AnnotationSchemaTable(Table):
   id = uuid_field(True, False)
   name = Field(str, unique=True, nullable=False)
   description = Field(str)
+  ordering = Field(int, nullable=False)
 
 
 def create_schema_table():

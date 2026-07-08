@@ -47,6 +47,7 @@ def make_attribute_model(table_name: str) -> type[Table]:
     schema = uuid_field(False, False)
     name = Field(str, nullable=False)
     description = Field(str)
+    ordering = Field(int, nullable=False)
 
   AttributeTable.__name__ = f"{table_name.title().replace('_', '')}Table"
   return AttributeTable
