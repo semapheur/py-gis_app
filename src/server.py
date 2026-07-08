@@ -551,7 +551,6 @@ class Handler(SimpleHTTPRequestHandler):
     try:
       schema_data = get_schema_data()
       result = {"data": schema_data}
-      print(result)
       self._api_response(result)
 
     except Exception as e:

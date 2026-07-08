@@ -1,4 +1,7 @@
-<script lang="ts" generics="T">
+<script
+  lang="ts"
+  generics="T extends Record<string, unknown> = Record<string, unknown>"
+>
   import {
     Grid,
     HeaderMenu,
@@ -15,9 +18,11 @@
   import { toast } from "$lib/stores/toast.svelte";
   import { fetchMsgpack } from "$lib/utils/fetch";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
-  import type { SelectOption } from "$lib/utils/types";
+  import type { ComponentExports, SelectOption } from "$lib/utils/types";
 
   type FormMode = "add" | "edit";
+
+  type GridApi = ComponentExports<typeof Grid>;
 
   interface FormState {
     open: boolean;
@@ -27,26 +32,42 @@
 
   interface Column extends IColumnConfig {
     nullable: boolean;
-    validate?: (input: T) => Promise<boolean>;
+    validate?: (input: unknown) => Promise<boolean>;
     unique?: boolean;
     selectOptions?: SelectOption[];
   }
 
+  interface ValidationResult {
+    valid: boolean;
+    message: string | null;
+  }
+
   interface Props {
     columns: Column[];
-    data: Record<string, string>[];
+    data: T[];
     insertApi: string;
     updateApi: string;
     deleteApi: string;
     inputIds?: Set<string>;
+    validateInputRow?: (
+      inputRow: Partial<T>,
+      existingRows: T[],
+    ) => ValidationResult;
   }
 
-  let { columns, data, insertApi, updateApi, deleteApi }: Props = $props();
+  let {
+    columns,
+    data,
+    insertApi,
+    updateApi,
+    deleteApi,
+    validateInputRow,
+  }: Props = $props();
   let gridWrapper: HTMLElement | null = null;
   let fileInput: HTMLInputElement | null = null;
   let isDragging = $state<boolean>(false);
 
-  let api = $state();
+  let api = $state<GridApi | undefined>();
   let form = $state<FormState>({
     open: false,
     mode: "add",
@@ -54,8 +75,8 @@
   });
 
   let selectedRows = $state([]);
-  let inputRow = $state<Record<string, string | number | null | undefined>>({});
-  let validationErrors = $state<Record<string, string>>({});
+  let inputRow = $state<Partial<T>>({});
+  let columnErrors = $state<Record<string, string>>({});
 
   let history = $derived(api?.getReactiveState().history);
   let numSelectedRows = $derived(selectedRows.length);
@@ -79,7 +100,7 @@
   }
 
   function openEdit(id: string) {
-    const row = structuredClone(api.getRow(id));
+    const row = structuredClone(api.getRow(id)) as T;
 
     form.open = true;
     form.mode = "edit";
@@ -102,7 +123,7 @@
     form.open = false;
     form.rowId = null;
     inputRow = {};
-    validationErrors = {};
+    columnErrors = {};
   }
 
   async function addRow() {
@@ -188,7 +209,7 @@
     }
 
     if (!column.nullable && value == null) {
-      return "Value cannot be nullish";
+      return "Value cannot be empty";
     }
 
     return null;
@@ -209,11 +230,19 @@
       errors.filter(([, error]) => error !== null),
     );
 
-    for (const key in validationErrors) delete validationErrors[key];
+    for (const key in columnErrors) delete columnErrors[key];
 
     if (Object.keys(newErrors).length > 0) {
-      Object.assign(validationErrors, newErrors);
+      Object.assign(columnErrors, newErrors);
       return;
+    }
+
+    if (validateInputRow) {
+      const validationResult = validateInputRow(inputRow, api.getState().data);
+      if (!validationResult.valid) {
+        console.error(validationResult.message);
+        return;
+      }
     }
 
     if (form.mode === "add") {
@@ -441,9 +470,9 @@
           placeholder={column.header}
         />
       {/if}
-      {#if validationErrors[column.id]}
+      {#if columnErrors[column.id]}
         <span class="error">
-          {validationErrors[column.id]}
+          {columnErrors[column.id]}
         </span>
       {/if}
     {/each}

@@ -1,4 +1,9 @@
+import type { Component } from "svelte";
+
 import type { AttributeId, ImageId, SchemaId } from "$lib/utils/brand";
+
+export type ComponentExports<TComponent extends Component<any, any>> =
+  TComponent extends Component<any, infer TExports> ? TExports : never;
 
 export interface BandStatistics {
   data_type: string;

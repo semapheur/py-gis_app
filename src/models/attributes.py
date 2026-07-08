@@ -16,9 +16,12 @@ app_settings = get_settings()
 
 ATTRIBUTE_TABLES = (
   "activity_categories",
-  "equipment_status",
-  "observation_confidence",
   "activity_likelihood",
+  "observation_confidence",
+  "equipment_status",
+  "equipment_visibility",
+  "equipment_configuration",
+  "equipment_modification",
   "classification",
   "releasability",
 )
