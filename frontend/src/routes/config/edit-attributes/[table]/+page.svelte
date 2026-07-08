@@ -40,7 +40,7 @@
     {
       id: "ordering",
       header: "Ordering",
-      nullable: false,
+      nullable: true,
       editor: "number",
       flexgrow: 1,
     },
