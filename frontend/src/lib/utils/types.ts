@@ -1,6 +1,6 @@
 import type { Component } from "svelte";
 
-import type { AttributeId, ImageId, SchemaId } from "$lib/utils/brand";
+import type { AttributeId, ImageId, SchemaId, SecurityId } from "$lib/utils/brand";
 
 export type ComponentExports<TComponent extends Component<any, any>> =
   TComponent extends Component<any, infer TExports> ? TExports : never;
@@ -85,6 +85,13 @@ export interface AttributeData {
 export interface AttributeTableInfo {
   name: string;
   label: string;
+}
+
+export interface SecurityData {
+  id: SecurityId;
+  name: string;
+  level: number;
+  ordering: number;
 }
 
 export interface AngleRange {

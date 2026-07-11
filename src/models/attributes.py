@@ -22,8 +22,6 @@ ATTRIBUTE_TABLES = (
   "equipment_visibility",
   "equipment_configuration",
   "equipment_modification",
-  "classification",
-  "releasability",
 )
 
 
@@ -101,6 +99,7 @@ def make_attribute_query(table: str):
       "json_object('id', uuid_blob_to_str(a.schema), 'name', s.name) as schema",
       "a.name AS name",
       "a.description AS description",
+      "a.ordering AS ordering"
     )
     .from_(f"{table} a")
     .join(
@@ -120,6 +119,12 @@ def get_attribute_data(table: str):
 
   return [{**r, "schema": json.loads(r["schema"])} for r in records]
 
+def get_next_ordering(table: str, schema: bytes) -> int:
+  query = SelectQuery().select("SELECT MAX(ordering) + 1 AS ordering").from_(table).where("schema = ?", schema)
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    records = db.select_records(query)
+
+  return int(records[0]["ordering"])
 
 class SchemaValue(TypedDict):
   id: str
@@ -130,6 +135,7 @@ class InsertAttribute(TypedDict):
   schema: SchemaValue
   name: str
   description: Optional[str]
+  ordering: Optional[int]
 
 
 def insert_attribute(table_name: str, payload: InsertAttribute):
@@ -139,11 +145,17 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   new_id = uuid.uuid4()
   schema_id = uuid.UUID(payload["schema"]["id"])
   attribute_description = payload.get("description")
+  ordering = payload.get("ordering")
+
+  if ordering is None:
+    ordering = get_next_ordering(table_name, schema_id.bytes)
+
   record = {
     "id": new_id,
     "schema": schema_id,
     "name": payload["name"],
     "description": attribute_description,
+    "ordering": ordering
   }
 
   table_row = table_model.from_dict(record)
@@ -156,28 +168,30 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
     "schema": payload["schema"],
     "name": payload["name"],
     "description": attribute_description,
+    "ordering": ordering
   }
 
 
-class UpdateAttribute(TypedDict):
+class UpdateAttribute(InsertAttribute):
   id: str
-  schema: SchemaValue
-  name: str
-  description: str
-
 
 def update_attribute(table_name: str, payload: UpdateAttribute):
   validate_attribute_table(table_name)
   table_model = make_attribute_model(table_name)
 
-  update_id = payload["id"]
-  description = payload["description"]
+  update_id = uuid.UUID(payload["id"])
+  schema_id = uuid.UUID(payload["schema"]["id"])
+  ordering = payload.get("ordering")
+
+  if ordering is None:
+    ordering = get_next_ordering(table_name, schema_id.bytes)
 
   update_fields = {
     "id": update_id,
-    "schema": payload["schema"]["id"],
+    "schema": schema_id,
     "name": payload["name"],
-    "description": description,
+    "description": payload["description"],
+    "ordering": ordering
   }
 
   table_row = table_model.from_dict(update_fields)
@@ -191,5 +205,6 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
     "id": update_id,
     "schema": payload["schema"],
     "name": payload["name"],
-    "description": description,
+    "description": payload["description"],
+    "ordering": ordering
   }
