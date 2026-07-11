@@ -98,9 +98,8 @@ def insert_sequrity(table_name: str, payload: InsertSecurity):
 
 class UpdateSecurity(InsertSecurity):
   id: str
-  ordering: int
 
-def update_attribute(table_name: str, payload: UpdateSecurity):
+def update_security(table_name: str, payload: UpdateSecurity):
   validate_security_table(table_name)
   table_model = make_security_model(table_name)
 
