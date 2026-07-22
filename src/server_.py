@@ -146,6 +146,12 @@ class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
     full_path = app_settings.STATIC_DIR / relative_path
 
     if full_path.is_dir():
+      index = full_path / "index.html"
+      if index.exists():
+        return str(index)
+      return str(app_settings.STATIC_DIR / "200.html")
+
+    if full_path.exists():
       return str(full_path)
 
     return super().translate_path(path)
@@ -174,7 +180,7 @@ class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
       self.send_header("Content-Type", content_type)
       self.send_header("Accept-Ranges", "bytes")
       self.send_header("Content-Range", f"bytes {start}-{end}/{file_size}")
-      self.send_header("Content-Lengt", str(end - start + 1))
+      self.send_header("Content-Length", str(end - start + 1))
       self.end_headers()
 
       with open(path, "rb") as f:
@@ -184,7 +190,7 @@ class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
   def _send_cors_headers(self):
     origin = self.headers.get("Origin")
     if origin:
-      self.send_header("Access-Controll-Allow-Origin", origin)
+      self.send_header("Access-Control-Allow-Origin", origin)
       self.send_header("Vary", "Origin")
 
     self.send_header("Access-Control-Allow-Methods", "GET, HEAD, OPTIONS")
@@ -410,6 +416,10 @@ class Handler(ApiHandler):
     if name is not None:
       raise ApiError(409, f"Area with '{name}' already exist!")
 
+  @api("POST", "/api/delete-areas")
+  def _post_delete_areas(self, payload: AreaDelete):
+    delete_areas(payload)
+
   @api("POST", "/api/validate-catalog-dir")
   def _post_validate_catalog_dir(self, payload: dict):
     input_path = Path(payload["path"])
@@ -437,3 +447,8 @@ class Handler(ApiHandler):
       )
 
     index_images(catalog_id, progress_callback=on_progress)
+
+  @api("POST", "/api/radiometric-params")
+  def _post_parametric_params(self, payload: dict[str, str]):
+    hash = decode_sha256_from_b64(payload["id"])
+    return get_radiometric_parameters(hash, ("noise", "sigma0"))
