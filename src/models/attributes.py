@@ -212,7 +212,7 @@ def update_attribute(table_name: str, payload: UpdateAttribute):
 
   table_row = table_model.from_dict(update_fields)
 
-  update_query = UpdateQuery().set_excluded("schema", "name", "description")
+  update_query = UpdateQuery().set_excluded("schema", "name", "description", "ordering")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], "schema, name", update_query)

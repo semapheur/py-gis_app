@@ -239,7 +239,6 @@ class SqliteDatabase:
       query.returning(returning)
 
     sql, _ = query.build()
-    print(sql)
 
     cursor = self.conn.cursor()
 

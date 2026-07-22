@@ -2,7 +2,7 @@ from http.server import ThreadingHTTPServer
 
 from src.bootstrap import get_settings
 from src.seed import create_db_tables
-from src.server import Handler
+from src.server_ import Handler
 
 if __name__ == "__main__":
   settings = get_settings()

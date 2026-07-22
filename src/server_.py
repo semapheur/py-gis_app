@@ -89,7 +89,7 @@ PARAM_REGEX = re.compile(r"\{(\w+)\}")
 
 
 def compile_pattern(path: str) -> re.Pattern:
-  regex = PARAM_REGEX.sub(r"(?P<\1>[^/]+", path)
+  regex = PARAM_REGEX.sub(r"(?P<\1>[^/]+)", path)
   return re.compile(f"^{regex}$")
 
 
@@ -194,7 +194,7 @@ class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
       "Content-Length, Content-Range, Accept-Ranges, Content-Encoding",
     )
 
-  def _stream_file(self, file, length: int):
+  def _stream_file(self, file: BufferedReader, length: int):
     chunk_size = 256 * 1024
     remaining = length
 

@@ -130,7 +130,7 @@ def update_schema(payload: UpdateSchema):
 
   table_row = AnnotationSchemaTable.from_dict(update_fields)
 
-  update_query = UpdateQuery().set_excluded("name", "description")
+  update_query = UpdateQuery().set_excluded("name", "description", "ordering")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], "id", update_query)

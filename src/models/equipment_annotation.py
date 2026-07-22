@@ -185,9 +185,9 @@ def get_annotations_by_image(image_id: bytes):
         "ea.equipment AS equipment_id",
         "ed.equipment.displayName AS equipment_label",
         "ea.confidence AS confidence_id",
-        "a.observation_confidence.text AS confidence_label",
+        "a.observation_confidence.name AS confidence_label",
         "ea.status AS status_id",
-        "a.equipment_status.text AS status_label",
+        "a.equipment_status.name AS status_label",
         "ea.createdByUserId AS createdByUserId",
         "ea.modifiedByUserId AS modifiedByUserId",
         "ea.createdAtTimestamp AS createdAtTimestamp",
@@ -303,9 +303,9 @@ def get_annotation_ghosts_by_geometry(
         "ea.equipment AS equipment_id",
         "ed.equipment.displayName AS equipment_label",
         "ea.confidence AS confidence_id",
-        "a.observation_confidence.text AS confidence_label",
+        "a.observation_confidence.name AS confidence_label",
         "ea.status AS status_id",
-        "a.equipment_status.text AS status_label",
+        "a.equipment_status.name AS status_label",
       )
       .from_(f"equipment_{geometry.lower()} ea")
       .inner_join("i.images", "i.images.id = ea.image")
