@@ -245,7 +245,7 @@ def check_image(image_path: Path, hash: bytes) -> tuple[IndexAction, Union[str, 
     .select(
       "concat(c.path, '/', i.relative_path, '/', i.filename, '.', i.filetype) AS path"
     )
-    .from_(f"{ImageIndexTable._table_name} i")
+    .from_(f"{ImageIndexTable.table_name()} i")
     .inner_join("catalog c", "c.id = i.catalog")
     .where("i.id = ?", hash)
   )
@@ -356,7 +356,7 @@ def index_images(
   query = (
     SelectQuery()
     .select("path")
-    .from_(CatalogTable._table_name)
+    .from_(CatalogTable.table_name())
     .where("id = ?", catalog_id.bytes)
   )
 
@@ -438,7 +438,7 @@ def search_images(payload: ImageQuery):
 
 def get_images_by_intersection(polygon_wkt: Optional[str], payload: ImageQuery):
   columns = ImageIndexTable.column_sql()
-  query = SelectQuery().from_(ImageIndexTable._table_name).select(*columns)
+  query = SelectQuery().from_(ImageIndexTable.table_name()).select(*columns)
 
   filename = payload.get("filename")
   if filename is not None:
@@ -520,7 +520,7 @@ def get_image_info(id: bytes) -> dict:
       "image_type",
       "band_statistics",
     )
-    .from_(ImageIndexTable._table_name)
+    .from_(ImageIndexTable.table_name())
     .where("id = ?", id)
   )
 

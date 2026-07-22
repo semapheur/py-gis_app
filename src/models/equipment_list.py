@@ -45,7 +45,7 @@ def create_equipment_table():
 
 
 def get_equipment():
-  query = SelectQuery().from_(EquipmentList._table_name)
+  query = SelectQuery().from_(EquipmentList.table_name())
 
   with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
     query = query.select("*")
@@ -56,7 +56,7 @@ def search_equipment(search_query: str):
   query = (
     SelectQuery()
     .select("e.id AS value", "e.displayName AS label")
-    .from_(EquipmentSearch._table_name)
+    .from_(EquipmentSearch.table_name())
     .inner_join("equipment e", "e.rowid = equipment_fts.rowid")
     .where("equipment_fts MATCH ?", f'"{search_query}"')
   )

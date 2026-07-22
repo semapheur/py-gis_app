@@ -50,7 +50,7 @@ def update_area(payload: AreaUpdate):
   query = (
     SelectQuery()
     .select("name")
-    .from_(AreasTable._table_name)
+    .from_(AreasTable.table_name())
     .where("name = ?", payload["name"])
     .where("id != ?", uuid.UUID(payload["id"]).bytes)
   )
@@ -73,7 +73,7 @@ def get_area(payload: AreaId):
   query = (
     SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
-    .from_(AreasTable._table_name)
+    .from_(AreasTable.table_name())
     .where("id = ?", uuid.UUID(payload["id"]).bytes)
   )
 
@@ -86,7 +86,7 @@ def get_area_wkt(area_id: str):
   query = (
     SelectQuery()
     .select("AsText(geometry) AS geometry")
-    .from_(AreasTable._table_name)
+    .from_(AreasTable.table_name())
     .where("id = ?", uuid.UUID(area_id).bytes)
   )
 
@@ -99,7 +99,7 @@ def get_areas():
   query = (
     SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
-    .from_(AreasTable._table_name)
+    .from_(AreasTable.table_name())
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:

@@ -69,7 +69,7 @@ def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors
   query = (
     SelectQuery()
     .select(*factors)
-    .from_(RadiometricParamsTable._table_name)
+    .from_(RadiometricParamsTable.table_name())
     .where("id = ?", hash_id)
   )
 

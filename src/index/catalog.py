@@ -44,7 +44,7 @@ def validate_catalog_dir(path: Path, check_db_presence: bool = False):
   query = (
     SelectQuery()
     .select("id")
-    .from_(CatalogTable._table_name)
+    .from_(CatalogTable.table_name())
     .where("path = ?", str(path))
   )
   with SqliteDatabase(app_settings.INDEX_DB) as db:
@@ -177,7 +177,7 @@ def update_catalog(payload: UpdateCatalog):
 
 def get_catalog_edit_data():
   columns = ("id", "path", "name")
-  query = SelectQuery().select(*columns).from_(CatalogTable._table_name)
+  query = SelectQuery().select(*columns).from_(CatalogTable.table_name())
 
   with SqliteDatabase(app_settings.INDEX_DB) as db:
     return db.select_model_records(CatalogTable, query, True)
@@ -186,9 +186,9 @@ def get_catalog_edit_data():
 def get_catalog_index_data():
   from src.index.images import ImageIndexTable
 
-  table_c = CatalogTable._table_name
+  table_c = CatalogTable.table_name()
   table_c_as = table_c[0]
-  table_i = ImageIndexTable._table_name
+  table_i = ImageIndexTable.table_name()
   table_i_as = table_i[0]
   columns = (
     f"{table_c_as}.id AS id",

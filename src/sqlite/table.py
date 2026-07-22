@@ -155,8 +155,11 @@ class Index:
   unique: bool = False
   name: Optional[str] = None
 
+  def resolved_name(self, table_name: str) -> str:
+    return self.name or f"ix_{table_name}_{'_'.join(self.columns)}"
+
   def sql(self, table_name: str) -> str:
-    index_name = self.name or f"ix_{table_name}_{'_'.join(self.columns)}"
+    index_name = self.resolved_name(table_name)
     unique_kw = "UNIQUE " if self.unique else ""
     columns_sql = ", ".join(self.columns)
 
@@ -202,6 +205,13 @@ class Table(metaclass=TableMeta):
     return data
 
   @classmethod
+  def table_name(cls) -> str:
+    if cls._table_name is None:
+      raise ValueError(f"{cls.__name__} must define table_name")
+
+    return cls._table_name
+
+  @classmethod
   def rowid(cls) -> Union[str, None]:
     for name, field in cls._fields.items():
       if field.primary_key:
@@ -211,8 +221,7 @@ class Table(metaclass=TableMeta):
 
   @classmethod
   def create_table_sql(cls) -> str:
-    if not cls._table_name:
-      raise ValueError(f"{cls.__name__} must define table_name")
+    table_name = cls.table_name()
 
     columns: list[str] = []
     for name, field in cls._fields.items():
@@ -237,25 +246,22 @@ class Table(metaclass=TableMeta):
       raise ValueError(f"{cls.__name__} has no fields")
 
     columns_sql = ", ".join(columns)
-    return f"CREATE TABLE IF NOT EXISTS {cls._table_name} ({columns_sql})"
+    return f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql})"
 
   @classmethod
   def create_index_sql(cls) -> list[str]:
-    if not cls._table_name:
-      raise ValueError(f"{cls.__name__} must define table_name")
-
-    return [index.sql(cls._table_name) for index in cls._indexes]
+    table_name = cls.table_name()
+    return [index.sql(table_name) for index in cls._indexes]
 
   @classmethod
   def add_geometry_sql(cls, dimension: str = "XY") -> list[str]:
-    if not cls._table_name:
-      raise ValueError(f"{cls.__name__} must define table_name")
+    table_name = cls.table_name()
 
     sql: list[str] = []
 
     for name, field in cls.geometry_fields().items():
       sql.append(f"""
-        SELECT AddGeometryColumn('{cls._table_name}', '{name}', {field.srid}, '{field.geometry_type}', '{dimension}')
+        SELECT AddGeometryColumn('{table_name}', '{name}', {field.srid}, '{field.geometry_type}', '{dimension}')
       """)
 
     return sql
@@ -290,6 +296,16 @@ class Table(metaclass=TableMeta):
       for name, field in cls._fields.items()
       if isinstance(field, GeometryField)
     }
+
+  @classmethod
+  def index_columns(cls, index_name: str) -> tuple[str, ...]:
+    table_name = cls.table_name()
+
+    for index in cls._indexes:
+      if index.resolved_name(table_name) == index_name:
+        return index.columns
+
+    raise ValueError(f"No index named '{index_name}' on table '{table_name}'")
 
   @classmethod
   def from_row(cls, row, columns=None) -> Table:

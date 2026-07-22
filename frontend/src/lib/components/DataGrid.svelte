@@ -458,6 +458,8 @@
     {#each editColumns as column}
       {#if column.editor === "text"}
         <Input bind:value={inputRow[column.id]} placeholder={column.header} />
+      {:else if column.editor === "number"}
+        <Input bind:value={inputRow[column.id]} placeholder={column.header} type="number" min="0"/>
       {:else if column.editor === "textarea"}
         <TextArea
           bind:value={inputRow[column.id]}

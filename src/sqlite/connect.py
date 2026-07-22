@@ -96,7 +96,7 @@ class SqliteDatabase:
     if self.conn is None:
       raise RuntimeError("Database not connected")
 
-    if table_exists(self.conn, table._table_name):
+    if table_exists(self.conn, table.table_name()):
       return False
 
     cursor = self.conn.cursor()
@@ -110,7 +110,7 @@ class SqliteDatabase:
   def create_fts_table(self, table: type[Table], columns: Sequence[str]):
     self._check_connection()
 
-    table_name = table._table_name
+    table_name = table.table_name()
     fts_name = f"{table_name}_fts"
 
     if table_exists(self.conn, fts_name):
@@ -174,7 +174,7 @@ class SqliteDatabase:
 
   def create_table_indexes(self, table: type[Table]):
     if not table._indexes:
-      raise ValueError(f"Table {table._table_name} has no specified indexes")
+      raise ValueError(f"Table {table.table_name()} has no specified indexes")
 
     if self.conn is None:
       raise RuntimeError("Database not connected")
@@ -197,7 +197,7 @@ class SqliteDatabase:
       return
 
     table = type(models[0])
-    table_name = table._table_name
+    table_name = table.table_name()
     geometry_fields = table.geometry_fields()
 
     rows = []
@@ -239,6 +239,7 @@ class SqliteDatabase:
       query.returning(returning)
 
     sql, _ = query.build()
+    print(sql)
 
     cursor = self.conn.cursor()
 
@@ -309,7 +310,7 @@ class SqliteDatabase:
   def delete_by_ids(self, table: type[Table], ids: list[Any]) -> int:
     self._check_connection()
 
-    table_name = table._table_name
+    table_name = table.table_name()
 
     pk_field = None
     pk_name = None
@@ -392,9 +393,9 @@ class SqliteDatabase:
     params = {"id": id, "geometry": geometry_wkt, "srid": srid}
     cursor.execute(
       f"""
-      INSERT INTO '{target_table._table_name}'({column_list}, '{geometry_column}')
+      INSERT INTO '{target_table.table_name()}'({column_list}, '{geometry_column}')
       SELECT {column_list}, ST_GeomFromText(:geometry, :srid)
-      FROM '{source_table._table_name}'
+      FROM '{source_table.table_name()}'
       WHERE id = :id
     """,
       params,
@@ -404,7 +405,7 @@ class SqliteDatabase:
       raise ValueError(f"Failed to insert into {target_table}")
 
     cursor.execute(
-      f"DELETE FROM '{source_table._table_name}' WHERE id = :id", {"id": id}
+      f"DELETE FROM '{source_table.table_name()}' WHERE id = :id", {"id": id}
     )
 
   def _validate_field_compatibility(

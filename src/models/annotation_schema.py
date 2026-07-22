@@ -9,15 +9,6 @@ from src.sqlite.table import Field, Table, uuid_field
 
 app_settings = get_settings()
 
-FTS_COLUMNS = (
-  "displayName",
-  "description",
-  "descriptionShort",
-  "natoName",
-  "nativeName",
-  "alternativeNames",
-)
-
 
 class AnnotationSchemaTable(Table):
   _table_name = "schema"
@@ -36,7 +27,7 @@ def get_schema_data():
   query = (
     SelectQuery()
     .select(*AnnotationSchemaTable.column_names())
-    .from_(AnnotationSchemaTable._table_name)
+    .from_(AnnotationSchemaTable.table_name())
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_model_records(AnnotationSchemaTable, query, to_json=True)
@@ -49,7 +40,7 @@ def get_schema_options():
       "name AS label",
       "uuid_blob_to_str(id) AS value",
     )
-    .from_(AnnotationSchemaTable._table_name)
+    .from_(AnnotationSchemaTable.table_name())
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     return db.select_model_records(AnnotationSchemaTable, query)
@@ -62,7 +53,7 @@ def get_schema_data_options():
       "name AS label",
       "json_object('id', uuid_blob_to_str(id), 'name', name) AS value",
     )
-    .from_(AnnotationSchemaTable._table_name)
+    .from_(AnnotationSchemaTable.table_name())
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     records = db.select_model_records(AnnotationSchemaTable, query)
@@ -70,48 +61,83 @@ def get_schema_data_options():
   return [{**r, "value": json.loads(r["value"])} for r in records]
 
 
+def get_next_ordering() -> int:
+  query = (
+    SelectQuery()
+    .select("COALESCE(MAX(ordering) + 1, 0) AS ordering")
+    .from_(AnnotationSchemaTable.table_name())
+  )
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    records = db.select_records(query)
+
+  return int(records[0]["ordering"])
+
+
 class InsertSchema(TypedDict):
   name: str
   description: Optional[str]
+  ordering: Optional[int]
 
 
 def insert_schema(payload: InsertSchema):
   new_id = uuid.uuid4()
-  schema_description = payload.get("description")
+  description = payload.get("description")
+  ordering = payload.get("ordering")
+
+  if ordering is None:
+    ordering = get_next_ordering()
+
   record = {
-    "id": str(new_id),
+    "id": new_id,
     "name": payload["name"],
-    "description": schema_description,
+    "description": description,
+    "ordering": ordering,
   }
 
-  table_row = AnnotationSchemaTable.from_dict(record, True)
+  table_row = AnnotationSchemaTable.from_dict(record)
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row])
 
-  return record
+  return {
+    "id": str(new_id),
+    "name": payload["name"],
+    "description": description,
+    "ordering": ordering,
+  }
 
 
 class UpdateSchema(TypedDict):
   id: str
   name: str
   description: str
+  ordering: Optional[int]
 
 
 def update_schema(payload: UpdateSchema):
-  update_id = str(uuid.UUID(payload["id"]))
+  update_id = uuid.UUID(payload["id"])
+  ordering = payload.get("ordering")
+
+  if ordering is None:
+    ordering = get_next_ordering()
 
   update_fields = {
     "id": update_id,
     "name": payload["name"],
     "description": payload["description"],
+    "ordering": ordering,
   }
 
-  table_row = AnnotationSchemaTable.from_dict(update_fields, True)
+  table_row = AnnotationSchemaTable.from_dict(update_fields)
 
   update_query = UpdateQuery().set_excluded("name", "description")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row], "id", update_query)
 
-  return update_fields
+  return {
+    "id": payload["id"],
+    "name": payload["name"],
+    "description": payload["description"],
+    "ordering": ordering,
+  }
