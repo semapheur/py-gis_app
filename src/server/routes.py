@@ -4,8 +4,8 @@ from typing import Callable
 
 from src.hashing import decode_sha256_from_b64
 from src.index.catalog import (
-  InsertCatalog,
-  UpdateCatalog,
+  CatalogInsert,
+  CatalogUpdate,
   get_catalog_edit_data,
   get_catalog_index_data,
   insert_catalog,
@@ -15,8 +15,8 @@ from src.index.catalog import (
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
 from src.models.annotation_schema import (
-  InsertSchema,
-  UpdateSchema,
+  SchemaInsert,
+  SchemaUpdate,
   get_schema_data,
   get_schema_data_options,
   insert_schema,
@@ -33,8 +33,8 @@ from src.models.areas import (
 )
 from src.models.attributes import (
   ATTRIBUTE_TABLES,
-  InsertAttribute,
-  UpdateAttribute,
+  AttributeInsert,
+  AttributeUpdate,
   get_attribute_data,
   get_attribute_options,
   get_attribute_tables,
@@ -42,8 +42,8 @@ from src.models.attributes import (
   update_attribute,
 )
 from src.models.equipment_annotation import (
+  AnnotationConvert,
   AnnotationUpdate,
-  ConvertAnnotation,
   GhostSearch,
   convert_annotation,
   delete_annotations,
@@ -54,8 +54,8 @@ from src.models.equipment_annotation import (
 from src.models.equipment_list import get_equipment, search_equipment, update_equipment
 from src.models.security import (
   SECURITY_TABLES,
-  InsertSecurity,
-  UpdateSecurity,
+  SecurityInsert,
+  SecurityUpdate,
   get_security_data,
   insert_sequrity,
   update_security,
@@ -128,27 +128,27 @@ class Handler(ApiHandler):
     return get_image_info(image_hash)
 
   @api("POST", "/api/insert-attribute/schema")
-  def _post_insert_schema(self, payload: InsertSchema):
+  def _post_insert_schema(self, payload: SchemaInsert):
     return {"inserted_row": insert_schema(payload)}
 
   @api("POST", "/api/insert-attribute/{table}")
-  def _post_insert_attribute(self, payload: InsertAttribute, table: str):
+  def _post_insert_attribute(self, payload: AttributeInsert, table: str):
     if table not in ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid POST endpoint")
     return {"inserted_row": insert_attribute(table, payload)}
 
   @api("POST", "/api/update-attribute/schema")
-  def _post_update_schema(self, payload: UpdateSchema):
+  def _post_update_schema(self, payload: SchemaUpdate):
     return update_schema(payload)
 
   @api("POST", "/api/update-attribute/{table}")
-  def _post_update_attribute(self, payload: UpdateAttribute, table: str):
+  def _post_update_attribute(self, payload: AttributeUpdate, table: str):
     if table not in ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid POST endpoint")
     return update_attribute(table, payload)
 
   @api("POST", "/api/insert-security/{table}")
-  def _post_insert_security(self, payload: InsertSecurity, table: str):
+  def _post_insert_security(self, payload: SecurityInsert, table: str):
     if table not in SECURITY_TABLES:
       raise ApiError(404, "Invalid POST endpoint")
 
@@ -156,7 +156,7 @@ class Handler(ApiHandler):
     return {"inserted_row": inserted_row}
 
   @api("POST", "/api/update-security/{table}")
-  def _post_update_security(self, payload: UpdateSecurity, table: str):
+  def _post_update_security(self, payload: SecurityUpdate, table: str):
     if not table or table not in SECURITY_TABLES:
       self.send_error(404, "Invalid POST endpoint")
 
@@ -196,7 +196,7 @@ class Handler(ApiHandler):
     return {"message": "successfully deleted annotations"}
 
   @api("POST", "/api/convert-annotation")
-  def _post_convert_annotation(self, payload: ConvertAnnotation):
+  def _post_convert_annotation(self, payload: AnnotationConvert):
     convert_annotation(payload)
     return {"message": "Successfully converted annotation"}
 
@@ -216,12 +216,12 @@ class Handler(ApiHandler):
     return {"valid": True}
 
   @api("POST", "/api/insert-catalog")
-  def _post_insert_catalog(self, payload: InsertCatalog):
+  def _post_insert_catalog(self, payload: CatalogInsert):
     result = insert_catalog(payload)
     return {"inserted_row": result}
 
   @api("POST", "/api/update-catalog")
-  def _post_update_catalog(self, payload: UpdateCatalog):
+  def _post_update_catalog(self, payload: CatalogUpdate):
     result = update_catalog(payload)
     return {"updated_row": result}
 

@@ -126,12 +126,12 @@ def parse_id_name_path_record(row: tuple[bytes, str, str]):
   }
 
 
-class InsertCatalog(TypedDict):
+class CatalogInsert(TypedDict):
   path: str
   name: str
 
 
-def insert_catalog(payload: InsertCatalog):
+def insert_catalog(payload: CatalogInsert):
   path = Path(payload["path"])
   verify_dir(path)
 
@@ -147,13 +147,13 @@ def insert_catalog(payload: InsertCatalog):
   return parse_id_name_path_record(result[0])
 
 
-class UpdateCatalog(TypedDict):
+class CatalogUpdate(TypedDict):
   id: str
   path: str
   name: str
 
 
-def update_catalog(payload: UpdateCatalog):
+def update_catalog(payload: CatalogUpdate):
   path = Path(payload["path"])
   verify_dir(path)
 

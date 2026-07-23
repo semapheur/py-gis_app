@@ -356,14 +356,14 @@ def get_annotation_ghosts_by_geometry(
         cursor.execute(statement)
 
 
-class ConvertAnnotation(TypedDict):
+class AnnotationConvert(TypedDict):
   id: str
   geometry: str
   modifiedByUserId: str
   modifiedAtTimestamp: str
 
 
-def convert_annotation(payload: ConvertAnnotation):
+def convert_annotation(payload: AnnotationConvert):
   insert_sql = """
     INSERT INTO equipment_polygon(
       id,

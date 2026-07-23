@@ -73,13 +73,13 @@ def get_next_ordering() -> int:
   return int(records[0]["ordering"])
 
 
-class InsertSchema(TypedDict):
+class SchemaInsert(TypedDict):
   name: str
   description: Optional[str]
   ordering: Optional[int]
 
 
-def insert_schema(payload: InsertSchema):
+def insert_schema(payload: SchemaInsert):
   new_id = uuid.uuid4()
   description = payload.get("description")
   ordering = payload.get("ordering")
@@ -107,14 +107,14 @@ def insert_schema(payload: InsertSchema):
   }
 
 
-class UpdateSchema(TypedDict):
+class SchemaUpdate(TypedDict):
   id: str
   name: str
   description: str
   ordering: Optional[int]
 
 
-def update_schema(payload: UpdateSchema):
+def update_schema(payload: SchemaUpdate):
   update_id = uuid.UUID(payload["id"])
   ordering = payload.get("ordering")
 

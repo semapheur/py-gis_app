@@ -56,20 +56,22 @@ def get_security_data(table: str):
 
 
 def get_next_ordering(table: str) -> int:
-  query = SelectQuery().select("SELECT MAX(ordering) + 1 AS ordering").from_(table)
+  query = (
+    SelectQuery().select("COALESCE(MAX(ordering) + 1, 0) AS ordering").from_(table)
+  )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     records = db.select_records(query)
 
   return int(records[0]["ordering"])
 
 
-class InsertSecurity(TypedDict):
+class SecurityInsert(TypedDict):
   name: str
   level: int
   ordering: Optional[int]
 
 
-def insert_sequrity(table_name: str, payload: InsertSecurity):
+def insert_sequrity(table_name: str, payload: SecurityInsert):
   validate_security_table(table_name)
   table_model = make_security_model(table_name)
 
@@ -99,11 +101,14 @@ def insert_sequrity(table_name: str, payload: InsertSecurity):
   }
 
 
-class UpdateSecurity(InsertSecurity):
+class SecurityUpdate(TypedDict):
   id: str
+  name: str
+  level: int
+  ordering: Optional[int]
 
 
-def update_security(table_name: str, payload: UpdateSecurity):
+def update_security(table_name: str, payload: SecurityUpdate):
   validate_security_table(table_name)
   table_model = make_security_model(table_name)
 

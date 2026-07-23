@@ -142,14 +142,14 @@ class SchemaValue(TypedDict):
   name: str
 
 
-class InsertAttribute(TypedDict):
+class AttributeInsert(TypedDict):
   schema: SchemaValue
   name: str
   description: Optional[str]
   ordering: Optional[int]
 
 
-def insert_attribute(table_name: str, payload: InsertAttribute):
+def insert_attribute(table_name: str, payload: AttributeInsert):
   validate_attribute_table(table_name)
   table_model = make_attribute_model(table_name)
 
@@ -183,7 +183,7 @@ def insert_attribute(table_name: str, payload: InsertAttribute):
   }
 
 
-class UpdateAttribute(TypedDict):
+class AttributeUpdate(TypedDict):
   id: str
   schema: SchemaValue
   name: str
@@ -191,7 +191,7 @@ class UpdateAttribute(TypedDict):
   ordering: Optional[int]
 
 
-def update_attribute(table_name: str, payload: UpdateAttribute):
+def update_attribute(table_name: str, payload: AttributeUpdate):
   validate_attribute_table(table_name)
   table_model = make_attribute_model(table_name)
 
