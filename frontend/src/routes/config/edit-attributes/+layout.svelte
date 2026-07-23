@@ -13,7 +13,6 @@
 
 <div class="page-container">
   <nav class="table-list">
-    <Link href={"/config/edit-attributes/schema"}>Schema</Link>
     {#each data.tables as info}
       <Link href={`/config/edit-attributes/${info.name}`}>{info.label}</Link>
     {/each}

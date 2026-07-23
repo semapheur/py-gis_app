@@ -40,10 +40,8 @@ class AttributeTableList(Table):
 def make_attribute_model(table_name: str) -> type[Table]:
   class AttributeTable(Table):
     _table_name = table_name
-    _indexes = [Index(("schema", "name"), unique=True)]
 
     id = uuid_field(True, False)
-    schema = uuid_field(False, False)
     name = Field(str, nullable=False)
     description = Field(str)
     ordering = Field(int, nullable=False)
@@ -60,7 +58,6 @@ def create_attribute_tables():
       is_created = db.create_table(model)
 
       if is_created:
-        db.create_table_indexes(model)
         row = {"name": table, "label": table.capitalize().replace("_", " ")}
         table_list.append(AttributeTableList.from_dict(row))
 
@@ -96,21 +93,13 @@ def get_attribute_options(table: str):
 
   query = (
     SelectQuery()
-    .select("schema", "id", "name")
+    .select("name AS label", "uuid_blob_to_str(id) AS value")
     .from_(table)
-    .order_by("schema")
     .order_by("ordering")
   )
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_model_records(model, query, True)
-
-  result: dict[str, list[AttributeOption]] = defaultdict(list)
-  for record in records:
-    schema = record["schema"]
-    result[schema].append({"label": record["name"], "value": record["id"]})
-
-  return result
+    return db.select_model_records(model, query, True)
 
 
 def make_attribute_query(table: str):
@@ -135,19 +124,18 @@ def make_attribute_query(table: str):
 def get_attribute_data(table: str):
   validate_attribute_table(table)
 
-  query = make_attribute_query(table)
-  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(query)
-
-  return [{**r, "schema": json.loads(r["schema"])} for r in records]
-
-
-def get_next_ordering(table: str, schema: bytes) -> int:
   query = (
     SelectQuery()
-    .select("COALESCE(MAX(ordering) + 1, 0) AS ordering")
+    .select("uuid_blob_to_str(a.id) AS id", "name", "description", "ordering")
     .from_(table)
-    .where("schema = ?", schema)
+  )
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    return db.select_records(query)
+
+
+def get_next_ordering(table: str) -> int:
+  query = (
+    SelectQuery().select("COALESCE(MAX(ordering) + 1, 0) AS ordering").from_(table)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     records = db.select_records(query)
@@ -155,13 +143,7 @@ def get_next_ordering(table: str, schema: bytes) -> int:
   return int(records[0]["ordering"])
 
 
-class SchemaValue(TypedDict):
-  id: str
-  name: str
-
-
 class AttributeInsert(TypedDict):
-  schema: SchemaValue
   name: str
   description: Optional[str]
   ordering: Optional[int]
@@ -172,16 +154,14 @@ def insert_attribute(table_name: str, payload: AttributeInsert):
   table_model = make_attribute_model(table_name)
 
   new_id = uuid.uuid4()
-  schema_id = uuid.UUID(payload["schema"]["id"])
   description = payload.get("description")
   ordering = payload.get("ordering")
 
   if ordering is None:
-    ordering = get_next_ordering(table_name, schema_id.bytes)
+    ordering = get_next_ordering(table_name)
 
   record = {
     "id": new_id,
-    "schema": schema_id,
     "name": payload["name"],
     "description": description,
     "ordering": ordering,
@@ -194,7 +174,6 @@ def insert_attribute(table_name: str, payload: AttributeInsert):
 
   return {
     "id": str(new_id),
-    "schema": payload["schema"],
     "name": payload["name"],
     "description": description,
     "ordering": ordering,
@@ -203,7 +182,6 @@ def insert_attribute(table_name: str, payload: AttributeInsert):
 
 class AttributeUpdate(TypedDict):
   id: str
-  schema: SchemaValue
   name: str
   description: Optional[str]
   ordering: Optional[int]
@@ -214,15 +192,13 @@ def update_attribute(table_name: str, payload: AttributeUpdate):
   table_model = make_attribute_model(table_name)
 
   update_id = uuid.UUID(payload["id"])
-  schema_id = uuid.UUID(payload["schema"]["id"])
   ordering = payload.get("ordering")
 
   if ordering is None:
-    ordering = get_next_ordering(table_name, schema_id.bytes)
+    ordering = get_next_ordering(table_name)
 
   update_fields = {
     "id": update_id,
-    "schema": schema_id,
     "name": payload["name"],
     "description": payload["description"],
     "ordering": ordering,
@@ -230,14 +206,13 @@ def update_attribute(table_name: str, payload: AttributeUpdate):
 
   table_row = table_model.from_dict(update_fields)
 
-  update_query = UpdateQuery().set_excluded("schema", "name", "description", "ordering")
+  update_query = UpdateQuery().set_excluded("name", "description", "ordering")
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    db.insert_models([table_row], "schema, name", update_query)
+    db.insert_models([table_row], "id", update_query)
 
   return {
     "id": payload["id"],
-    "schema": payload["schema"],
     "name": payload["name"],
     "description": payload["description"],
     "ordering": ordering,

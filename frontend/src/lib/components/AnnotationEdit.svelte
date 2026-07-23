@@ -46,6 +46,24 @@
       sortable: true,
       filterable: true,
     },
+    {
+      id: "configuration",
+      label: "Configuration",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: "modification",
+      label: "Modification",
+      sortable: true,
+      filterable: true,
+    },
+    {
+      id: "visibility",
+      label: "Visibility",
+      sortable: true,
+      filterable: true,
+    },
   ] as const;
 
   const activityColumns = [];
