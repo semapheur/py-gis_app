@@ -10,6 +10,7 @@
     EquipmentData,
   } from "$lib/contexts/annotate.svelte";
   import { toast } from "$lib/stores/toast.svelte";
+  import type { SchemaId } from "$lib/utils/brand";
 
   type EquipmentPatch = Partial<EquipmentData>;
 
@@ -22,13 +23,32 @@
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
-  const { confidenceOptions, statusOptions } = getEquipmentOptions();
+  const {
+    schemaOptions,
+    confidenceOptions,
+    statusOptions,
+    configurationOptions,
+    modificationOptions,
+    visibilityOptions,
+  } = getEquipmentOptions();
 
   let selectedEquipment = $state<SelectOption | null>(
     toSelectOption(untrack(() => value?.equipment) ?? null),
   );
-  let confidenceId = $derived<string | null>(value.confidence?.id ?? null);
-  let statusId = $derived<string | null>(value.status?.id ?? null);
+  let schemaId = $state<SchemaId>(schemaOptions[0].value);
+  let confidenceId = $derived<string | null>(
+    value.confidence?.[schemaId].id ?? null,
+  );
+  let statusId = $derived<string | null>(value.status?.[schemaId].id ?? null);
+  let configurationId = $derived<string | null>(
+    value.configuration?.[schemaId].id ?? null,
+  );
+  let modificationId = $derived<string | null>(
+    value.modification?.[schemaId].id ?? null,
+  );
+  let visibilityId = $derived<string | null>(
+    value.visibility?.[schemaId].id ?? null,
+  );
 
   const isValid = $derived.by(() => {
     if (bulk) {
@@ -66,7 +86,8 @@
   }
 
   function handleConfidenceChange(id: string | null) {
-    const option = confidenceOptions.find((o) => o.value === id) ?? null;
+    const option =
+      confidenceOptions[schemaId].find((o) => o.value === id) ?? null;
     update(
       "confidence",
       option ? toAnnotateValue(option) : bulk ? undefined : null,
@@ -74,12 +95,40 @@
   }
 
   function handleStatusChange(id: string | null) {
-    const option = statusOptions.find((o) => o.value === id) ?? null;
+    const option = statusOptions[schemaId].find((o) => o.value === id) ?? null;
     update(
       "status",
       option ? toAnnotateValue(option) : bulk ? undefined : null,
     );
   }
+
+  function handleConfigurationChange(id: string | null) {
+    const option =
+      configurationOptions[schemaId].find((o) => o.value === id) ?? null;
+    update(
+      "configuration",
+      option ? toAnnotateValue(option) : bulk ? undefined : null,
+    );
+  }
+
+  function handleModificationChange(id: string | null) {
+    const option =
+      modificationOptions[schemaId].find((o) => o.value === id) ?? null;
+    update(
+      "modification",
+      option ? toAnnotateValue(option) : bulk ? undefined : null,
+    );
+  }
+
+  function handleVisibilityChange(id: string | null) {
+    const option =
+      visibilityOptions[schemaId].find((o) => o.value === id) ?? null;
+    update(
+      "visibility",
+      option ? toAnnotateValue(option) : bulk ? undefined : null,
+    );
+  }
+
   async function searchEquipment(query: string): Promise<SelectOption[]> {
     const response = await fetch("/api/search-equipment", {
       method: "POST",
@@ -109,18 +158,47 @@
       );
     }}
   />
-  <Select
-    options={confidenceOptions}
-    placeholder="Confidence"
-    value={confidenceId}
-    onchange={(e) => handleConfidenceChange(e.currentTarget.value)}
-  />
-  <Select
-    options={statusOptions}
-    placeholder="Status"
-    value={statusId}
-    onchange={(e) => handleStatusChange(e.currentTarget.value)}
-  />
+  <Select options={schemaOptions} placeholder="Schema" value={schemaId} />
+  {#if confidenceOptions[schemaId]}
+    <Select
+      options={confidenceOptions[schemaId]}
+      placeholder="Confidence"
+      value={confidenceId}
+      onchange={(e) => handleConfidenceChange(e.currentTarget.value)}
+    />
+  {/if}
+  {#if statusOptions[schemaId]}
+    <Select
+      options={statusOptions[schemaId]}
+      placeholder="Status"
+      value={statusId}
+      onchange={(e) => handleStatusChange(e.currentTarget.value)}
+    />
+  {/if}
+  {#if configurationOptions[schemaId]}
+    <Select
+      options={configurationOptions[schemaId]}
+      placeholder="Configuration"
+      value={configurationId}
+      onchange={(e) => handleConfigurationChange(e.currentTarget.value)}
+    />
+  {/if}
+  {#if modificationOptions[schemaId]}
+    <Select
+      options={modificationOptions[schemaId]}
+      placeholder="Status"
+      value={modificationId}
+      onchange={(e) => handleModificationChange(e.currentTarget.value)}
+    />
+  {/if}
+  {#if visibilityOptions[schemaId]}
+    <Select
+      options={visibilityOptions[schemaId]}
+      placeholder="Visibility"
+      value={visibilityId}
+      onchange={(e) => handleVisibilityChange(e.currentTarget.value)}
+    />
+  {/if}
 </form>
 
 <style>

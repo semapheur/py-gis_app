@@ -1,5 +1,6 @@
 import json
 import uuid
+from collections import defaultdict
 from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
@@ -19,9 +20,9 @@ ATTRIBUTE_TABLES = (
   "activity_likelihood",
   "observation_confidence",
   "equipment_status",
-  "equipment_visibility",
   "equipment_configuration",
   "equipment_modification",
+  "equipment_visibility",
 )
 
 
@@ -84,15 +85,32 @@ def validate_attribute_table(table: str):
     raise ValueError(f"Invalid attribute table: {table}")
 
 
+class AttributeOption(TypedDict):
+  label: str
+  value: str
+
+
 def get_attribute_options(table: str):
   validate_attribute_table(table)
   model = make_attribute_model(table)
 
   query = (
-    SelectQuery().select("name AS label", "uuid_blob_to_str(id) AS value").from_(table)
+    SelectQuery()
+    .select("schema", "id", "name")
+    .from_(table)
+    .order_by("schema")
+    .order_by("ordering")
   )
+
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    return db.select_model_records(model, query)
+    records = db.select_model_records(model, query, True)
+
+  result: dict[str, list[AttributeOption]] = defaultdict(list)
+  for record in records:
+    schema = record["schema"]
+    result[schema].append({"label": record["name"], "value": record["id"]})
+
+  return result
 
 
 def make_attribute_query(table: str):

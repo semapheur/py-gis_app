@@ -19,6 +19,7 @@ from src.models.annotation_schema import (
   SchemaUpdate,
   get_schema_data,
   get_schema_data_options,
+  get_schema_options,
   insert_schema,
   update_schema,
 )
@@ -61,13 +62,17 @@ from src.models.security import (
   update_security,
 )
 from src.models.update import TableUpdate
-from src.server.api import ApiError, ApiHandler, api
+from src.server.api_handler import ApiError, ApiHandler, api
 
 
-class Handler(ApiHandler):
+class ApiRoutes(ApiHandler):
   @api("GET", "/api/attribute-tables")
   def _get_attribute_tables(self):
     return {"tables": get_attribute_tables()}
+
+  @api("GET", "/api/schema-options")
+  def _get_schema_options(self):
+    return {"options": get_schema_options}
 
   @api("GET", "/api/schema-data-options")
   def _get_schema_data_options(self):

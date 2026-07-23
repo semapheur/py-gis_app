@@ -276,7 +276,7 @@ class SelectQuery:
     self._where: list[tuple[str, WhereOp]] = []
     self._group_by: list[str] = []
     self._having: list[tuple[str, WhereOp]] = []
-    self._order: Optional[str] = None
+    self._order: list[str] = []
     self._limit: Optional[int] = None
     self._offset: Optional[int] = None
     self._params = []
@@ -366,7 +366,7 @@ class SelectQuery:
     return self
 
   def order_by(self, col: str, direction: SortOrder = "asc"):
-    self._order = f"{col} {direction.upper()}"
+    self._order.append(f"{col} {direction.upper()}")
     return self
 
   def limit(self, n: int):
@@ -417,7 +417,7 @@ class SelectQuery:
       sql.append("HAVING " + " ".join(clauses))
 
     if self._order:
-      sql.append("ORDER BY " + self._order)
+      sql.append("ORDER BY " + ", ".join(self._order))
 
     if self._limit is not None:
       sql.append(f"LIMIT {self._limit}")

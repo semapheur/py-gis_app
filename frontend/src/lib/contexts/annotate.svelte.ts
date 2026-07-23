@@ -1,3 +1,4 @@
+import type { SchemaId } from "$lib/utils/brand";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
@@ -35,8 +36,11 @@ export interface ActivityData {
 
 export interface EquipmentData {
   equipment: AnnotateValue | null;
-  confidence: AnnotateValue | null;
-  status: AnnotateValue | null;
+  confidence: Record<SchemaId, AnnotateValue> | null;
+  status: Record<SchemaId, AnnotateValue> | null;
+  configuration: Record<SchemaId, AnnotateValue> | null;
+  modification: Record<SchemaId, AnnotateValue> | null;
+  visibility: Record<SchemaId, AnnotateValue> | null;
 }
 export type CompleteEquipmentData = {
   [K in keyof EquipmentData]-?: NonNullable<EquipmentData[K]>;

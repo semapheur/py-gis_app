@@ -32,33 +32,65 @@ export const load: PageLoad = async ({ params, fetch }) => {
     body: encode({ id }),
   };
 
-  const [confidenceOptions, statusOptions, imageInfoWithoutId, annotations] =
-    await Promise.all([
-      fetchMsgPack(
-        fetch,
-        "/api/get-attributes/observation_confidence",
-        undefined,
-        "Failed to fetch observation confidence attributes",
-      ),
-      fetchMsgPack(
-        fetch,
-        "/api/get-attributes/equipment_status",
-        undefined,
-        "Failed to fetch equipment status attributes",
-      ),
-      fetchMsgPack<Partial<ImageInfo>>(
-        fetch,
-        "/api/image-info",
-        postRequest,
-        "Failed to fetch image info",
-      ),
-      fetchMsgPack<AnnotationInfo[]>(
-        fetch,
-        `/api/get-annotations/${id}`,
-        undefined,
-        `Failed to fetch annotations for ${id}`,
-      ),
-    ]);
+  const [
+    schemaOptions,
+    confidenceOptions,
+    statusOptions,
+    configurationOptions,
+    modificationOptions,
+    visibilityOptions,
+    imageInfoWithoutId,
+    annotations,
+  ] = await Promise.all([
+    fetchMsgPack(
+      fetch,
+      "/api/schema-options",
+      undefined,
+      "Failed to fetch schema options",
+    ),
+    fetchMsgPack(
+      fetch,
+      "/api/get-attributes/observation_confidence",
+      undefined,
+      "Failed to fetch observation confidence attributes",
+    ),
+    fetchMsgPack(
+      fetch,
+      "/api/get-attributes/equipment_status",
+      undefined,
+      "Failed to fetch equipment status attributes",
+    ),
+    fetchMsgPack(
+      fetch,
+      "/api/get-attributes/equipment_configuration",
+      undefined,
+      "Failed to fetch equipment configuration attributes",
+    ),
+    fetchMsgPack(
+      fetch,
+      "/api/get-attributes/equipment_modification",
+      undefined,
+      "Failed to fetch equipment modification attributes",
+    ),
+    fetchMsgPack(
+      fetch,
+      "/api/get-attributes/equipment_visibility",
+      undefined,
+      "Failed to fetch equipment visibility attributes",
+    ),
+    fetchMsgPack<Partial<ImageInfo>>(
+      fetch,
+      "/api/image-info",
+      postRequest,
+      "Failed to fetch image info",
+    ),
+    fetchMsgPack<AnnotationInfo[]>(
+      fetch,
+      `/api/get-annotations/${id}`,
+      undefined,
+      `Failed to fetch annotations for ${id}`,
+    ),
+  ]);
 
   const radiometricParams =
     imageInfoWithoutId.image_type === "slc"
@@ -78,7 +110,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
   return {
     imageInfo,
     radiometricParams,
+    schemaOptions,
     confidenceOptions,
+    configurationOptions,
+    modificationOptions,
+    visibilityOptions,
     statusOptions,
     annotations,
   };
