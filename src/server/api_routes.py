@@ -72,7 +72,7 @@ class ApiRoutes(ApiHandler):
 
   @api("GET", "/api/schema-options")
   def _get_schema_options(self):
-    return {"options": get_schema_options}
+    return {"options": get_schema_options()}
 
   @api("GET", "/api/schema-data-options")
   def _get_schema_data_options(self):

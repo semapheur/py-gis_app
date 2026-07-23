@@ -32,31 +32,55 @@
     visibilityOptions,
   } = getEquipmentOptions();
 
-  let selectedEquipment = $state<SelectOption | null>(
-    toSelectOption(untrack(() => value?.equipment) ?? null),
-  );
-  let schemaId = $state<SchemaId>(schemaOptions[0].value);
-  let confidenceId = $derived<string | null>(
-    value.confidence?.[schemaId].id ?? null,
-  );
-  let statusId = $derived<string | null>(value.status?.[schemaId].id ?? null);
-  let configurationId = $derived<string | null>(
-    value.configuration?.[schemaId].id ?? null,
-  );
-  let modificationId = $derived<string | null>(
-    value.modification?.[schemaId].id ?? null,
-  );
-  let visibilityId = $derived<string | null>(
-    value.visibility?.[schemaId].id ?? null,
-  );
+  const attributeFields = [
+    { key: "confidence", label: "Confidence", options: confidenceOptions },
+    { key: "status", label: "Status", options: statusOptions },
+    {
+      key: "configuration",
+      label: "Configuration",
+      options: configurationOptions,
+    },
+    {
+      key: "modification",
+      label: "Modification",
+      options: modificationOptions,
+    },
+    { key: "visibility", label: "Visibility", options: visibilityOptions },
+  ] as const satisfies Array<{
+    key: keyof Omit<EquipmentData, "equipment">;
+    label: string;
+    options: Record<SchemaId, SelectOption[]>;
+  }>;
 
-  const isValid = $derived.by(() => {
-    if (bulk) {
-      return true;
+  type AttributeKey = (typeof attributeFields)[number]["key"];
+
+  let selectedEquipment = $derived(toSelectOption(value.equipment ?? null));
+  let schemaId = $state<SchemaId>(schemaOptions[0].value);
+  let attributeIds = $derived.by(() => {
+    const ids = {} as Record<AttributeKey, string | null>;
+    for (const field of attributeFields) {
+      ids[field.key] =
+        value[field.key]?.[schemaId]?.id ??
+        field.options[schemaId]?.[0]?.value ??
+        null;
+    }
+    return ids;
+  });
+
+  let isValid = $derived.by(() => {
+    const full = value as EquipmentData;
+
+    if (!bulk && !full.equipment) return false;
+
+    for (const field of attributeFields) {
+      const optionsForSchema = field.options[schemaId];
+
+      if (!optionsForSchema) continue;
+      if (bulk) continue;
+      if (!full[field.key]?.[schemaId]) return false;
     }
 
-    const full = value as EquipmentData;
-    return Boolean(full.equipment && full.status && full.confidence);
+    return true;
   });
 
   $effect(() => {
@@ -85,46 +109,13 @@
     return value ? { value: value.id, label: value.label } : null;
   }
 
-  function handleConfidenceChange(id: string | null) {
-    const option =
-      confidenceOptions[schemaId].find((o) => o.value === id) ?? null;
+  function handleAttributeChange(
+    field: (typeof attributeFields)[number],
+    id: string | null,
+  ) {
+    const option = field.options[schemaId]?.find((o) => o.value === id) ?? null;
     update(
-      "confidence",
-      option ? toAnnotateValue(option) : bulk ? undefined : null,
-    );
-  }
-
-  function handleStatusChange(id: string | null) {
-    const option = statusOptions[schemaId].find((o) => o.value === id) ?? null;
-    update(
-      "status",
-      option ? toAnnotateValue(option) : bulk ? undefined : null,
-    );
-  }
-
-  function handleConfigurationChange(id: string | null) {
-    const option =
-      configurationOptions[schemaId].find((o) => o.value === id) ?? null;
-    update(
-      "configuration",
-      option ? toAnnotateValue(option) : bulk ? undefined : null,
-    );
-  }
-
-  function handleModificationChange(id: string | null) {
-    const option =
-      modificationOptions[schemaId].find((o) => o.value === id) ?? null;
-    update(
-      "modification",
-      option ? toAnnotateValue(option) : bulk ? undefined : null,
-    );
-  }
-
-  function handleVisibilityChange(id: string | null) {
-    const option =
-      visibilityOptions[schemaId].find((o) => o.value === id) ?? null;
-    update(
-      "visibility",
+      field.key,
       option ? toAnnotateValue(option) : bulk ? undefined : null,
     );
   }
@@ -159,46 +150,16 @@
     }}
   />
   <Select options={schemaOptions} placeholder="Schema" value={schemaId} />
-  {#if confidenceOptions[schemaId]}
-    <Select
-      options={confidenceOptions[schemaId]}
-      placeholder="Confidence"
-      value={confidenceId}
-      onchange={(e) => handleConfidenceChange(e.currentTarget.value)}
-    />
-  {/if}
-  {#if statusOptions[schemaId]}
-    <Select
-      options={statusOptions[schemaId]}
-      placeholder="Status"
-      value={statusId}
-      onchange={(e) => handleStatusChange(e.currentTarget.value)}
-    />
-  {/if}
-  {#if configurationOptions[schemaId]}
-    <Select
-      options={configurationOptions[schemaId]}
-      placeholder="Configuration"
-      value={configurationId}
-      onchange={(e) => handleConfigurationChange(e.currentTarget.value)}
-    />
-  {/if}
-  {#if modificationOptions[schemaId]}
-    <Select
-      options={modificationOptions[schemaId]}
-      placeholder="Status"
-      value={modificationId}
-      onchange={(e) => handleModificationChange(e.currentTarget.value)}
-    />
-  {/if}
-  {#if visibilityOptions[schemaId]}
-    <Select
-      options={visibilityOptions[schemaId]}
-      placeholder="Visibility"
-      value={visibilityId}
-      onchange={(e) => handleVisibilityChange(e.currentTarget.value)}
-    />
-  {/if}
+  {#each attributeFields as field (field.key)}
+    {#if field.options[schemaId]}
+      <Select
+        options={field.options[schemaId]}
+        placeholder={field.label}
+        value={attributeIds[field.key]}
+        onchange={(e) => handleAttributeChange(field, e.currentTarget.value)}
+      />
+    {/if}
+  {/each}
 </form>
 
 <style>
