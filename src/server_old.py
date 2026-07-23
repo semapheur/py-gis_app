@@ -59,7 +59,13 @@ from src.models.equipment_annotation import (
   update_annotations,
 )
 from src.models.equipment_list import get_equipment, search_equipment, update_equipment
-from src.models.security import InsertSecurity, UpdateSecurity, get_security_data, insert_sequrity, update_security
+from src.models.security import (
+  InsertSecurity,
+  UpdateSecurity,
+  get_security_data,
+  insert_sequrity,
+  update_security,
+)
 from src.models.update import TableUpdate
 from src.msgpack import decode_msgpack, encode_msgpack
 
@@ -477,7 +483,7 @@ class Handler(SimpleHTTPRequestHandler):
   def _post_delete_annotations(self):
     def logic(payload: dict[str, list[str]]):
       delete_annotations(payload)
-      return {"message": "Successfully deleted annotations"}
+      return {"message": "successfully deleted annotations"}
 
     self._handle_post(logic)
 
@@ -624,18 +630,17 @@ class Handler(SimpleHTTPRequestHandler):
       self.send_error(500, f"Server error: {str(e)}")
 
   def _get_security_data(self, table: str):
-      if not table or table not in ATTRIBUTE_TABLES:
-        self.send_error(404, "Invalid POST endpoint")
-        return
+    if not table or table not in ATTRIBUTE_TABLES:
+      self.send_error(404, "Invalid POST endpoint")
+      return
 
-      try:
-        security_data = get_security_data(table)
-        result = {"data": security_data}
-        self._api_response(result)
+    try:
+      security_data = get_security_data(table)
+      result = {"data": security_data}
+      self._api_response(result)
 
-      except Exception as e:
-        self.send_error(500, f"Server error: {str(e)}")
-
+    except Exception as e:
+      self.send_error(500, f"Server error: {str(e)}")
 
   def _get_equipment(self):
     result = get_equipment()

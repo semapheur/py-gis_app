@@ -1,6 +1,6 @@
 import uuid
 from pathlib import Path
-from typing import Any, Callable, TypedDict, TypeVar
+from typing import Callable
 
 from src.hashing import decode_sha256_from_b64
 from src.index.catalog import (
@@ -53,6 +53,7 @@ from src.models.equipment_annotation import (
 )
 from src.models.equipment_list import get_equipment, search_equipment, update_equipment
 from src.models.security import (
+  SECURITY_TABLES,
   InsertSecurity,
   UpdateSecurity,
   get_security_data,
@@ -109,6 +110,14 @@ class Handler(ApiHandler):
       raise ApiError(404, "Invalid GET endpoint")
     return {"options": get_attribute_options(table)}
 
+  @api("GET", "/api/security-data/{table}")
+  def _get_security_data(self, table: str):
+    if not table or table not in ATTRIBUTE_TABLES:
+      raise ApiError(404, "Invalid POST endpoint")
+
+    security_data = get_security_data(table)
+    return {"data": security_data}
+
   @api("POST", "/api/search-images")
   def _post_query_images(self, payload: ImageQuery):
     return search_images(payload)
@@ -117,10 +126,6 @@ class Handler(ApiHandler):
   def _post_image_info(self, payload: dict):
     image_hash = decode_sha256_from_b64(payload["id"])
     return get_image_info(image_hash)
-
-  @api("POST", "/api/update-equipment")
-  def _post_update_equipment(self, payload: TableUpdate):
-    return update_equipment(payload)
 
   @api("POST", "/api/insert-attribute/schema")
   def _post_insert_schema(self, payload: InsertSchema):
@@ -142,6 +147,34 @@ class Handler(ApiHandler):
       raise ApiError(404, "Invalid POST endpoint")
     return update_attribute(table, payload)
 
+  @api("POST", "/api/insert-security/{table}")
+  def _post_insert_security(self, payload: InsertSecurity, table: str):
+    if table not in SECURITY_TABLES:
+      raise ApiError(404, "Invalid POST endpoint")
+
+    inserted_row = insert_sequrity(table, payload)
+    return {"inserted_row": inserted_row}
+
+  @api("POST", "/api/update-security/{table}")
+  def _post_update_security(self, payload: UpdateSecurity, table: str):
+    if not table or table not in SECURITY_TABLES:
+      self.send_error(404, "Invalid POST endpoint")
+
+    return update_security(table, payload)
+
+  @api("POST", "/api/search-equipment")
+  def _post_search_equipment(self, payload: dict[str, str]):
+    query = payload["query"]
+    return search_equipment(query)
+
+  @api("POST", "/api/update-equipment")
+  def _post_update_equipment(self, payload: TableUpdate):
+    return update_equipment(payload)
+
+  @api("POST", "/api/get-area")
+  def _post_fetch_area(self, payload: AreaId):
+    return get_area(payload)
+
   @api("POST", "/api/update-area")
   def _post_update_area(self, payload: AreaUpdate):
     name = update_area(payload)
@@ -151,6 +184,25 @@ class Handler(ApiHandler):
   @api("POST", "/api/delete-areas")
   def _post_delete_areas(self, payload: AreaDelete):
     delete_areas(payload)
+
+  @api("POST", "/api/update-annotations")
+  def _post_update_annotations(self, payload: list[AnnotationUpdate]):
+    update_annotations(payload)
+    return {"message": "Successfully updated annotations"}
+
+  @api("POST", "/api/delete-annotations")
+  def _post_delete_annotations(self, payload: dict[str, list[str]]):
+    delete_annotations(payload)
+    return {"message": "successfully deleted annotations"}
+
+  @api("POST", "/api/convert-annotation")
+  def _post_convert_annotation(self, payload: ConvertAnnotation):
+    convert_annotation(payload)
+    return {"message": "Successfully converted annotation"}
+
+  @api("POST", "/api/get-annotation-ghosts")
+  def _post_fetch_annotation_ghosts(self, payload: GhostSearch):
+    return get_annotation_ghosts(payload)
 
   @api("POST", "/api/validate-catalog-dir")
   def _post_validate_catalog_dir(self, payload: dict):
@@ -162,6 +214,16 @@ class Handler(ApiHandler):
     except ValueError as e:
       raise ApiError(409, str(e))
     return {"valid": True}
+
+  @api("POST", "/api/insert-catalog")
+  def _post_insert_catalog(self, payload: InsertCatalog):
+    result = insert_catalog(payload)
+    return {"inserted_row": result}
+
+  @api("POST", "/api/update-catalog")
+  def _post_update_catalog(self, payload: UpdateCatalog):
+    result = update_catalog(payload)
+    return {"updated_row": result}
 
   @api("POST", "/api/index-catalog", stream=True)
   def _post_index_catalog(self, payload: dict, send_event: Callable[[str, dict], None]):
