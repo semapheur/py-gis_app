@@ -1,5 +1,4 @@
 <script lang="ts">
-  import { onMount } from "svelte";
   import FilterOutlineIcon from "@iconify-svelte/mdi/filter-outline";
   import ButtonIcon from "$lib/components/ButtonIcon.svelte";
   import Input from "$lib/components/Input.svelte";
@@ -13,8 +12,6 @@
     selectable?: RowSelect;
     selected?: Record<string, string | number>[];
     onselectionchange?: (rows: Record<string, string | number>[]) => void;
-    rowHeightRem?: number;
-    overscan?: number;
   }
 
   let {
@@ -23,14 +20,7 @@
     selectable = "none",
     selected = $bindable([]),
     onselectionchange,
-    rowHeightRem = 1,
-    overscan = 5,
   }: Props = $props();
-
-  let rootFontSize = $state(16);
-  let rowHeight = $derived(rowHeightRem * rootFontSize);
-  let scrollTop = $state(0);
-  let viewportHeight = $state(0);
 
   let openFilter = $state<string | null>(null);
   let filterSearch = $state<Record<string, string>>({});
@@ -167,49 +157,17 @@
     onselectionchange?.(selected);
   }
 
-  function onScroll(e: Event) {
-    scrollTop = (e.target as HTMLDivElement).scrollTop;
-  }
-
-  let totalRows = $derived(processedData.length);
-  const startIndex = $derived(
-    Math.max(0, Math.floor(scrollTop / rowHeight) - overscan),
-  );
-  const visibleCount = $derived(
-    Math.ceil(viewportHeight / rowHeight) + overscan * 2,
-  );
-  const endIndex = $derived(Math.min(totalRows, startIndex + visibleCount));
-  const visibleRows = $derived(
-    processedData
-      .slice(startIndex, endIndex)
-      .map((record, i) => ({ record, index: startIndex + i })),
-  );
-  const topSpacerHeight = $derived(startIndex * rowHeight);
-  const bottomSpacerHeight = $derived((totalRows - endIndex) * rowHeight);
-  const colCount = $derived(columns.length + (selectable !== "none" ? 1 : 0));
-
   $effect(() => {
     processedData;
     selectedRows = new Set();
     selected = [];
     lastSelectedIndex = null;
   });
-
-  onMount(() => {
-    const updateRootFontSize = () => {
-      rootFontSize = parseFloat(
-        getComputedStyle(document.documentElement).fontSize,
-      );
-    };
-    updateRootFontSize();
-    window.addEventListener("resize", updateRootFontSize);
-    return () => window.removeEventListener("resize", updateRootFontSize);
-  });
 </script>
 
 <svelte:window onclick={closeFilter} />
 
-<div class="table-wrap" bind:clientHeight={viewportHeight} onscroll={onScroll}>
+<div class="table-wrap">
   <table>
     <thead>
       <tr>
@@ -260,9 +218,11 @@
                           Select all
                         </label>
                       </li>
-                      {#each columnValues[c.id].filter((v) => !filterSearch[c.id] || v
+                      {#each columnValues[c.id].filter((v) => {
+                        !filterSearch[c.id] || v
                             .toLowerCase()
-                            .includes(filterSearch[c.id].toLowerCase())) as value}
+                            .includes(filterSearch[c.id].toLowerCase());
+                      }) as value}
                         <li>
                           <label>
                             <input
@@ -303,25 +263,19 @@
       </tr>
     </thead>
     <tbody>
-      {#if topSpacerHeight > 0}
-        <tr style="height: {topSpacerHeight}px;" aria-hidden="true">
-          <td colspan={colCount}></td>
-        </tr>
-      {/if}
-      {#each visibleRows as { record, index } (index)}
+      {#each processedData as record, i}
         <tr
-          style="height: {rowHeightRem}rem;"
           class={{
-            selected: selectedRows.has(index),
+            selected: selectedRows.has(i),
             selectable: selectable !== "none",
           }}
-          onclick={(e) => toggleRow(index, e)}
+          onclick={(e) => toggleRow(i, e)}
         >
           {#if selectable === "multi"}
             <td class="select-col">
               <input
                 type="checkbox"
-                checked={selectedRows.has(index)}
+                checked={selectedRows.has(i)}
                 onclick={(e) => {
                   e.stopPropagation();
                   e.preventDefault();
@@ -332,7 +286,7 @@
             <td class="select-col">
               <input
                 type="radio"
-                checked={selectedRows.has(index)}
+                checked={selectedRows.has(i)}
                 onclick={(e) => e.stopPropagation()}
               />
             </td>
@@ -342,11 +296,6 @@
           {/each}
         </tr>
       {/each}
-      {#if bottomSpacerHeight > 0}
-        <tr style="height: {bottomSpacerHeight}px;" aria-hidden="true">
-          <td colspan={colCount}></td>
-        </tr>
-      {/if}
     </tbody>
   </table>
 </div>
@@ -377,7 +326,7 @@
   }
 
   tr.selectable:hover td {
-    background: oklch(var(--color-secondary-accent) / 0.1);
+    background: oklch(var(--color--secondary-accent) / 0.1);
   }
 
   tr.selected td {
