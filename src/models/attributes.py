@@ -102,31 +102,12 @@ def get_attribute_options(table: str):
     return db.select_model_records(model, query, True)
 
 
-def make_attribute_query(table: str):
-  return (
-    SelectQuery()
-    .select(
-      "uuid_blob_to_str(a.id) AS id",
-      "json_object('id', uuid_blob_to_str(a.schema), 'name', s.name) as schema",
-      "a.name AS name",
-      "a.description AS description",
-      "a.ordering AS ordering",
-    )
-    .from_(f"{table} a")
-    .join(
-      "schema s",
-      on="a.schema = s.id",
-      join_type="LEFT",
-    )
-  )
-
-
 def get_attribute_data(table: str):
   validate_attribute_table(table)
 
   query = (
     SelectQuery()
-    .select("uuid_blob_to_str(a.id) AS id", "name", "description", "ordering")
+    .select("uuid_blob_to_str(id) AS id", "name", "description", "ordering")
     .from_(table)
   )
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:

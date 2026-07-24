@@ -269,26 +269,33 @@ class InsertQuery:
 class SelectQuery:
   def __init__(self):
     self._ctes: list[tuple[str, str]] = []
+    self._cte_params: list[Any] = []
     self._select: list[str] = []
     self._select_params: list[Any] = []
     self._table: Optional[str] = None
+    self._from_params: list[Any] = []
     self._joins: list[str] = []
+    self._join_params: list[Any] = []
     self._where: list[tuple[str, WhereOp]] = []
+    self._where_params: list[Any] = []
     self._group_by: list[str] = []
     self._having: list[tuple[str, WhereOp]] = []
+    self._having_params: list[Any] = []
     self._order: list[str] = []
     self._limit: Optional[int] = None
     self._offset: Optional[int] = None
-    self._params = []
 
   @property
   def columns(self) -> list[tuple[str, Optional[str]]]:
     as_regex = re.compile(r"\s+[Aa][Ss]\s+")
     result: list[tuple[str, Optional[str]]] = []
     for column in self._select:
-      if as_regex.search(column):
-        name, alias = as_regex.split(column)
-        result.append((name.strip(), alias.strip()))
+      matches = list(as_regex.finditer(column))
+      if matches:
+        last = matches[-1]
+        name = column[: last.start()].strip()
+        alias = column[last.end() :].strip()
+        result.append((name, alias))
       else:
         result.append((column.strip(), None))
 
@@ -297,24 +304,30 @@ class SelectQuery:
   def with_(self, name: str, query: "SelectQuery"):
     cte_sql, cte_params = query.build()
     self._ctes.append((name, cte_sql))
-    self._params = cte_params + self._params
+    self._cte_params.extend(cte_params)
     return self
 
   def select(self, *cols: str):
     self._select.extend(cols)
     return self
 
-  def select_raw(self, expr: str, *values, Any, alias: Optional[str] = None):
+  def select_raw(self, expr: str, *values: Any, alias: Optional[str] = None):
     self._select.append(f"{expr} AS {alias}" if alias else expr)
     self._select_params.extend(values)
     return self
 
   def from_(self, table: str, *values):
     self._table = table
-    self._params = list(values) + self._params
+    self._from_params.extend(values)
     return self
 
-  def join(self, table: str, on: Optional[str] = None, join_type: JoinOp = "INNER"):
+  def join(
+    self,
+    table: str,
+    on: Optional[str] = None,
+    *values: Any,
+    join_type: JoinOp = "INNER",
+  ):
 
     if join_type == "CROSS":
       if on is not None:
@@ -325,21 +338,22 @@ class SelectQuery:
         raise ValueError(f"{join_type} JOIN requires an ON clause")
 
       self._joins.append(f"{join_type} JOIN {table} ON {on}")
+      self._join_params.extend(values)
 
     return self
 
-  def inner_join(self, table: str, on: str):
-    return self.join(table, on, join_type="INNER")
+  def inner_join(self, table: str, on: str, *values: Any):
+    return self.join(table, on, *values, join_type="INNER")
 
-  def left_join(self, table: str, on: str):
-    return self.join(table, on, join_type="LEFT")
+  def left_join(self, table: str, on: str, *values: Any):
+    return self.join(table, on, *values, join_type="LEFT")
 
   def cross_join(self, table: str):
     return self.join(table, join_type="CROSS")
 
   def where(self, condition: str, *values, op: WhereOp = "AND"):
     self._where.append((condition, op))
-    self._params.extend(values)
+    self._where_params.extend(values)
     return self
 
   def where_group(
@@ -351,10 +365,11 @@ class SelectQuery:
     parts = []
     for condition, *values in conditions:
       parts.append(condition)
-      self._params.extend(values)
+      self._where_params.extend(values)
 
     grouped = "(" + f" {op_inner} ".join(parts) + ")"
     self._where.append((grouped, op_outer))
+    return self
 
   def group_by(self, *cols: str):
     self._group_by.extend(cols)
@@ -362,7 +377,7 @@ class SelectQuery:
 
   def having(self, condition: str, *values, op: WhereOp = "AND"):
     self._having.append((condition, op))
-    self._params.extend(values)
+    self._having_params.extend(values)
     return self
 
   def order_by(self, col: str, direction: SortOrder = "asc"):
@@ -426,7 +441,16 @@ class SelectQuery:
     elif self._offset is not None:
       sql.extend(("LIMIT -1", f"OFFSET {self._offset}"))
 
-    return " ".join(sql), self._select_params + self._params
+    params = (
+      self._cte_params
+      + self._select_params
+      + self._from_params
+      + self._join_params
+      + self._where_params
+      + self._having_params
+    )
+
+    return " ".join(sql), params
 
 
 class UnionQuery:

@@ -14,16 +14,23 @@ from typing import (
   Union,
 )
 
-from src.sqlite.query_builder import InsertQuery, SelectQuery, UpdateQuery
+from src.sqlite.query_builder import DeleteQuery, InsertQuery, SelectQuery, UpdateQuery
 from src.sqlite.table import Field, GeometryField, SqliteValue, Table
 from src.sqlite.utils import uuid_blob_to_str
 
 
 class SqliteDatabase:
-  def __init__(self, db_path: Path, spatial: bool = False, wal: bool = True):
+  def __init__(
+    self,
+    db_path: Path,
+    spatial: bool = False,
+    wal: bool = True,
+    foreign_keys: bool = True,
+  ):
     self.db_path = db_path
     self.spatial = spatial
     self.wal = wal
+    self.foreign_keys = foreign_keys
     self.conn = None
 
   def __enter__(self):
@@ -35,6 +42,9 @@ class SqliteDatabase:
 
     self.conn = sqlite3.connect(self.db_path, timeout=10)
     self.conn.create_function("uuid_blob_to_str", 1, uuid_blob_to_str)
+
+    if self.foreign_keys:
+      self.conn.execute("PRAGMA foreign_keys = ON")
 
     if self.wal:
       self.conn.execute("PRAGMA journal_mode=WAL")
@@ -83,6 +93,9 @@ class SqliteDatabase:
   @contextmanager
   def transaction(self):
     self._check_connection()
+    if self.conn.in_transaction():
+      raise RuntimeError("A transaction is already active on this connection")
+
     cursor = self.conn.cursor()
     try:
       cursor.execute("BEGIN TRANSACTION")
@@ -247,11 +260,9 @@ class SqliteDatabase:
       for row in rows:
         cursor.execute(sql, row)
         results.append(cursor.fetchone())
-      self.conn.commit()
       return results
 
     self.conn.cursor().executemany(sql, rows)
-    self.conn.commit()
     return
 
   def select_records(self, query: SelectQuery) -> list[dict[srt, SqliteValue]]:
@@ -350,7 +361,6 @@ class SqliteDatabase:
     rows_deleted = cursor.rowcount
 
     cursor.execute("DROP TABLE temp_delete_ids")
-    self.conn.commit()
     return rows_deleted
 
   def convert_geometry(
@@ -406,6 +416,27 @@ class SqliteDatabase:
     cursor.execute(
       f"DELETE FROM '{source_table.table_name()}' WHERE id = :id", {"id": id}
     )
+
+  def set_uuid_list(self, junction: type[Table], parent_id: Any, values: list[Any]):
+    self._check_connection()
+
+    table_name = junction.table_name()
+    parent_field = junction._fields["parent_id"]
+    value_field = junction._fields["value"]
+    serialized_parent = parent_field.serialize_to_sql(parent_id)
+
+    cursor = self.conn.cursor()
+    delete_query = (
+      DeleteQuery().from_(table_name).where("parent_id = ?", serialized_parent)
+    )
+    delete_sql, delete_params = delete_query.build()
+    cursor.execute(delete_sql, delete_params)
+
+    if values:
+      rows = [(serialized_parent, value_field.serialize_to_sql(v)) for v in values]
+      cursor.executemany(
+        f"INSERT INTO {table_name} (parent_id, value) VALUES (?, ?)", rows
+      )
 
   def _validate_field_compatibility(
     self, source_model: type[Table], target_model: type[Table], common_columns: set[str]

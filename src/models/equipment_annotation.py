@@ -19,7 +19,9 @@ from src.sqlite.table import (
   Table,
   datetime_field,
   hash_field,
+  json_field,
   uuid_field,
+  uuid_list_junction_model,
 )
 
 EquipmentGeometry = Literal["POINT", "POLYGON"]
@@ -27,7 +29,7 @@ EquipmentGeometry = Literal["POINT", "POLYGON"]
 app_settings = get_settings()
 
 
-def equipment_annotation_model(geometry_type: EquipmentGeometry):
+def equipment_annotation_models(geometry_type: EquipmentGeometry):
   table_name = f"equipment_{geometry_type.lower()}"
 
   class EquipmentAnnotation(Table):
@@ -37,9 +39,8 @@ def equipment_annotation_model(geometry_type: EquipmentGeometry):
     equipment = uuid_field(False, False)
     confidence = uuid_field(False, False)
     status = uuid_field(False, False)
-    configuration = uuid_field(False, False)
-    modification = uuid_field(False, False)
     visibility = uuid_field(False, False)
+    configuration = uuid_field(False, False)
     geometry = GeometryField(str, geometry_type=geometry_type)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
@@ -47,15 +48,25 @@ def equipment_annotation_model(geometry_type: EquipmentGeometry):
     modifiedAtTimestamp = datetime_field(True)
 
   EquipmentAnnotation.__name__ = f"{table_name.title().replace('_', '')}Table"
-  return EquipmentAnnotation
+
+  ModificationJunction = uuid_list_junction_model(EquipmentAnnotation, "modification")
+  CamoflageJunction = uuid_list_junction_model(EquipmentAnnotation, "camoflage")
+
+  return EquipmentAnnotation, ModificationJunction, CamoflageJunction
 
 
 def create_annotation_tables():
   geometries = ("POINT", "POLYGON")
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for g in geometries:
-      model = equipment_annotation_model(g)
-      db.create_table(model)
+      annotation, modification, camoflage = equipment_annotation_models(g)
+
+      db.create_table(annotation)
+      db.create_table(modification)
+      db.create_table(camoflage)
+
+      db.create_table_indexes(modification)
+      db.create_table_indexes(camoflage)
 
 
 class AnnotationUpdate(TypedDict):
@@ -67,11 +78,16 @@ def update_annotations(payloads: list[AnnotationUpdate]):
   wkt_pattern = re.compile(r"^(?:SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
 
   upsert_models: dict[str, list[type[Table]]] = {"equipment": [], "activity": []}
+  list_writes: list[
+    tuple[type[Table], type[Table], uuid.UUID, list[uuid.UUID], list[uuid.UUID]]
+  ] = []
 
   update_query = UpdateQuery().set_excluded(
     "equipment",
     "confidence",
     "status",
+    "visibility",
+    "configuration",
     "geometry",
     "modifiedByUserId",
     "modifiedAtTimestamp",
@@ -93,8 +109,17 @@ def update_annotations(payloads: list[AnnotationUpdate]):
       raise ValueError(f"Invalid WKT: {geometry_wkt}")
 
     geometry = match.group(1)
-    model_cls = equipment_annotation_model(geometry)
-    upsert_models[annotation_type].append(model_cls.from_dict(data, True))
+    annotation_cls, modification_cls, camoflage_cls = equipment_annotation_models(
+      geometry
+    )
+    upsert_models[annotation_type].append(annotation_cls.from_dict(data, True))
+
+    parent_id = uuid.UUID(data["id"])
+    modification_ids = [uuid.UUID(u) for u in data.get("modification", [])]
+    camoflage_ids = [uuid.UUID(u) for u in data.get("camoflage", [])]
+    list_writes.append(
+      (modification_cls, camoflage_cls, parent_id, modification_ids, camoflage_ids)
+    )
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for models in upsert_models.values():
@@ -102,6 +127,16 @@ def update_annotations(payloads: list[AnnotationUpdate]):
         continue
 
       db.insert_models(models, "id", update_query)
+
+    for (
+      modification_cls,
+      camoflage_cls,
+      parent_id,
+      modification_ids,
+      camoflage_ids,
+    ) in list_writes:
+      db.set_uuid_list(modification_cls, parent_id, modification_ids)
+      db.set_uuid_list(camoflage_cls, parent_id, camoflage_ids)
 
 
 def delete_annotations(payload: dict[str, list[str]]):
@@ -124,7 +159,10 @@ def delete_annotations(payload: dict[str, list[str]]):
 
   def resolve_model(annotation_type: str, geometry: str):
     if annotation_type == "equipment":
-      return equipment_annotation_model(geometry)
+      annotation_cls, _modification_cls, _camoflage_cls = equipment_annotation_models(
+        geometry
+      )
+      return annotation_cls
 
     if annotation_type == "activity":
       raise NotImplementedError("Annotation deletion not implemented for activity")
@@ -141,35 +179,35 @@ def delete_annotations(payload: dict[str, list[str]]):
 
 
 def get_annotations_by_image(image_id: bytes):
-
-  def map_row(row: Row):
+  def map_row(row: Row) -> dict:
     r = dict(row)
-
-    label = "\n".join(
-      [
-        r["equipment_label"],
-        r["confidence_label"],
-        r["status_label"],
-      ]
-    )
-
     return {
-      "id": uuid_bytes_to_str(r["id"]),
+      "id": r["id"],
       "geometry": json.loads(r["geometry"]),
-      "label": label,
+      "label": r["label"],
       "data": {
         "equipment": {
-          "id": uuid_bytes_to_str(r["equipment_id"]),
+          "id": r["equipment_id"],
           "label": r["equipment_label"],
         },
         "confidence": {
-          "id": uuid_bytes_to_str(r["confidence_id"]),
+          "id": r["confidence_id"],
           "label": r["confidence_label"],
         },
         "status": {
-          "id": uuid_bytes_to_str(r["status_id"]),
+          "id": r["status_id"],
           "label": r["status_label"],
         },
+        "visibility": {
+          "id": r["visibility_id"],
+          "label": r["visibility_label"],
+        },
+        "configuration": {
+          "id": r["configuration_id"],
+          "label": r["configuration_label"],
+        },
+        "modification": json.loads(r["modification"]),
+        "camoflage": json.loads(r["camoflage"]),
       },
       "metaData": {
         "createdByUserId": r["createdByUserId"],
@@ -180,36 +218,68 @@ def get_annotations_by_image(image_id: bytes):
     }
 
   def build_subquery(geometry: EquipmentGeometry):
+    table = f"equipment_{geometry.lower()}"
+    modification_table = f"{table}_modification"
+    camoflage_table = f"{table}_camoflage"
+
+    modification_json = f"""
+      (
+        SELECT COALESCE(json_group_array(json_object('id', uuid_blob_to_str(m.value), 'label', em.name)), '[]')
+        FROM {modification_table} m
+        INNER JOIN a.equipment_modification em ON em.id = m.value
+        WHERE m.parent_id = ea.id
+      ) AS modification
+    """
+
+    camoflage_json = f"""
+      (
+        SELECT COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', ec.name)), '[]')
+        FROM {camoflage_table} c
+        INNER JOIN a.equipment_camoflage ec ON ec.id = c.value
+        WHERE c.parent_id = ea.id
+      ) AS camoflage
+    """
+
     return (
       SelectQuery()
       .select(
-        "ea.id AS id",
+        "uuid_blob_to_str(ea.id) AS id",
         "AsGeoJSON(ea.geometry) AS geometry",
-        "ea.equipment AS equipment_id",
-        "ed.equipment.displayName AS equipment_label",
-        "ea.confidence AS confidence_id",
+        "ed.equipment.displayname AS label",
+        "uuid_blob_to_str(ea.equipment) AS equipment_id",
+        "ed.equipment.displayname AS equipment_label",
+        "uuid_blob_to_str(ea.confidence) AS confidence_id",
         "a.observation_confidence.name AS confidence_label",
-        "ea.status AS status_id",
+        "uuid_blob_to_str(ea.status) AS status_id",
         "a.equipment_status.name AS status_label",
+        "uuid_blob_to_str(ea.visibility) AS visibility_id",
+        "a.equipment_visibility.name AS visibility_label",
+        "uuid_blob_to_str(ea.configuration) AS configuration_id",
+        "a.equipment_configuration.name AS configuration_label",
+        modification_json,
+        camoflage_json,
         "ea.createdByUserId AS createdByUserId",
         "ea.modifiedByUserId AS modifiedByUserId",
         "ea.createdAtTimestamp AS createdAtTimestamp",
         "ea.modifiedAtTimestamp AS modifiedAtTimestamp",
       )
-      .from_(f"equipment_{geometry.lower()} ea")
+      .from_(f"{table} ea")
       .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
       .inner_join(
         "a.observation_confidence", "a.observation_confidence.id = ea.confidence"
       )
+      .inner_join("a.equipment_visibility", "a.equipment_visibility.id = ea.visibility")
       .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
+      .inner_join(
+        "a.equipment_configuration", "a.equipment_configuration.id = ea.configuration"
+      )
       .where("ea.image = ?", image_id)
     )
 
-  attach_sql = (
-    f"ATTACH DATABASE '{app_settings.EQUIPMENT_DB}' AS ed",
-    f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a",
+  attach_statements = (
+    ("ed", f"ATTACH DATABASE '{app_settings.EQUIPMENT_DB}' AS ed"),
+    ("a", f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a"),
   )
-  detach_sql = ("DETACH DATABASE ed", "DETACH DATABASE a")
 
   geometries = ["POINT", "POLYGON"]
   subqueries = [build_subquery(g) for g in geometries]
@@ -219,15 +289,16 @@ def get_annotations_by_image(image_id: bytes):
     db.conn.row_factory = Row
     cursor = db.conn.cursor()
 
-    for statement in attach_sql:
-      cursor.execute(statement)
-
+    attached: list[str] = []
     try:
-      return [map_row(r) for r in cursor.execute(select_sql, params)]
-
-    finally:
-      for statement in detach_sql:
+      for alias, statement in attach_statements:
         cursor.execute(statement)
+        attached.append(alias)
+
+      return [map_row(r) for r in cursor.execute(select_sql, params)]
+    finally:
+      for alias in reversed(attached):
+        cursor.execute(f"DETACH DATABASE {alias}")
 
 
 class GhostSearch(TypedDict):
@@ -373,6 +444,8 @@ def convert_annotation(payload: AnnotationConvert):
       image,
       equipment,
       status,
+      visibility,
+      configuration,
       createdByUserId,
       modifiedByUserId,
       createdAtTimestamp,
@@ -384,6 +457,8 @@ def convert_annotation(payload: AnnotationConvert):
       image,
       equipment,
       status,
+      visibility,
+      configuration,
       createdByUserId,
       :modifiedByUserId,
       createdAtTimestamp,
@@ -393,10 +468,22 @@ def convert_annotation(payload: AnnotationConvert):
     WHERE id = :id;
   """
 
+  migrate_modification_sql = """
+    INSERT OR IGNORE INTO equipment_polygon_modification (parent_id, value)
+    SELECT parent_id, value FROM equipment_point_modification WHERE parent_id = :id;
+  """
+
+  migrate_camoflage_sql = """
+    INSERT OR IGNORE INTO equipment_polygon_camoflage (parent_id, value)
+    SELECT parent_id, value FROM equipment_point_camoflage WHERE parent_id = :id;
+  """
+
   delete_query = DeleteQuery().from_("equipment_point").where("id = ?", payload["id"])
   delete_sql, delete_params = delete_query.build()
 
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     cursor = db.conn.cursor()
     cursor.execute(insert_sql, payload)
+    cursor.execute(migrate_modification_sql, payload)
+    cursor.execute(migrate_camoflage_sql, payload)
     cursor.execute(delete_sql, delete_params)

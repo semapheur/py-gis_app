@@ -37,6 +37,8 @@ Geometry = Literal[
   "GEOMETRYCOLLECTION",
 ]
 
+ForeignKeyAction = Literal["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"]
+
 
 class ColumnType(Enum):
   INTEGER = int
@@ -54,12 +56,27 @@ class ColumnType(Enum):
 
 
 @dataclass(slots=True)
+class ForeignKey:
+  table: str
+  column: str
+  on_delete: ForeignKeyAction = "CASCADE"
+  on_update: ForeignKeyAction = "NO ACTION"
+
+  def sql(self, column_name: str) -> str:
+    return (
+      f"FOREIGN KEY ({column_name}) REFERENCES {self.table}({self.column}) "
+      f"ON DELETE {self.on_delete} ON UPDATE {self.on_update}"
+    )
+
+
+@dataclass(slots=True)
 class Field(Generic[T, S, J]):
   python_type: type[T]
   sql_type: Optional[ColumnType] = None
   primary_key: bool = False
   nullable: bool = True
   unique: bool = False
+  foreign_key: Optional[ForeignKey] = None
   default: Optional[S] = None
   to_sql: Optional[Callable[[T], S]] = None
   from_sql: Optional[Callable[[S], T]] = None
@@ -185,6 +202,7 @@ class Table(metaclass=TableMeta):
   _table_name: Optional[str] = None
   _fields: dict[str, Union[Field, GeometryField]] = {}
   _indexes: list[Index] = []
+  _without_rowid: bool = False
 
   def __init_subclass__(cls, **kwargs):
     super().__init_subclass__(**kwargs)
@@ -212,25 +230,30 @@ class Table(metaclass=TableMeta):
     return cls._table_name
 
   @classmethod
-  def rowid(cls) -> Union[str, None]:
-    for name, field in cls._fields.items():
-      if field.primary_key:
-        return name
+  def primary_key_columns(cls) -> tuple[str, ...]:
+    return tuple(name for name, field in cls._fields.items() if field.primary_key)
 
-    return None
+  @classmethod
+  def rowid(cls) -> Union[str, None]:
+    primary_keys = cls.primary_key_columns()
+    return primary_keys[0] if len(primary_keys) == 1 else None
 
   @classmethod
   def create_table_sql(cls) -> str:
     table_name = cls.table_name()
+    primary_keys = cls.primary_key_columns()
+    composite_primary_key = len(primary_keys) > 1
 
     columns: list[str] = []
+    constraints: list[str] = []
+
     for name, field in cls._fields.items():
       if isinstance(field, GeometryField):
         continue
 
       col_def = [name, field.sql_column_type()]
 
-      if field.primary_key:
+      if field.primary_key and not composite_primary_key:
         col_def.append("PRIMARY KEY")
       elif not field.nullable:
         col_def.append("NOT NULL")
@@ -242,11 +265,20 @@ class Table(metaclass=TableMeta):
 
       columns.append(" ".join(col_def))
 
+      if field.foreign_key is not None:
+        constraints.append(field.foreign_key.sql(name))
+
     if not columns:
       raise ValueError(f"{cls.__name__} has no fields")
 
-    columns_sql = ", ".join(columns)
-    return f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql})"
+    if composite_primary_key:
+      constraints.insert(0, f"PRIMARY KEY ({', '.join(primary_keys)})")
+
+    all_defs = columns + constraints
+    columns_sql = ", ".join(all_defs)
+    without_rowid_sql = " WITHOUT ROWID" if cls._without_rowid else ""
+
+    return f"CREATE TABLE IF NOT EXISTS {table_name} ({columns_sql}){without_rowid_sql}"
 
   @classmethod
   def create_index_sql(cls) -> list[str]:
@@ -364,6 +396,26 @@ def uuid_field(primary: bool, nullable: bool):
   )
 
 
+def uuid_fk_field(
+  references_table: str,
+  references_column: str = "id",
+  primary: bool = False,
+  nullable: bool = False,
+  on_delete: ForeignKeyAction = "CASCADE",
+):
+  return Field(
+    uuid.UUID,
+    sql_type=ColumnType.BLOB,
+    primary_key=primary,
+    nullable=False if primary else nullable,
+    foreign_key=ForeignKey(references_table, references_column, on_delete=on_delete),
+    to_sql=lambda u: u.bytes,
+    from_sql=lambda b: uuid.UUID(bytes=b),
+    to_json=lambda u: str(u),
+    from_json=lambda u: uuid.UUID(u),
+  )
+
+
 def datetime_field(nullable: bool):
   return Field(
     datetime,
@@ -419,3 +471,19 @@ def jsonb_field(python_json: type[T], nullable: bool = True):
     to_sql=lambda x: json.dumps(x),
     from_sql=lambda x: json.loads(x),
   )
+
+
+def uuid_list_junction_model(parent_model: type[Table], column_name: str):
+  parent_table = parent_model.table_name()
+  junction_table_name = f"{parent_table}_{column_name}"
+
+  class Junction(Table):
+    _table_name = junction_table_name
+    _without_rowid = True
+    parent_id = uuid_fk_field(parent_table, "id", primary=True)
+    value = uuid_field(True, False)
+
+    _indexes = [Index(("value",), name=f"ix_{junction_table_name}_value")]
+
+  Junction.__name__ = f"{junction_table_name.title().replace('_', '')}Table"
+  return Junction
