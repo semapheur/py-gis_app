@@ -1,4 +1,5 @@
 <script lang="ts" generics="T = string">
+  import Input from "$lib/components/Input.svelte";
   import type { SelectOption } from "$lib/utils/types";
 
   interface Props {
@@ -24,7 +25,25 @@
   let open = $state<boolean>(false);
   let query = $state<string>("");
   let containerEl = $state<HTMLDivElement | null>(null);
+  let dropdownEl = $state<HTMLDivElement | null>(null);
   let activeIndex = $state<number>(-1);
+  let dropUp = $state<boolean>(false);
+
+  const DROPDOWN_MAX_HEIGHT = 300;
+
+  function updatePlacement() {
+    if (!containerEl) return;
+
+    const rect = containerEl.getBoundingClientRect();
+    const spaceBelow = window.innerHeight - rect.bottom;
+    const spaceAbove = rect.top;
+
+    if (spaceBelow < DROPDOWN_MAX_HEIGHT && spaceAbove > spaceBelow) {
+      dropUp = true;
+    } else {
+      dropUp = false;
+    }
+  }
 
   const filteredOptions = $derived(
     query.trim() === ""
@@ -125,6 +144,27 @@
     }
   });
 
+  $effect(() => {
+    if (!open || !containerEl || !dropdownEl) return;
+
+    const recompute = () => {
+      const rect = containerEl.getBoundingClientRect();
+      const dropdownHeight = dropdownEl.offsetHeight;
+      const spaceBelow = window.innerHeight - rect.bottom;
+      const spaceAbove = rect.top;
+
+      dropUp = spaceBelow < dropdownHeight && spaceAbove > spaceBelow;
+    };
+
+    recompute();
+    window.addEventListener("scroll", recompute, true);
+    window.addEventListener("resize", recompute);
+    return () => {
+      window.removeEventListener("scroll", recompute, true);
+      window.removeEventListener("resize", recompute);
+    };
+  });
+
   const selectedLabels = $derived(
     options.filter((o) => selectedSet.has(o.value)).map((o) => o.label),
   );
@@ -183,10 +223,13 @@
   </div>
 
   {#if open}
-    <div class="ms-dropdown" role="listbox">
+    <div
+      bind:this={dropdownEl}
+      class={["ms-dropdown", { "drop-up": dropUp }]}
+      role="listbox"
+    >
       {#if searchable}
-        <input
-          class="ms-search"
+        <Input
           type="text"
           bind:value={query}
           placeholder="Search..."
@@ -225,11 +268,6 @@
 <style>
   .multiselect {
     position: relative;
-    font-family:
-      system-ui,
-      -apple-system,
-      sans-serif;
-    font-size: 14px;
     width: 100%;
     max-width: 400px;
   }
@@ -238,19 +276,19 @@
     display: block;
     margin-bottom: 6px;
     font-weight: 500;
-    color: #374151;
+    color: oklch(var(--color-text));
   }
 
   .ms-control {
     display: flex;
     align-items: center;
     justify-content: space-between;
-    gap: 8px;
-    min-height: 40px;
-    padding: 6px 10px;
-    border: 1px solid #d1d5db;
-    border-radius: 8px;
-    background: white;
+    gap: var(--size-sm);
+    min-height: 1rem;
+    padding: var(--size-sm) var(--size-md);
+    border: 1px solid oklch(var(--color-secondary));
+    border-radius: var(--size-md);
+    background: oklch(var(--color-primary-accent));
     cursor: pointer;
     transition:
       border-color 0.15s ease,
@@ -258,88 +296,87 @@
   }
 
   .ms-control:hover:not(.disabled) {
-    border-color: #9ca3af;
+    border-color: oklch(var(--color-secondary-accent));
   }
 
   .ms-control.open {
-    border-color: #6366f1;
-    box-shadow: 0 0 0 3px rgba(99, 102, 241, 0.15);
+    border-color: oklch(var(--color-secondary));
+    box-shadow: 0 0 0 3px oklch(var(--color-secondary-accent));
   }
 
   .ms-control.disabled {
-    background: #f3f4f6;
+    background: oklch(var(--color-primary-accent) / 0.5);
     cursor: not-allowed;
-    opacity: 0.6;
   }
 
   .ms-tags {
     display: flex;
     flex-wrap: wrap;
-    gap: 4px;
+    gap: var(--size-sm);
     flex: 1;
     min-width: 0;
   }
 
   .ms-placeholder {
-    color: #9ca3af;
+    color: oklch(var(--color-text) / 0.5);
   }
 
   .ms-tag {
     display: flex;
     align-items: center;
-    gap: 4px;
-    background: #eef2ff;
-    color: #4338ca;
-    padding: 2px 6px 2px 8px;
-    border-radius: 6px;
-    font-size: 13px;
+    gap: var(--size-sm);
+    background: oklch(var(--color-primary));
+    color: oklch(var(--color-text));
+    padding: var(--size-xs) var(--size-sm);
+    border-radius: var(--size-sm);
+    font-size: var(--text-xs);
     white-space: nowrap;
   }
 
   .ms-tag-count {
-    background: #f3f4f6;
-    color: #374151;
+    background: oklch(var(--color-primary));
+    color: oklch(var(--color-text));
   }
 
   .ms-tag-remove {
     border: none;
     background: none;
-    color: #4338ca;
+    color: oklch(var(--color-secondary));
     cursor: pointer;
-    font-size: 14px;
+    font-size: var(--text-sm);
     line-height: 1;
-    padding: 0 2px;
-    border-radius: 3px;
+    padding: 0 var(--size-sm);
+    border-radius: 50%;
   }
 
   .ms-tag-remove:hover {
-    background: rgba(67, 56, 202, 0.15);
+    background: oklch(var(--color-secondary-accent));
   }
 
   .ms-actions {
     display: flex;
     align-items: center;
-    gap: 6px;
+    gap: var(--size-sm);
     flex-shrink: 0;
   }
 
   .ms-clear {
     border: none;
     background: none;
-    color: #9ca3af;
+    color: oklch(var(--color-text));
     cursor: pointer;
-    font-size: 16px;
+    font-size: var(--text-sm);
     line-height: 1;
-    padding: 0 2px;
+    padding: 0 var(--size-xs);
   }
 
   .ms-clear:hover {
-    color: #4b5563;
+    color: oklch(var(--color-negative));
   }
 
   .ms-arrow {
-    color: #9ca3af;
-    font-size: 12px;
+    color: oklch(var(--color-text));
+    font-size: var(--text-md);
     transition: transform 0.15s ease;
   }
 
@@ -349,81 +386,76 @@
 
   .ms-dropdown {
     position: absolute;
-    top: calc(100% + 4px);
+    top: calc(100% + 0.5rem);
     left: 0;
     right: 0;
-    background: white;
-    border: 1px solid #e5e7eb;
-    border-radius: 8px;
-    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.12);
-    z-index: 50;
+    padding: var(--size-sm);
+    background: oklch(var(--color-primary-accent));
+    border: 1px solid oklch(var(--color-secondary));
+    border-radius: var(--size-md);
+    z-index: 1;
     overflow: hidden;
   }
 
-  .ms-search {
-    width: 100%;
-    box-sizing: border-box;
-    padding: 8px 10px;
-    border: none;
-    border-bottom: 1px solid #e5e7eb;
-    outline: none;
-    font-size: 14px;
+  .ms-dropdown.drop-up {
+    top: auto;
+    bottom: calc(100% + 0.5rem);
   }
 
   .ms-options {
     max-height: 220px;
     overflow-y: auto;
-    padding: 4px;
+    padding: var(--size-sm);
   }
 
   .ms-option {
     display: flex;
     align-items: center;
-    gap: 8px;
+    gap: var(--size-md);
     width: 100%;
     box-sizing: border-box;
-    padding: 8px 10px;
+    padding: var(--size-sm);
     border: none;
     background: none;
     text-align: left;
     cursor: pointer;
     border-radius: 6px;
     font-size: 14px;
-    color: #1f2937;
+    color: oklch(var(--color-text));
   }
 
   .ms-option.active {
-    background: #f3f4f6;
+    background: oklch(var(--color-primary));
   }
 
   .ms-option.selected {
-    color: #4338ca;
-    font-weight: 500;
+    color: oklch(var(--color-secondary));
+    font-weight: var(--font-bold);
   }
 
   .ms-checkbox {
-    width: 16px;
-    height: 16px;
-    border: 1px solid #d1d5db;
-    border-radius: 4px;
+    width: var(--text-sm);
+    height: var(--text-sm);
+    border: 1px solid oklch(var(--color-secondary));
+    border-radius: var(--size-sm);
     display: flex;
     align-items: center;
     justify-content: center;
-    font-size: 11px;
+    font-size: var(--text-sm);
     flex-shrink: 0;
-    color: white;
+    color: oklch(var(--color-text));
     background: transparent;
   }
 
   .ms-option.selected .ms-checkbox {
-    background: #6366f1;
-    border-color: #6366f1;
+    background: oklch(var(--color-secondary));
+    border-color: oklch(var(--color-secondary));
   }
 
   .ms-empty {
-    padding: 16px;
+    padding: var(--size-sm);
     text-align: center;
-    color: #9ca3af;
-    font-size: 13px;
+    color: oklch(var(--color-text));
+    font-size: var(--text-sm);
   }
 </style>
