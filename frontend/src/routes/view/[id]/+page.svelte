@@ -32,12 +32,12 @@
   setImageViewerOptions(viewerOptions);
   setEquipmentOptions(
     untrack(() => ({
-      schemaOptions: data.schemaOptions.options,
       confidenceOptions: data.confidenceOptions.options,
+      visibilityOptions: data.visibilityOptions.options,
       statusOptions: data.statusOptions.options,
       configurationOptions: data.configurationOptions.options,
       modificationOptions: data.modificationOptions.options,
-      visibilityOptions: data.visibilityOptions.options,
+      camoflageOptions: data.camoflageOptions.options,
     })),
   );
   setAnnotateState();

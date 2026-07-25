@@ -2,6 +2,7 @@
   import { encode, decode } from "@msgpack/msgpack";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
+  import MultiSelect from "$lib/components/MultiSelect.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
   import { type SelectOption } from "$lib/utils/types";
   import type {
@@ -9,7 +10,6 @@
     EquipmentData,
   } from "$lib/contexts/annotate.svelte";
   import { toast } from "$lib/stores/toast.svelte";
-  import type { SchemaId } from "$lib/utils/brand";
 
   type EquipmentPatch = Partial<EquipmentData>;
 
@@ -23,45 +23,67 @@
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
   const {
-    schemaOptions,
     confidenceOptions,
     statusOptions,
+    visibilityOptions,
     configurationOptions,
     modificationOptions,
-    visibilityOptions,
+    camoflageOptions,
   } = getEquipmentOptions();
 
-  const attributeFields = [
+  const singleAttributeFields = [
     { key: "confidence", label: "Confidence", options: confidenceOptions },
     { key: "status", label: "Status", options: statusOptions },
+    { key: "visibility", label: "Visibility", options: visibilityOptions },
     {
       key: "configuration",
       label: "Configuration",
       options: configurationOptions,
     },
+  ] as const satisfies Array<{
+    key: keyof Pick<
+      EquipmentData,
+      "confidence" | "status" | "visibility" | "configuration"
+    >;
+    label: string;
+    options: SelectOption[];
+  }>;
+
+  const multiAttributeFields = [
     {
       key: "modification",
       label: "Modification",
       options: modificationOptions,
     },
-    { key: "visibility", label: "Visibility", options: visibilityOptions },
+    {
+      key: "camoflage",
+      label: "Camoflage",
+      options: camoflageOptions,
+    },
   ] as const satisfies Array<{
-    key: keyof Omit<EquipmentData, "equipment">;
+    key: keyof Pick<EquipmentData, "modification" | "camoflage">;
     label: string;
-    options: Record<SchemaId, SelectOption[]>;
+    options: SelectOption[];
   }>;
 
-  type AttributeKey = (typeof attributeFields)[number]["key"];
+  type SingleAttributeKey = (typeof singleAttributeFields)[number]["key"];
+  type MultiAttributeKey = (typeof multiAttributeFields)[number]["key"];
 
   let selectedEquipment = $derived(toSelectOption(value.equipment ?? null));
-  let schemaId = $state<SchemaId>(schemaOptions[0].value);
-  let attributeIds = $derived.by(() => {
-    const ids = {} as Record<AttributeKey, string | null>;
-    for (const field of attributeFields) {
+
+  let singleAttributeIds = $derived.by(() => {
+    const ids = {} as Record<SingleAttributeKey, string | null>;
+    for (const field of singleAttributeFields) {
       ids[field.key] =
-        value[field.key]?.[schemaId]?.id ??
-        field.options[schemaId]?.[0]?.value ??
-        null;
+        value[field.key]?.id ?? field.options?.[0]?.value ?? null;
+    }
+    return ids;
+  });
+
+  let multiAttributeIds = $derived.by(() => {
+    const ids = {} as Record<MultiAttributeKey, string[]>;
+    for (const field of multiAttributeFields) {
+      ids[field.key] = (value[field.key] ?? []).map((v) => v.id);
     }
     return ids;
   });
@@ -69,14 +91,12 @@
   let isValid = $derived.by(() => {
     const full = value as EquipmentData;
 
-    if (!bulk && !full.equipment) return false;
+    if (bulk) return true;
 
-    for (const field of attributeFields) {
-      const optionsForSchema = field.options[schemaId];
+    if (!full.equipment) return false;
 
-      if (!optionsForSchema) continue;
-      if (bulk) continue;
-      if (!full[field.key]?.[schemaId]) return false;
+    for (const field of singleAttributeFields) {
+      if (!full[field.key]) return false;
     }
 
     return true;
@@ -108,15 +128,31 @@
     return value ? { value: value.id, label: value.label } : null;
   }
 
-  function handleAttributeChange(
-    field: (typeof attributeFields)[number],
+  function handleSingleAttributeChange(
+    field: (typeof singleAttributeFields)[number],
     id: string | null,
   ) {
-    const option = field.options[schemaId]?.find((o) => o.value === id) ?? null;
+    const option = field.options.find((o) => o.value === id) ?? null;
     update(
       field.key,
       option ? toAnnotateValue(option) : bulk ? undefined : null,
     );
+  }
+
+  function handleMultiAttributeChange(
+    field: (typeof multiAttributeFields)[number],
+    ids: string[],
+  ) {
+    const values = ids
+      .map((id) => field.options.find((o) => o.value === id))
+      .filter((o): o is SelectOption => o != null)
+      .map((o) => toAnnotateValue(o));
+
+    if (bulk && values.length === 0) {
+      update(field.key, undefined);
+    } else {
+      update(field.key, values);
+    }
   }
 
   async function searchEquipment(query: string): Promise<SelectOption[]> {
@@ -148,16 +184,24 @@
       );
     }}
   />
-  <Select options={schemaOptions} placeholder="Schema" value={schemaId} />
-  {#each attributeFields as field (field.key)}
-    {#if field.options[schemaId]}
-      <Select
-        options={field.options[schemaId]}
-        placeholder={field.label}
-        value={attributeIds[field.key]}
-        onchange={(e) => handleAttributeChange(field, e.currentTarget.value)}
-      />
-    {/if}
+  {#each singleAttributeFields as field (field.key)}
+    <Select
+      options={field.options}
+      placeholder={field.label}
+      value={singleAttributeIds[field.key]}
+      onchange={(e) =>
+        handleSingleAttributeChange(field, e.currentTarget.value)}
+    />
+  {/each}
+  {#each multiAttributeFields as field (field.key)}
+    <MultiSelect
+      options={field.options}
+      placeholder={field.label}
+      bind:selected={
+        () => multiAttributeIds[field.key],
+        (ids) => handleMultiAttributeChange(field, ids)
+      }
+    />
   {/each}
 </form>
 

@@ -6,14 +6,14 @@
     selected: Array<T>;
     placeholder: string;
     label?: string;
-    disabled: boolean;
-    searchable: boolean;
-    maxVisible: number;
+    disabled?: boolean;
+    searchable?: boolean;
+    maxVisible?: number;
   }
 
   let {
     options,
-    selected,
+    selected = $bindable([]),
     placeholder,
     label,
     disabled = false,

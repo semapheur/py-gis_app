@@ -5,15 +5,14 @@ import type {
 } from "$lib/utils/types";
 import { createContext } from "svelte";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
-import type { SchemaId } from "$lib/utils/brand";
 
 interface EquipmentOptions {
-  schemaOptions: SelectOption<SchemaId>[];
-  confidenceOptions: Record<SchemaId, SelectOption[]>;
-  statusOptions: Record<SchemaId, SelectOption[]>;
-  configurationOptions: Record<SchemaId, SelectOption[]>;
-  modificationOptions: Record<SchemaId, SelectOption[]>;
-  visibilityOptions: Record<SchemaId, SelectOption[]>;
+  confidenceOptions: SelectOption[];
+  visibilityOptions: SelectOption[];
+  statusOptions: SelectOption[];
+  configurationOptions: SelectOption[];
+  modificationOptions: SelectOption[];
+  camoflageOptions: SelectOption[];
 }
 
 export const [getEquipmentOptions, setEquipmentOptions] =

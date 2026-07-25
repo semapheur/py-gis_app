@@ -1,10 +1,25 @@
 import { error } from "@sveltejs/kit";
 import { encode, decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
-import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
+import type {
+  ImageInfo,
+  RadiometricParams,
+  SelectOption,
+} from "$lib/utils/types";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 
 export const prerender = false;
+
+const ATTRIBUTE_FIELDS = {
+  confidenceOptions: "equipment_confidence",
+  statusOptions: "equipment_status",
+  visibilityOptions: "equipment_visibility",
+  configurationOptions: "equipment_configuration",
+  modificationOptions: "equipment_modification",
+  camoflageOptions: "equipment_camoflage",
+} as const;
+
+type AttributeOptionsName = keyof typeof ATTRIBUTE_FIELDS;
 
 async function fetchMsgPack<T>(
   fetch: typeof globalThis.fetch,
@@ -32,65 +47,36 @@ export const load: PageLoad = async ({ params, fetch }) => {
     body: encode({ id }),
   };
 
-  const [
-    schemaOptions,
-    confidenceOptions,
-    statusOptions,
-    configurationOptions,
-    modificationOptions,
-    visibilityOptions,
-    imageInfoWithoutId,
-    annotations,
-  ] = await Promise.all([
-    fetchMsgPack(
-      fetch,
-      "/api/schema-options",
-      undefined,
-      "Failed to fetch schema options",
-    ),
-    fetchMsgPack(
-      fetch,
-      "/api/get-attributes/observation_confidence",
-      undefined,
-      "Failed to fetch observation confidence attributes",
-    ),
-    fetchMsgPack(
-      fetch,
-      "/api/get-attributes/equipment_status",
-      undefined,
-      "Failed to fetch equipment status attributes",
-    ),
-    fetchMsgPack(
-      fetch,
-      "/api/get-attributes/equipment_configuration",
-      undefined,
-      "Failed to fetch equipment configuration attributes",
-    ),
-    fetchMsgPack(
-      fetch,
-      "/api/get-attributes/equipment_modification",
-      undefined,
-      "Failed to fetch equipment modification attributes",
-    ),
-    fetchMsgPack(
-      fetch,
-      "/api/get-attributes/equipment_visibility",
-      undefined,
-      "Failed to fetch equipment visibility attributes",
-    ),
-    fetchMsgPack<Partial<ImageInfo>>(
-      fetch,
-      "/api/image-info",
-      postRequest,
-      "Failed to fetch image info",
-    ),
-    fetchMsgPack<AnnotationInfo[]>(
-      fetch,
-      `/api/get-annotations/${id}`,
-      undefined,
-      `Failed to fetch annotations for ${id}`,
-    ),
-  ]);
+  const [attributeResults, imageInfoWithoutId, annotations] = await Promise.all(
+    [
+      Promise.all(
+        Object.values(ATTRIBUTE_FIELDS).map((table) =>
+          fetchMsgPack(
+            fetch,
+            `/api/get-attributes/${table}`,
+            undefined,
+            `Failed to fetch ${table.replace("_", " ")} attributes`,
+          ),
+        ),
+      ),
+      fetchMsgPack<Partial<ImageInfo>>(
+        fetch,
+        "/api/image-info",
+        postRequest,
+        "Failed to fetch image info",
+      ),
+      fetchMsgPack<AnnotationInfo[]>(
+        fetch,
+        `/api/get-annotations/${id}`,
+        undefined,
+        `Failed to fetch annotations for ${id}`,
+      ),
+    ],
+  );
+
+  const attributes = Object.fromEntries(
+    Object.keys(ATTRIBUTE_FIELDS).map((name, i) => [name, attributeResults[i]]),
+  ) as Record<AttributeOptionsName, { options: SelectOption[] }>;
 
   const radiometricParams =
     imageInfoWithoutId.image_type === "slc"
@@ -110,12 +96,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
   return {
     imageInfo,
     radiometricParams,
-    schemaOptions,
-    confidenceOptions,
-    configurationOptions,
-    modificationOptions,
-    visibilityOptions,
-    statusOptions,
+    ...attributes,
     annotations,
   };
 };

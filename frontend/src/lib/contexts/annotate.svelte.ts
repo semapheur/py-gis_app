@@ -36,11 +36,12 @@ export interface ActivityData {
 
 export interface EquipmentData {
   equipment: AnnotateValue | null;
-  confidence: Record<SchemaId, AnnotateValue> | null;
-  status: Record<SchemaId, AnnotateValue> | null;
-  configuration: Record<SchemaId, AnnotateValue> | null;
-  modification: Record<SchemaId, AnnotateValue> | null;
-  visibility: Record<SchemaId, AnnotateValue> | null;
+  confidence: AnnotateValue | null;
+  status: AnnotateValue | null;
+  visibility: AnnotateValue | null;
+  configuration: AnnotateValue | null;
+  modification: AnnotateValue[] | null;
+  camoflage: AnnotateValue[] | null;
 }
 export type CompleteEquipmentData = {
   [K in keyof EquipmentData]-?: NonNullable<EquipmentData[K]>;
