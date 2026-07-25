@@ -1,6 +1,4 @@
-import json
 import uuid
-from collections import defaultdict
 from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
@@ -8,7 +6,6 @@ from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import SelectQuery, UpdateQuery
 from src.sqlite.table import (
   Field,
-  Index,
   Table,
   uuid_field,
 )
@@ -18,11 +15,12 @@ app_settings = get_settings()
 ATTRIBUTE_TABLES = (
   "activity_categories",
   "activity_likelihood",
-  "observation_confidence",
+  "equipment_confidence",
   "equipment_status",
+  "equipment_visibility",
   "equipment_configuration",
   "equipment_modification",
-  "equipment_visibility",
+  "equipment_camoflage",
 )
 
 

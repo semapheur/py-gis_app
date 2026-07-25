@@ -199,7 +199,7 @@ class SqliteDatabase:
 
   def insert_models(
     self,
-    models: Sequence[Table],
+    models: Sequence[type[Table]],
     conflict_index: Optional[str] = None,
     update_query: Optional[UpdateQuery] = None,
     returning: Optional[str] = None,
@@ -265,7 +265,7 @@ class SqliteDatabase:
     self.conn.cursor().executemany(sql, rows)
     return
 
-  def select_records(self, query: SelectQuery) -> list[dict[srt, SqliteValue]]:
+  def select_records(self, query: SelectQuery) -> list[dict[str, SqliteValue]]:
     sql, params = query.build()
     cursor = self.conn.cursor()
     cursor.row_factory = sqlite3.Row
