@@ -116,7 +116,7 @@ def update_annotations(payloads: list[AnnotationUpdate]):
 
     parent_id = uuid.UUID(data["id"])
     field_ids = {
-      field: [uuid.UUID(u) for u in data.get(field, [])]
+      field: [uuid.UUID(u) for u in data.get(field) or []]
       for field in MULTI_ATTRIBUTE_FIELDS
     }
     list_writes.append((models, parent_id, field_ids))
@@ -213,7 +213,7 @@ def get_annotations_by_image(image_id: bytes):
     select_fields = [
       "uuid_blob_to_str(ea.id) AS id",
       "AsGeoJSON(ea.geometry) AS geometry",
-      "ed.equipment.displayname AS label",
+      "ed.equipment.displayname || '\n' || a.equipment_confidence.name  AS label",
       "uuid_blob_to_str(ea.equipment) AS equipment_id",
       "ed.equipment.displayname AS equipment_label",
     ]

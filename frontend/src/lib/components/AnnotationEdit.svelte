@@ -11,7 +11,7 @@
   import {
     type AnnotateForm,
     type EquipmentData,
-    type CompleteEquipmentData,
+    type ValidEquipmentData,
     annotateTabs,
   } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
@@ -47,6 +47,12 @@
       filterable: true,
     },
     {
+      id: "visibility",
+      label: "Visibility",
+      sortable: true,
+      filterable: true,
+    },
+    {
       id: "configuration",
       label: "Configuration",
       sortable: true,
@@ -59,8 +65,8 @@
       filterable: true,
     },
     {
-      id: "visibility",
-      label: "Visibility",
+      id: "camoflage",
+      label: "Camoflage",
       sortable: true,
       filterable: true,
     },
@@ -98,14 +104,18 @@
   const tableData = $derived({
     equipment: selectedAnnotations.equipment
       .map((f, i) => {
-        const data = f.get("data") as EquipmentData | undefined;
+        const data = f.get("data") as ValidEquipmentData;
         if (!data) return null;
 
         return {
           id: i + 1,
-          equipment: data.equipment?.label,
-          confidence: data.confidence?.label,
-          status: data.status?.label,
+          equipment: data.equipment.label,
+          confidence: data.confidence.label,
+          status: data.status.label,
+          visibility: data.visibility.label,
+          configuration: data.configuration.label,
+          modification: data.modification?.map((m) => m.label) ?? [],
+          camoflage: data.camoflage?.map((c) => c.label) ?? [],
         };
       })
       .filter(Boolean),
@@ -169,15 +179,15 @@
 
     const commonValues: BulkEquipmentPatch = {};
 
-    const firstData = features[0].get("data") as CompleteEquipmentData | null;
+    const firstData = features[0].get("data") as ValidEquipmentData | null;
     if (!firstData) return {};
 
     for (const key in firstData) {
-      const typedKey = key as keyof CompleteEquipmentData;
+      const typedKey = key as keyof ValidEquipmentData;
       const firstValue = firstData[typedKey];
 
       const isCommon = features.every((feature) => {
-        const data = feature.get("data") as CompleteEquipmentData | null;
+        const data = feature.get("data") as ValidEquipmentData | null;
 
         if (!data) return false;
 

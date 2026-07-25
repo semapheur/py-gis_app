@@ -51,6 +51,7 @@ import type {
   EquipmentData,
   ActivityData,
   AnnotationBaseInfo,
+  ValidEquipmentData,
 } from "$lib/contexts/annotate.svelte";
 
 export type ContextMenuItemType = "equipment" | "measurement" | "ghost";
@@ -707,6 +708,7 @@ export class ImageViewerController {
     for (const record of records) {
       const geometry = format.readGeometry(record.geometry);
       const feature = new Feature({ geometry });
+      console.log(record);
 
       feature.setProperties({
         id: record.id,
@@ -729,7 +731,7 @@ export class ImageViewerController {
         const geometry = feature.getGeometry();
         if (geometry === undefined) return null;
 
-        const data = feature.get("data");
+        const data = feature.get("data") as ValidEquipmentData;
         const metaData = feature.get("metaData");
         const geometry4326 = mapProjection
           ? geometry.clone().transform(mapProjection, "EPSG:4326")
@@ -740,13 +742,14 @@ export class ImageViewerController {
           data: {
             id: feature.get("id"),
             image: this.#image,
+            geometry: format.writeGeometry(geometry4326),
             equipment: data.equipment.id,
             confidence: data.confidence.id,
             status: data.status.id,
-            configuration: data.status.id,
-            modification: data.status.id,
-            visibility: data.status.id,
-            geometry: format.writeGeometry(geometry4326),
+            visibility: data.visibility.id,
+            configuration: data.configuration.id,
+            modification: data.modification?.map((m) => m.id) ?? [],
+            camoflage: data.camoflage?.map((m) => m.id) ?? [],
             createdByUserId: metaData.createdByUserId,
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,
@@ -932,7 +935,7 @@ export class ImageViewerController {
 
     const label =
       type === "equipment"
-        ? `${data.equipment?.label}\n${data.confidence.label}\n${data.status.label}`
+        ? `${data.equipment?.label}\n${data.confidence.label}`
         : "";
 
     feature.setProperties({

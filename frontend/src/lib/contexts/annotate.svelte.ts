@@ -1,4 +1,3 @@
-import type { SchemaId } from "$lib/utils/brand";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
@@ -43,9 +42,14 @@ export interface EquipmentData {
   modification: AnnotateValue[] | null;
   camoflage: AnnotateValue[] | null;
 }
-export type CompleteEquipmentData = {
-  [K in keyof EquipmentData]-?: NonNullable<EquipmentData[K]>;
-};
+
+type MultiAttributeField = "modification" | "camoflage";
+
+export type ValidEquipmentData = {
+  [K in keyof EquipmentData as Exclude<K, MultiAttributeField>]-?: NonNullable<
+    EquipmentData[K]
+  >;
+} & Pick<EquipmentData, MultiAttributeField>;
 
 interface AttributeMetaData {
   createdByUserId: string;
@@ -75,6 +79,14 @@ export const activityTypes = ["Maneuver"] as const;
 export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 const defaultLayer = "equipment";
+
+const equipmentSingleAttributeFields = [
+  "equipment",
+  "confidence",
+  "status",
+  "visibility",
+  "configuration",
+] as const satisfies Array<keyof EquipmentData>;
 
 export class AnnotateState {
   layer = $state<AnnotateForm>(defaultLayer);
@@ -112,7 +124,7 @@ export class AnnotateState {
   isValid = $derived.by(() => {
     if (this.layer === "equipment") {
       const d = this.data as EquipmentData;
-      return d.equipment && d.confidence && d.status;
+      return equipmentSingleAttributeFields.every((field) => d[field] != null);
     }
 
     if (this.layer === "activity") {
@@ -149,6 +161,10 @@ export class AnnotateState {
         equipment: null,
         confidence: null,
         status: null,
+        visibility: null,
+        configuration: null,
+        modification: null,
+        camoflage: null,
       } satisfies EquipmentData;
     }
 

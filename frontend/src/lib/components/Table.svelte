@@ -8,7 +8,7 @@
   type RowSelect = "none" | "single" | "multi";
 
   interface Props {
-    data: Record<string, string | number>[];
+    data: Record<string, string | number | string[]>[];
     columns: ColumnDefinition[];
     selectable?: RowSelect;
     selected?: Record<string, string | number>[];
@@ -46,7 +46,14 @@
         .filter((c) => c.filterable)
         .map((c) => [
           c.id,
-          [...new Set(data.map((r) => String(r[c.id])))].sort(),
+          [
+            ...new Set(
+              data.flatMap((r) => {
+                const v = r[c.id];
+                return Array.isArray(v) ? v.map(String) : [String(v)];
+              }),
+            ),
+          ].sort(),
         ]),
     ),
   );
@@ -98,7 +105,15 @@
     for (const col of columns.filter((c) => c.filterable)) {
       if (isFilterActive(col.id)) {
         const checked = getChecked(col.id);
-        rows = rows.filter((r) => checked.has(String(r[col.id])));
+        rows = rows.filter((r) => {
+          const v = r[col.id];
+          if (Array.isArray(v)) {
+            return v.length === 0
+              ? checked.has("")
+              : v.some((item) => checked.has(String(item)));
+          }
+          return checked.has(String(r[col.id]));
+        });
       }
     }
 
@@ -113,7 +128,10 @@
           return (av - bv) * order;
         }
 
-        return String(av).localeCompare(String(bv)) * order;
+        const aStr = Array.isArray(av) ? av.join(", ") : String(av);
+        const bStr = Array.isArray(bv) ? bv.join(", ") : String(bv);
+
+        return aStr.localeCompare(bStr) * order;
       });
     }
 
@@ -229,75 +247,77 @@
         {/if}
         {#each columns as c}
           <th>
-            {#if c.filterable}
-              <div class="filter-wrap">
-                <ButtonIcon
-                  onclick={(e) => {
-                    e.stopPropagation();
-                    openFilter = openFilter === c.id ? null : c.id;
-                  }}><FilterOutlineIcon height="1rem" /></ButtonIcon
-                >
-                {#if openFilter === c.id}
-                  <div
-                    class="filter-dropdown"
-                    role="presentation"
-                    onclick={(e) => e.stopPropagation()}
-                    onkeydown={() => {}}
+            <div class="th-inner">
+              <span class={{ "filter-active": isFilterActive(c.id) }}>
+                {c.label}
+              </span>
+              {#if c.filterable}
+                <div class="filter-wrap">
+                  <ButtonIcon
+                    onclick={(e) => {
+                      e.stopPropagation();
+                      openFilter = openFilter === c.id ? null : c.id;
+                    }}><FilterOutlineIcon height="1rem" /></ButtonIcon
                   >
-                    <Input
-                      type="text"
-                      placeholder="Search"
-                      bind:value={filterSearch[c.id]}
-                    />
-                    <ul>
-                      <li>
-                        <label>
-                          <input
-                            type="checkbox"
-                            checked={isAllChecked(c.id)}
-                            onchange={() => toggleAll(c.id)}
-                          />
-                          Select all
-                        </label>
-                      </li>
-                      {#each columnValues[c.id].filter((v) => !filterSearch[c.id] || v
-                            .toLowerCase()
-                            .includes(filterSearch[c.id].toLowerCase())) as value}
+                  {#if openFilter === c.id}
+                    <div
+                      class="filter-dropdown"
+                      role="presentation"
+                      onclick={(e) => e.stopPropagation()}
+                      onkeydown={() => {}}
+                    >
+                      <Input
+                        type="text"
+                        placeholder="Search"
+                        bind:value={filterSearch[c.id]}
+                      />
+                      <ul>
                         <li>
                           <label>
                             <input
                               type="checkbox"
-                              checked={getChecked(c.id).has(value)}
-                              onchange={() => toggleValue(c.id, value)}
+                              checked={isAllChecked(c.id)}
+                              onchange={() => toggleAll(c.id)}
                             />
-                            {value}
+                            Select all
                           </label>
                         </li>
-                      {/each}
-                    </ul>
-                  </div>
-                {/if}
-              </div>
-            {/if}
-            <span>
-              {c.label}
-            </span>
-            {#if c.sortable}
-              <button class="sort" onclick={() => toggleSort(c.id)}>
-                <span class="arrows">
-                  <span
-                    style="opacity: {sortKey === c.id && sortOrder === 'asc'
-                      ? 1
-                      : 0.3}">▲</span
-                  >
-                  <span
-                    style="opacity: {sortKey === c.id && sortOrder === 'desc'
-                      ? 1
-                      : 0.3}">▼</span
-                  >
-                </span>
-              </button>
-            {/if}
+                        {#each columnValues[c.id].filter((v) => !filterSearch[c.id] || v
+                              .toLowerCase()
+                              .includes(filterSearch[c.id].toLowerCase())) as value}
+                          <li>
+                            <label>
+                              <input
+                                type="checkbox"
+                                checked={getChecked(c.id).has(value)}
+                                onchange={() => toggleValue(c.id, value)}
+                              />
+                              {value}
+                            </label>
+                          </li>
+                        {/each}
+                      </ul>
+                    </div>
+                  {/if}
+                </div>
+              {/if}
+              {#if c.sortable}
+                <button class="sort" onclick={() => toggleSort(c.id)}>
+                  <span class="arrows">
+                    <span
+                      style="opacity: {sortKey === c.id && sortOrder === 'asc'
+                        ? 1
+                        : 0.3}">▲</span
+                    >
+                    <span
+                      style="opacity: {sortKey === c.id && sortOrder === 'desc'
+                        ? 1
+                        : 0.3}">▼</span
+                    >
+                  </span>
+                </button>
+              {/if}
+            </div>
           </th>
         {/each}
       </tr>
@@ -384,6 +404,12 @@
     background: oklch(var(--color-secondary-accent));
   }
 
+  .th-inner {
+    display: flex;
+    align-items: center;
+    gap: var(--size-xs);
+  }
+
   .filter-wrap {
     position: relative;
     display: inline-flex;
@@ -400,6 +426,10 @@
     margin-top: var(--size-md);
     background: oklch(var(--color-primary-accent));
     border-radius: var(--size-md);
+  }
+
+  .filter-active {
+    color: oklch(var(--color-secondary));
   }
 
   ul {

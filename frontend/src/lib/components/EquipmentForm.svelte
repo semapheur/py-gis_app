@@ -22,6 +22,8 @@
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
+  $inspect(value);
+
   const {
     confidenceOptions,
     statusOptions,
@@ -74,8 +76,7 @@
   let singleAttributeIds = $derived.by(() => {
     const ids = {} as Record<SingleAttributeKey, string | null>;
     for (const field of singleAttributeFields) {
-      ids[field.key] =
-        value[field.key]?.id ?? field.options?.[0]?.value ?? null;
+      ids[field.key] = value[field.key]?.id ?? null;
     }
     return ids;
   });
@@ -104,6 +105,25 @@
 
   $effect(() => {
     onvalid?.(isValid);
+  });
+
+  $effect(() => {
+    if (bulk) return;
+
+    const missing = singleAttributeFields.filter(
+      (field) => !value[field.key] && field.options?.[0],
+    );
+    if (missing.length === 0) return;
+
+    const next = { ...value } as EquipmentData;
+
+    for (const field of missing) {
+      next[field.key] = toAnnotateValue(
+        field.options[0],
+      ) as EquipmentData[typeof field.key];
+    }
+
+    onchange(next);
   });
 
   function update<K extends keyof EquipmentData>(
