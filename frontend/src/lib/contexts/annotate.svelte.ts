@@ -89,7 +89,7 @@ export class AnnotateState {
       const d = this.data as EquipmentData;
       return {
         equipment: d.equipment?.id,
-        confidence: d.equipment?.id,
+        confidence: d.confidence?.id,
         status: d.status?.id,
       };
     }

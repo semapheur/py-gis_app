@@ -1,13 +1,12 @@
 <script lang="ts">
   import type { HTMLSelectAttributes } from "svelte/elements";
+  import type { SelectOption } from "$lib/utils/types";
 
-  interface SelectOption<T = string> {
-    label: string;
-    value: T;
+  interface SelectOptionDisabled<T> extends SelectOption<T> {
     disabled?: boolean;
   }
 
-  type OptionInput<T = string> = T | SelectOption<T>;
+  type OptionInput<T = string> = T | SelectOptionDisabled<T>;
 
   interface Props<T = string> extends HTMLSelectAttributes {
     placeholder?: string | null;

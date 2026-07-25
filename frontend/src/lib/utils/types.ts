@@ -1,6 +1,11 @@
 import type { Component } from "svelte";
 
-import type { AttributeId, ImageId, SchemaId, SecurityId } from "$lib/utils/brand";
+import type {
+  AttributeId,
+  ImageId,
+  SchemaId,
+  SecurityId,
+} from "$lib/utils/brand";
 
 export type ComponentExports<TComponent extends Component<any, any>> =
   TComponent extends Component<any, infer TExports> ? TExports : never;
