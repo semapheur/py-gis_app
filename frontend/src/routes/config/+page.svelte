@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Link from "$lib/components/Link.svelte";
+  import LinkText from "$lib/components/LinkText.svelte";
 </script>
 
 <nav>
-  <Link href="config/index-images">Index images</Link>
-  <Link href="config/edit-catalogs">Edit catalogs</Link>
-  <Link href="config/edit-attributes">Edit attributes</Link>
-  <Link href="config/edit-equipment">Edit equipment</Link>
+  <LinkText href="config/index-images" label="Index images" />
+  <LinkText href="config/edit-catalogs" label="Edit catalogs" />
+  <LinkText href="config/edit-attributes" label="Edit attributes" />
+  <LinkText href="config/edit-equipment" label="Edit equipment" />
 </nav>
 
 <style>

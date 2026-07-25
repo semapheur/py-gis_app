@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { PageData } from "./$types";
-  import Link from "$lib/components/Link.svelte";
+  import LinkText from "$lib/components/LinkText.svelte";
 
   interface Props {
     data: PageData;
@@ -14,7 +14,10 @@
 <div class="page-container">
   <nav class="table-list">
     {#each data.tables as info}
-      <Link href={`/config/edit-attributes/${info.name}`}>{info.label}</Link>
+      <LinkText
+        href={`/config/edit-attributes/${info.name}`}
+        label={info.label}
+      />
     {/each}
   </nav>
   {@render children()}
