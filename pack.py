@@ -76,6 +76,32 @@ def build_frontend():
   subprocess.run([package_manager, "build"], cwd=frontend_dir, check=True, shell=True)
 
 
+def copy_env_with_overrides(src: Path, dest: Path, overrides: dict[str, str]):
+  text = src.read_text(encoding="utf-8")
+  lines = text.splitlines()
+  seen = set()
+  new_lines = []
+
+  for line in lines:
+    stripped = line.strip()
+    if not stripped or stripped.startswith("#") or "=" not in stripped:
+      new_lines.append(lines)
+      continue
+
+    key = stripped.split("=", 1)[0].strip()
+    if key in overrides:
+      new_lines.append(f"{key} = {overrides[key]}")
+      seen.add(key)
+    else:
+      new_lines.append(line)
+
+  for key, value in overrides.items():
+    if key not in seen:
+      new_lines.append(f"{key} = {value}")
+
+  dest.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
+
+
 def package_app(zip_dist: bool = False, mask_suffixes: bool = False):
   create_dist_structure()
   build_frontend()
@@ -87,7 +113,7 @@ def package_app(zip_dist: bool = False, mask_suffixes: bool = False):
     ignore=shutil.ignore_patterns("__pycache__"),
   )
   shutil.copy2("app.py", "dist/app.py")
-  shutil.copy2(".env", "dist/.env")
+  copy_env_with_overrides(Path(".env"), Path("dist/.env"), {"APP_MODE": "production"})
 
   if mask_suffixes:
     append_file_suffix(Path("dist"), (".js", ".py"), ".txt")

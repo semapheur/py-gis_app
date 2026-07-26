@@ -94,12 +94,6 @@
   let validBulkForm = $state(true);
 
   const selectedAnnotations = $derived(viewerController.selectedAnnotations);
-  const hasSelectedAnnotations = $derived.by(() => {
-    const totalLength =
-      selectedAnnotations.equipment.length +
-      selectedAnnotations.activity.length;
-    return totalLength > 0;
-  });
 
   const tableData = $derived({
     equipment: selectedAnnotations.equipment
@@ -293,7 +287,7 @@
 {/snippet}
 
 {#snippet bottomPane()}
-  <div>
+  <div class="bottom-pane">
     {#if editData}
       {#if selectedType === "equipment"}
         <EquipmentForm
@@ -348,31 +342,14 @@
   </div>
 {/snippet}
 
-{#if hasSelectedAnnotations}
-  <aside class="edit-sidebar">
-    <SplitPanes panes={[topPane, bottomPane]} direction="column" />
-  </aside>
-{/if}
+<SplitPanes panes={[topPane, bottomPane]} direction="column" />
 
 <style>
-  .edit-sidebar {
-    display: flex;
-    flex-direction: column;
-    gap: var(--size-md);
-    height: 100%;
-    width: clamp(200px, 30%, 600px);
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: var(--size-md);
-    background: oklch(var(--color-primary));
-    z-index: 1;
-  }
-
   .edit-table {
     display: grid;
     grid-template-rows: auto 1fr;
     gap: var(--size-md);
+    padding: 0 var(--size-md);
     height: 100%;
     overflow: hidden;
     border-bottom: 1px solid oklch(var(--color-secondary-accent));
@@ -384,5 +361,12 @@
     padding-bottom: var(--size-md);
     border-bottom: 1px solid oklch(var(--color-secondary-accent));
     z-index: 2;
+  }
+
+  .bottom-pane {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-md);
+    padding: var(--size-md);
   }
 </style>

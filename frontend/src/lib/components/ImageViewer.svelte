@@ -18,8 +18,14 @@
   import { startOfDay, type DateRange } from "$lib/utils/date";
   import { toast } from "$lib/stores/toast.svelte";
   import type { ImageMetadata } from "$lib/utils/types";
+  import ResizeableSidebar from "./ResizeableSidebar.svelte";
+
+  const imageViewer = getImageViewerController();
+  const viewerOptions = getImageViewerOptions();
+  const viewerState = getImageViewerState();
 
   let leftSidebarOpen = $state<boolean>(false);
+  let rightSidebarOpen = $state<boolean>(false);
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
   let enhancementOpen = $state<boolean>(false);
@@ -27,10 +33,6 @@
   let searchOpen = $state<boolean>(false);
   let ghostsOpen = $state<boolean>(false);
   let images = $state<ImageMetadata[]>([]);
-
-  const imageViewer = getImageViewerController();
-  const viewerOptions = getImageViewerOptions();
-  const viewerState = getImageViewerState();
 
   const initialDateRange = setInitialDateRange(3);
 
@@ -113,6 +115,10 @@
       ghostsOpen = false;
     }
   }
+
+  $effect(() => {
+    rightSidebarOpen = imageViewer.hasSelectedAnnotations;
+  });
 </script>
 
 <div class="image-viewer">
@@ -149,7 +155,6 @@
     <AnnotateDialog bind:open={annotateOpen} />
   {/if}
   <ImageRenderer />
-  <AnnotationEdit />
   <AnnotationSummary bind:open={summaryOpen} />
   {#if measurementOpen}
     <MeasureDialog bind:open={measurementOpen} />
@@ -165,6 +170,18 @@
         <GhostSearch />
       {/if}
     </div>
+  {/if}
+  {#if rightSidebarOpen}
+    <ResizeableSidebar
+      side="right"
+      widthPercent={25}
+      minWidthPercent={10}
+      maxWidthPercent={50}
+    >
+      {#if imageViewer.hasSelectedAnnotations}
+        <AnnotationEdit />
+      {/if}
+    </ResizeableSidebar>
   {/if}
 </div>
 
@@ -192,6 +209,19 @@
   .left-sidebar-button-group {
     display: flex;
     justify-content: flex-end;
+  }
+
+  .right-sidebar {
+    display: flex;
+    flex-direction: column;
+    position: absolute;
+    top: 0;
+    right: 0;
+    width: 30%;
+    height: 100%;
+    padding: var(--size-md);
+    background-color: oklch(var(--color-primary));
+    z-index: 2;
   }
 
   .enhancement {

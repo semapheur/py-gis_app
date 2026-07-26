@@ -7,7 +7,6 @@
   import Button from "$lib/components/Button.svelte";
   import DaterangePicker from "$lib/components/DaterangePicker.svelte";
   import AzimuthRangePicker from "$lib/components/AzimuthRangePicker.svelte";
-  import NumberRangeInput from "$lib/components/NumberRangeInput.svelte";
   import { formatDate, parseIsoDate, type DateRange } from "$lib/utils/date";
   import { type AngleRange } from "$lib/utils/types";
   import {

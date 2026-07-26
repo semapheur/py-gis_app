@@ -96,6 +96,11 @@ export class ImageViewerController {
     equipment: [],
     activity: [],
   });
+  #hasSelectedAnnotations = $derived(
+    this.#selectedAnnotations.activity.length +
+      this.#selectedAnnotations.equipment.length >
+      0,
+  );
   enhancement = $state<Enhancement>({ ...defaultEnhancement });
   #contextMenu = $state<{
     x: number;
@@ -109,6 +114,10 @@ export class ImageViewerController {
 
   get selectedAnnotations() {
     return this.#selectedAnnotations;
+  }
+
+  get hasSelectedAnnotations(): boolean {
+    return this.#hasSelectedAnnotations;
   }
 
   get equipmentFeatures() {

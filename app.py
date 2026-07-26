@@ -1,3 +1,4 @@
+import webbrowser
 from http.server import ThreadingHTTPServer
 
 from src.bootstrap import get_settings
@@ -9,5 +10,9 @@ if __name__ == "__main__":
   create_db_tables()
 
   print(f"Serving {settings.HOST}:{settings.PORT}")
+
+  if settings.APP_MODE == "production":
+    webbrowser.open(f"http://localhost:{settings.PORT}")
+
   server = ThreadingHTTPServer((settings.HOST, settings.PORT), ApiRoutes)
   server.serve_forever()

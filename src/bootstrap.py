@@ -2,12 +2,14 @@ import os
 from dataclasses import dataclass
 from functools import lru_cache
 from pathlib import Path
+from typing import Literal
 
 from src.env import add_to_path, load_env, require_env
 
 
 @dataclass(frozen=True)
 class Settings:
+  APP_MODE: Literal["development", "production"]
   DB_DIR: Path
   STATIC_DIR: Path
   SPATIALITE_PATH: Path
@@ -41,6 +43,7 @@ class Settings:
 
 def load_settings() -> Settings:
   return Settings(
+    APP_MODE=os.getenv("APP_MODE", "development"),
     DB_DIR=Path(require_env("DB_DIR")),
     STATIC_DIR=Path(require_env("STATIC_DIR")),
     SPATIALITE_PATH=Path(require_env("SPATIALITE")),
