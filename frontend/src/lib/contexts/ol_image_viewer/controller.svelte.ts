@@ -11,7 +11,15 @@ import GeoTIFF from "ol/source/GeoTIFF";
 import { DragBox, Draw, Modify, Select, Translate } from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature from "ol/Feature";
-import { Point, LineString, Polygon, MultiPolygon } from "ol/geom";
+import {
+  Geometry,
+  SimpleGeometry,
+  Point,
+  LineString,
+  Polygon,
+  MultiPolygon,
+} from "ol/geom";
+import { extend, createEmpty } from "ol/extent";
 import { fromExtent } from "ol/geom/Polygon";
 import {
   pointerMove,
@@ -75,6 +83,13 @@ interface Options {
   imageInfo: ImageInfo;
   radiometricParams: RadiometricParams | null;
   annotations?: AnnotationInfo[];
+}
+
+interface ZoomOptions {
+  padding?: [number, number, number, number];
+  maxZoom?: number;
+  duration?: number;
+  sourceProjection?: string;
 }
 
 export class ImageViewerController {
@@ -1055,6 +1070,16 @@ export class ImageViewerController {
     });
   }
 
+  public selectAllAnnotations(annotationType: AnnotateForm) {
+    if (this.#interactions.annotation === null) return;
+
+    const select = this.#interactions.annotation.select;
+    const source = this.#annotationSources[annotationType];
+
+    select.getFeatures().clear();
+    source.getFeatures().forEach((f) => select.getFeatures().push(f));
+  }
+
   public getViewExtentWkt(): string | null {
     if (this.#map === null) return null;
 
@@ -1068,6 +1093,38 @@ export class ImageViewerController {
     const polygon = fromExtent(extent4326);
 
     return new WKT().writeGeometry(polygon);
+  }
+
+  public zoomToGeometry(geometry: SimpleGeometry, options: ZoomOptions = {}) {
+    if (this.#map === null || this.projection === null) return;
+
+    const target =
+      options.sourceProjection && options.sourceProjection !== this.projection
+        ? geometry.clone().transform(options.sourceProjection, this.projection)
+        : geometry;
+
+    this.#map.getView().fit(target, {
+      padding: options.padding ?? [50, 50, 50, 50],
+      maxZoom: options.maxZoom,
+      duration: options.duration ?? 100,
+    });
+  }
+
+  public zoomToFeatures(features: Feature[], options: ZoomOptions = {}) {
+    if (!features.length) return;
+
+    const geometries = features
+      .map((f) => f.getGeometry())
+      .filter((g): g is Geometry => g !== undefined);
+
+    if (!geometries.length) return;
+
+    const extent = geometries.reduce(
+      (acc, g) => extend(acc, g.getExtent()),
+      createEmpty(),
+    );
+
+    this.zoomToGeometry(fromExtent(extent), options);
   }
 
   public closeContextMenu() {

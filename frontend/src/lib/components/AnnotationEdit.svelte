@@ -254,9 +254,18 @@
     <header class="edit-table-header">
       <KebabMenu>
         {#if activeTableTab === "equipment"}
-          <button role="menuitem" onclick={() => {}}
+          <button
+            role="menuitem"
+            onclick={() =>
+              viewerController.selectAllAnnotations(activeTableTab)}
             >Select all annotations</button
           >
+          <button
+            role="menuitem"
+            onclick={() => viewerController.zoomToFeatures(selectedFeatures)}
+          >
+            Zoom to selected annotations
+          </button>
           <button role="menuitem" onclick={exportFeaturesToGeoJson}
             >Export to GeoJSON</button
           >

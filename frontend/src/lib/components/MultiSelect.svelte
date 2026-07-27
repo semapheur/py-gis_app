@@ -269,7 +269,6 @@
   .multiselect {
     position: relative;
     width: 100%;
-    max-width: 400px;
   }
 
   .ms-label {
@@ -287,7 +286,7 @@
     min-height: 1rem;
     padding: var(--size-sm) var(--size-md);
     border: 1px solid oklch(var(--color-secondary));
-    border-radius: var(--size-md);
+    border-radius: var(--size-sm);
     background: oklch(var(--color-primary-accent));
     cursor: pointer;
     transition:
