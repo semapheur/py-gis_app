@@ -253,35 +253,23 @@
   <div class="edit-table">
     <header class="edit-table-header">
       <KebabMenu>
-        {#if activeTableTab === "equipment"}
-          <button
-            role="menuitem"
-            onclick={() =>
-              viewerController.selectAllAnnotations(activeTableTab)}
-            >Select all annotations</button
-          >
+        {#if selectedFeatures.length}
           <button
             role="menuitem"
             onclick={() => viewerController.zoomToFeatures(selectedFeatures)}
           >
             Zoom to selected annotations
           </button>
-          <button role="menuitem" onclick={exportFeaturesToGeoJson}
-            >Export to GeoJSON</button
-          >
-          {#if selectedAnnotations.equipment.length > 1}
-            <button
-              role="menuitem"
-              disabled={!canBulkEdit}
-              onclick={startBulkEdit}>Bulk edit</button
-            >
-          {/if}
-          <button role="menuitem" onclick={bulkDelete}>Bulk delete</button>
-        {:else if activeTableTab === "activity"}
-          <button role="menuitem" onclick={() => {}}
-            >Select all annotations</button
-          >
         {/if}
+        <button
+          role="menuitem"
+          onclick={() => viewerController.selectAllAnnotations(activeTableTab)}
+          >Select all annotations</button
+        >
+        <button role="menuitem" onclick={exportFeaturesToGeoJson}
+          >Export to GeoJSON</button
+        >
+        <button role="menuitem" onclick={bulkDelete}>Bulk delete</button>
       </KebabMenu>
       <Tabs tabs={annotateTabs} bind:selected={activeTableTab} />
     </header>
