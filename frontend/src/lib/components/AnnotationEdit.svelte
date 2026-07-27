@@ -18,6 +18,7 @@
   } from "$lib/contexts/annotate.svelte";
   import { exportFile } from "$lib/utils/io";
   import type { ColumnDefinition } from "$lib/utils/types";
+  import { Point } from "ol/geom";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
@@ -103,9 +104,9 @@
   let polygonSize = $state<number>(2);
   let openConvert = $state<boolean>(false);
 
-  const selectedAnnotations = $derived(viewerController.selectedAnnotations);
+  let selectedAnnotations = $derived(viewerController.selectedAnnotations);
 
-  const tableData = $derived({
+  let tableData = $derived({
     equipment: selectedAnnotations.equipment
       .map((f, i) => {
         const data = f.get("data") as ValidEquipmentData;
@@ -127,10 +128,18 @@
     activity: [],
   });
 
-  const selectedFeatures = $derived(
+  let selectedFeatures = $derived(
     selectedRows
       .map((i) => selectedAnnotations[activeTableTab][i])
       .filter(Boolean),
+  );
+
+  let selectedPointFeatures = $derived(
+    selectedFeatures.filter((f) => f.getGeometry() instanceof Point),
+  );
+
+  let convertTitle = $derived(
+    `Convert ${selectedPointFeatures.length} ${selectedPointFeatures.length === 1 ? "point" : "points"} to ${selectedPointFeatures.length === 1 ? "polygon" : "polygons"}`,
   );
 
   const selectedFeature = $derived(
@@ -268,7 +277,7 @@
           onclick={() => viewerController.selectAllAnnotations(activeTableTab)}
           >Select all annotations</button
         >
-        {#if activeTableTab === "equipment" && selectedFeatures.length}
+        {#if activeTableTab === "equipment" && selectedPointFeatures.length}
           <button role="menuitem" onclick={() => (openConvert = true)}>
             Convert to polygons
           </button>
@@ -344,12 +353,7 @@
 {/snippet}
 
 <SplitPanes panes={[topPane, bottomPane]} direction="column" />
-<Modal
-  bind:open={openConvert}
-  title="Convert {selectedFeatures.length} {selectedFeatures.length === 1
-    ? 'point'
-    : 'points'} to {selectedFeatures.length === 1 ? 'polygon' : 'polygons'}"
->
+<Modal bind:open={openConvert} title={convertTitle}>
   <div class="conversion-form">
     <Input
       bind:value={polygonSize}
