@@ -93,7 +93,7 @@ class SqliteDatabase:
   @contextmanager
   def transaction(self):
     self._check_connection()
-    if self.conn.in_transaction():
+    if self.conn.in_transaction:
       raise RuntimeError("A transaction is already active on this connection")
 
     cursor = self.conn.cursor()

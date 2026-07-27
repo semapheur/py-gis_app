@@ -3,7 +3,9 @@
   import ActivityForm from "$lib/components/ActivityForm.svelte";
   import Button from "$lib/components/Button.svelte";
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
+  import Input from "$lib/components/Input.svelte";
   import KebabMenu from "$lib/components/KebabMenu.svelte";
+  import Modal from "$lib/components/Modal.svelte";
   import SplitPanes from "$lib/components/SplitPanes.svelte";
   import Table from "$lib/components/Table.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
@@ -97,7 +99,9 @@
   let editData = $state<EquipmentData | null>(null);
   let bulkEdit = $state<boolean>(false);
   let bulkPatch = $state<BulkEquipmentPatch>({});
-  let validBulkForm = $state(true);
+  let validBulkForm = $state<boolean>(true);
+  let polygonSize = $state<number>(2);
+  let openConvert = $state<boolean>(false);
 
   const selectedAnnotations = $derived(viewerController.selectedAnnotations);
 
@@ -134,9 +138,6 @@
   );
 
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
-  const selectedGeometry = $derived(
-    selectedFeature?.getGeometry()?.getType() ?? null,
-  );
 
   $effect(() => {
     if (selectedFeatures.length > 1) {
@@ -232,12 +233,6 @@
     viewerController.removeAnnotations(selectedFeatures);
   }
 
-  function polygonize() {
-    if (!selectedFeature) return;
-
-    viewerController.convertPointFeatureToPolygon(selectedFeature, 2);
-  }
-
   function exportFeaturesToGeoJson() {
     if (!selectedFeatures.length) return;
 
@@ -265,7 +260,7 @@
             role="menuitem"
             onclick={() => viewerController.zoomToFeatures(selectedFeatures)}
           >
-            Zoom to selected annotations
+            Zoom to selection
           </button>
         {/if}
         <button
@@ -273,6 +268,11 @@
           onclick={() => viewerController.selectAllAnnotations(activeTableTab)}
           >Select all annotations</button
         >
+        {#if activeTableTab === "equipment" && selectedFeatures.length}
+          <button role="menuitem" onclick={() => (openConvert = true)}>
+            Convert to polygons
+          </button>
+        {/if}
         <button role="menuitem" onclick={exportFeaturesToGeoJson}
           >Export to GeoJSON</button
         >
@@ -310,9 +310,6 @@
         >
           Save
         </Button>
-        {#if selectedGeometry === "Point"}
-          <Button onclick={() => polygonize()}>Polygonize</Button>
-        {/if}
         <Button
           background="oklch(var(--color-negative))"
           onclick={deleteFeature}>Delete</Button
@@ -347,6 +344,43 @@
 {/snippet}
 
 <SplitPanes panes={[topPane, bottomPane]} direction="column" />
+<Modal
+  bind:open={openConvert}
+  title="Convert {selectedFeatures.length} {selectedFeatures.length === 1
+    ? 'point'
+    : 'points'} to {selectedFeatures.length === 1 ? 'polygon' : 'polygons'}"
+>
+  <div class="conversion-form">
+    <Input
+      bind:value={polygonSize}
+      placeholder="Polygon size (meters)"
+      type="number"
+      min="1"
+      step="0.1"
+    />
+    <div class="conversion-buttons">
+      <Button
+        background="oklch(var(--color-positive))"
+        disabled={!selectedFeatures.length}
+        onclick={() => {
+          viewerController.convertPointFeaturesToPolygons(
+            selectedFeatures,
+            polygonSize,
+          );
+          openConvert = false;
+        }}
+      >
+        Convert
+      </Button>
+      <Button
+        background="oklch(var(--color-negative))"
+        onclick={() => (openConvert = false)}
+      >
+        Cancel
+      </Button>
+    </div>
+  </div>
+</Modal>
 
 <style>
   .edit-table {
@@ -372,5 +406,17 @@
     flex-direction: column;
     gap: var(--size-md);
     padding: var(--size-md);
+  }
+
+  .conversion-form {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-md);
+    padding-top: var(--size-md);
+  }
+
+  .conversion-buttons {
+    display: flex;
+    gap: var(--size-md);
   }
 </style>

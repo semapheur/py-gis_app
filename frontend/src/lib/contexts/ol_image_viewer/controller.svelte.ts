@@ -2,7 +2,7 @@ import { getContext, setContext } from "svelte";
 import { encode } from "@msgpack/msgpack";
 import Map from "ol/Map";
 import View from "ol/View";
-import { transformExtent } from "ol/proj";
+import { transform, transformExtent } from "ol/proj";
 import VectorLayer from "ol/layer/Vector";
 import VectorSource from "ol/source/Vector";
 import WebGLTileLayer from "ol/layer/WebGLTile";
@@ -732,7 +732,6 @@ export class ImageViewerController {
     for (const record of records) {
       const geometry = format.readGeometry(record.geometry);
       const feature = new Feature({ geometry });
-      console.log(record);
 
       feature.setProperties({
         id: record.id,
@@ -972,65 +971,93 @@ export class ImageViewerController {
     this.#persistFeatures([feature], "edit");
   }
 
-  public async convertPointFeatureToPolygon(
-    feature: Feature,
+  public async convertPointFeaturesToPolygons(
+    features: Feature[],
     sizeMeters: number = 3,
   ) {
-    const point = feature.getGeometry();
+    const mapProjection = this.projection;
+    if (!mapProjection) return;
 
-    if (!point || !(point instanceof Point)) {
-      throw new Error("Feature must have a Point geometry");
-    }
+    const pointFeatures = features.filter(
+      (f) => f.getGeometry() instanceof Point,
+    );
 
-    const [x, y] = point.getCoordinates();
-    const half = sizeMeters / 2;
-    const squareCoords = [
-      [
-        [x - half, y - half],
-        [x + half, y - half],
-        [x + half, y + half],
-        [x - half, y + half],
-        [x - half, y - half], // close the ring
-      ],
-    ];
-    const polygon = new Polygon(squareCoords);
+    if (!pointFeatures.length) return;
 
-    feature.setGeometry(polygon);
-    const metaData = feature.get("metaData");
-    const oldMetaData = structuredClone(metaData);
-    metaData.modifiedByUserId = "";
-    metaData.modifiedAtTimestamp = Date.now();
-    feature.setProperties({
-      metaData,
+    const conversions = pointFeatures.map((feature) => {
+      const point = feature.getGeometry() as Point;
+      const coords = point.getCoordinates();
+
+      const [mx, my] = transform(coords, mapProjection, "EPSG:3857");
+      const half = sizeMeters / 2;
+      const squareCoordsMeters = [
+        [
+          [mx - half, my - half],
+          [mx + half, my - half],
+          [mx + half, my + half],
+          [mx - half, my + half],
+          [mx - half, my - half],
+        ],
+      ];
+
+      const squareCoords = [
+        squareCoordsMeters[0].map((c) =>
+          transform(c, "EPSG:3857", mapProjection),
+        ),
+      ];
+      const polygon = new Polygon(squareCoords);
+
+      const metaData = $state.snapshot(feature.get("metaData"));
+      const oldMetaData = structuredClone(metaData);
+      const modifiedAtTimestamp = Date.now();
+
+      return {
+        feature,
+        point,
+        polygon,
+        oldMetaData,
+        modifiedAtTimestamp,
+      };
     });
-    feature.changed();
 
+    for (const { feature, polygon, modifiedAtTimestamp } of conversions) {
+      feature.setGeometry(polygon);
+      const metaData = feature.get("metaData");
+      metaData.modifiedByUserId = "";
+      metaData.modifiedAtTimestamp = modifiedAtTimestamp;
+      feature.setProperties({ metaData });
+      feature.changed();
+    }
     this.#syncSelectedAnnotations();
 
     const format = new WKT();
-    const payload = {
-      id: feature.get("id"),
-      geometry: format.writeGeometry(polygon),
-      modifiedByUserId: metaData.modifiedByUserId,
-      modifiedAtTimestamp: metaData.modifiedAtTimestamp,
-    };
+    const payload = conversions.map(
+      ({ feature, polygon, modifiedAtTimestamp }) => ({
+        id: feature.get("id"),
+        geometry: format.writeGeometry(polygon),
+        modifiedByUserId: "",
+        modifiedAtTimestamp: modifiedAtTimestamp,
+      }),
+    );
 
     try {
       const response = await fetch("/api/convert-annotation", {
         method: "POST",
         headers: { "Content-Type": "application/msgpack" },
-        body: encode(payload),
+        body: encode({ conversions: payload }),
       });
 
       if (!response.ok) {
         throw new Error(`Failed to persist features: ${response.statusText}`);
       }
     } catch (error) {
-      feature.setGeometry(point);
-      feature.setProperties(oldMetaData);
-      feature.changed();
+      for (const { feature, point, oldMetaData } of conversions) {
+        feature.setGeometry(point);
+        feature.setProperties(oldMetaData);
+        feature.changed();
+      }
       this.#syncSelectedAnnotations();
-      throw error;
+      console.error("Failed to convert features to polygons:", error);
     }
   }
 

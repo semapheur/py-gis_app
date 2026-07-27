@@ -2,7 +2,7 @@ import json
 import re
 import uuid
 from sqlite3 import Row
-from typing import Literal, NamedTuple, TypedDict, Union
+from typing import Literal, NamedTuple, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
@@ -403,15 +403,40 @@ class AnnotationConvert(TypedDict):
   id: str
   geometry: str
   modifiedByUserId: str
-  modifiedAtTimestamp: str
+  modifiedAtTimestamp: int
 
 
-def convert_annotation(payload: AnnotationConvert):
+class AnnotationConvertBatch(TypedDict):
+  conversions: list[AnnotationConvert]
+
+
+class ConvertParams(TypedDict):
+  id: bytes
+  geometry: str
+  modifiedByUserId: str
+  modifiedAtTimestamp: int
+
+
+class AnnotationConvertError(Exception):
+  def __init__(self, id: str, reason: str):
+    self.id = id
+    self.reason = reason
+    super().__init__(f"Failed to convert {id}: {reason}")
+
+
+def convert_annotation(payload: AnnotationConvertBatch):
+  def build_migrate_sql(field: str):
+    return f"""
+      INSERT OR IGNORE INTO equipment_polygon_{field} (parent_id, value)
+      SELECT parent_id, value FROM equipment_point_{field} WHERE parent_id = :id;
+    """
+
   insert_sql = """
     INSERT INTO equipment_polygon(
       id,
       image,
       equipment,
+      confidence,
       status,
       visibility,
       configuration,
@@ -425,6 +450,7 @@ def convert_annotation(payload: AnnotationConvert):
       id,
       image,
       equipment,
+      confidence,
       status,
       visibility,
       configuration,
@@ -437,22 +463,22 @@ def convert_annotation(payload: AnnotationConvert):
     WHERE id = :id;
   """
 
-  migrate_modification_sql = """
-    INSERT OR IGNORE INTO equipment_polygon_modification (parent_id, value)
-    SELECT parent_id, value FROM equipment_point_modification WHERE parent_id = :id;
-  """
-
-  migrate_camoflage_sql = """
-    INSERT OR IGNORE INTO equipment_polygon_camoflage (parent_id, value)
-    SELECT parent_id, value FROM equipment_point_camoflage WHERE parent_id = :id;
-  """
-
-  delete_query = DeleteQuery().from_("equipment_point").where("id = ?", payload["id"])
-  delete_sql, delete_params = delete_query.build()
-
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
-    cursor = db.conn.cursor()
-    cursor.execute(insert_sql, payload)
-    cursor.execute(migrate_modification_sql, payload)
-    cursor.execute(migrate_camoflage_sql, payload)
-    cursor.execute(delete_sql, delete_params)
+    with db.transaction() as cursor:
+      for item in payload["conversions"]:
+        params = cast(ConvertParams, item.copy())
+        params["id"] = uuid.UUID(item["id"]).bytes
+        cursor.execute(insert_sql, params)
+
+        if cursor.rowcount == 0:
+          raise AnnotationConvertError(item["id"], "no matching equipment_point row")
+
+        for field in MULTI_ATTRIBUTE_FIELDS:
+          migrate_sql = build_migrate_sql(field)
+          cursor.execute(migrate_sql, params)
+
+        delete_query = (
+          DeleteQuery().from_("equipment_point").where("id = ?", params["id"])
+        )
+        delete_sql, delete_params = delete_query.build()
+        cursor.execute(delete_sql, delete_params)

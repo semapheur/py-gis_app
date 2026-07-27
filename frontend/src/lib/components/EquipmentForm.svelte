@@ -22,8 +22,6 @@
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
-  $inspect(value);
-
   const {
     confidenceOptions,
     statusOptions,
