@@ -35,6 +35,12 @@
       filterable: true,
     },
     {
+      id: "geometry",
+      label: "Geometry",
+      sortable: true,
+      filterable: true,
+    },
+    {
       id: "confidence",
       label: "Confidence",
       sortable: true,
@@ -104,6 +110,7 @@
         return {
           id: i + 1,
           equipment: data.equipment.label,
+          geometry: f.getGeometry()?.getType(),
           confidence: data.confidence.label,
           status: data.status.label,
           visibility: data.visibility.label,
@@ -127,9 +134,9 @@
   );
 
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
-  const selectedGeometry = $derived(selectedFeature?.getGeometryName() ?? null);
-
-  const canBulkEdit = $derived(selectedFeatures.length > 1);
+  const selectedGeometry = $derived(
+    selectedFeature?.getGeometry()?.getType() ?? null,
+  );
 
   $effect(() => {
     if (selectedFeatures.length > 1) {
