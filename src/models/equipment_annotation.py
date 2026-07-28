@@ -28,7 +28,7 @@ app_settings = get_settings()
 EquipmentGeometry = Literal["POINT", "POLYGON"]
 
 SINGLE_ATTRIBUTE_FIELDS = ("confidence", "status", "visibility", "configuration")
-MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage")
+MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage", "alternatives")
 
 
 class AnnotationModels(NamedTuple):
@@ -36,7 +36,7 @@ class AnnotationModels(NamedTuple):
   junctions: dict[str, type[Table]]
 
 
-def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationModel:
+def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationModels:
   table_name = f"equipment_{geometry_type.lower()}"
 
   class EquipmentAnnotation(Table):
@@ -169,7 +169,7 @@ def delete_annotations(payload: dict[str, list[str]]):
 
 
 def build_junction_array_sql(
-  child_table: str, ref_table: str, annotation_table: str = "ea"
+  child_table: str, reference_table: str, annotation_table: str = "ea"
 ) -> str:
   return (
     SelectQuery()
@@ -177,7 +177,7 @@ def build_junction_array_sql(
       "COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', r.name)), '[]')"
     )
     .from_(f"{child_table} c")
-    .inner_join(f"a.{ref_table} r", "r.id = c.value")
+    .inner_join(f"a.{reference_table} r", "r.id = c.value")
     .where(f"c.parent_id = {annotation_table}.id")
   ).build()[0]
 
@@ -223,7 +223,8 @@ def get_annotations_by_image(image_id: bytes):
       select_fields.append(f"a.equipment_{field}.name AS {field}_label")
 
     for field in MULTI_ATTRIBUTE_FIELDS:
-      array_sql = build_junction_array_sql(f"{table}_{field}", f"equipment_{field}")
+      ref_table = "equipment" if field == "alternatives" else f"equipment_{field}"
+      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table)
       select_fields.append(f"({array_sql}) AS {field}")
 
     select_fields += [
@@ -295,72 +296,75 @@ class GhostResult(TypedDict):
 def get_annotation_ghosts_by_geometry(
   polygon_wkt: str, datetime: int, future: bool
 ) -> list[GhostResult]:
-  data: dict[str, GhostResult] = {}
+  ghost_data: dict[str, GhostResult] = {}
 
   def map_row(row: Row):
     r = dict(row)
 
-    label = "\n".join(
-      [
-        r["equipment_label"],
-        r["confidence_label"],
-        r["status_label"],
-      ]
-    )
-
     image_id = encode_sha256_to_b64(r["image"])
 
-    ghost_result = data.setdefault(
+    ghost_result = ghost_data.setdefault(
       image_id,
       GhostResult(image_id=image_id, datetime=r["datetime"], annotations=[]),
     )
 
+    attribute_data = {
+      field: {"id": r[f"{field}_id"], "label": r[f"{field}_label"]}
+      for field in ("equipment", *SINGLE_ATTRIBUTE_FIELDS)
+    }
+
+    for field in MULTI_ATTRIBUTE_FIELDS:
+      attribute_data[field] = json.loads(r[field])
+
     ghost_result["annotations"].append(
       {
-        "id": uuid_bytes_to_str(r["id"]),
+        "id": r["id"],
         "geometry": json.loads(r["geometry"]),
-        "label": label,
-        "data": {
-          "equipment": {
-            "id": uuid_bytes_to_str(r["equipment_id"]),
-            "label": r["equipment_label"],
-          },
-          "confidence": {
-            "id": uuid_bytes_to_str(r["confidence_id"]),
-            "label": r["confidence_label"],
-          },
-          "status": {
-            "id": uuid_bytes_to_str(r["status_id"]),
-            "label": r["status_label"],
-          },
-        },
+        "label": r["label"],
+        "data": attribute_data,
       }
     )
 
   def build_subquery(geometry: EquipmentGeometry):
-    return (
+    table = f"equipment_{geometry.lower()}"
+
+    select_fields = [
+      "uuid_blob_to_str(ea.id) AS id",
+      "ea.image AS image",
+      "i.images.datetime_collected AS datetime",
+      "AsGeoJSON(ea.geometry) AS geometry",
+      "ed.equipment.displayname || '\n' || a.equipment_confidence.name  AS label",
+      "uuid_blob_to_str(ea.equipment) AS equipment_id",
+      "ed.equipment.displayname AS equipment_label",
+    ]
+
+    for field in SINGLE_ATTRIBUTE_FIELDS:
+      select_fields.append(f"uuid_blob_to_str(ea.{field}) AS {field}_id")
+      select_fields.append(f"a.equipment_{field}.name AS {field}_label")
+
+    for field in MULTI_ATTRIBUTE_FIELDS:
+      ref_table = "equipment" if field == "alternatives" else f"equipment_{field}"
+      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table)
+      select_fields.append(f"({array_sql}) AS {field}")
+
+    query = (
       SelectQuery()
-      .select(
-        "ea.id AS id",
-        "ea.image AS image",
-        "i.images.datetime_collected AS datetime",
-        "AsGeoJSON(ea.geometry) AS geometry",
-        "ea.equipment AS equipment_id",
-        "ed.equipment.displayName AS equipment_label",
-        "ea.confidence AS confidence_id",
-        "a.equipment_confidence.name AS confidence_label",
-        "ea.status AS status_id",
-        "a.equipment_status.name AS status_label",
-      )
-      .from_(f"equipment_{geometry.lower()} ea")
+      .select(*select_fields)
+      .from_(f"{table} ea")
       .inner_join("i.images", "i.images.id = ea.image")
       .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
-      .inner_join("a.equipment_confidence", "a.equipment_confidence.id = ea.confidence")
-      .inner_join("a.equipment_status", "a.equipment_status.id = ea.status")
-      .cross_join("poly")
-      .where(f"i.images.datetime_collected {date_op} ?", datetime)
-      .where("ST_Intersects(ea.geometry, poly.geom)")
     )
+
+    for field in SINGLE_ATTRIBUTE_FIELDS:
+      query = query.inner_join(
+        f"a.equipment_{field}", f"a.equipment_{field}.id = ea.{field}"
+      )
+
+    query = query.where(f"i.images.datetime_collected {date_op} ?", datetime).where(
+      "ST_Intersects(ea.geometry, poly.geom)"
+    )
+
+    return query
 
   date_op = ">" if future else "<"
 

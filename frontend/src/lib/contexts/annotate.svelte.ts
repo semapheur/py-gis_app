@@ -41,6 +41,7 @@ export interface EquipmentData {
   configuration: AnnotateValue | null;
   modification: AnnotateValue[] | null;
   camoflage: AnnotateValue[] | null;
+  alternatives: AnnotateValue[] | null;
 }
 
 type MultiAttributeField = "modification" | "camoflage";
@@ -110,8 +111,8 @@ export class AnnotateState {
 
   label = $derived.by(() => {
     if (this.layer === "equipment") {
-      const d = this.data as EquipmentData;
-      return `${d.equipment?.label}\n${d.confidence?.label}\n${d.status?.label}`;
+      const d = this.data as ValidEquipmentData;
+      return `${d.equipment.label}\n${d.confidence.label}`;
     }
 
     if (this.layer === "activity") {
@@ -165,6 +166,7 @@ export class AnnotateState {
         configuration: null,
         modification: null,
         camoflage: null,
+        alternatives: null,
       } satisfies EquipmentData;
     }
 
