@@ -1,15 +1,11 @@
 <script lang="ts">
-  interface UnitOption {
-    label: string;
-    value: string;
-    factor: number;
-  }
+  import type { UnitOption } from "$lib/utils/types";
 
   interface Props {
     value: number | null;
     baseValue: number | null;
-    unit: string;
     units: UnitOption[];
+    unit: string;
     placeholder: string;
     min?: string;
     max?: string;
@@ -18,9 +14,9 @@
 
   let {
     value = $bindable(null),
-    unit,
-    units,
     baseValue = $bindable(null),
+    units,
+    unit = $bindable(""),
     placeholder,
     min,
     max,
@@ -44,8 +40,29 @@
   });
 
   function handleNumberInput(e: Event) {
-    const raw = (e.currentTarget as HTMLInputElement).value;
-    value = raw === "" ? null : Number(raw);
+    const input = e.currentTarget as HTMLInputElement;
+    const raw = input.value;
+
+    if (raw === "") {
+      value = null;
+      return;
+    }
+
+    const n = Number(raw);
+
+    if (isNaN(n) || raw.endsWith(".") || raw === "-") {
+      value = raw as unknown as number;
+      return;
+    }
+
+    const lo = min !== undefined ? Number(min) : -Infinity;
+    const hi = max !== undefined ? Number(max) : Infinity;
+    const clamped = Math.min(hi, Math.max(lo, n));
+
+    if (clamped !== n) {
+      input.value = String(clamped);
+    }
+    value = clamped;
   }
 </script>
 
@@ -81,7 +98,8 @@
     left: var(--size-md);
     font-size: var(--text-2xs);
     top: 0;
-    transform: all 0.15s ease;
+    transform: translateY(-50%);
+    transition: all 0.15s ease;
     color: oklch(var(--color-text));
     pointer-events: none;
     text-shadow: var(--text-shadow);

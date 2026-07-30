@@ -66,6 +66,10 @@ export interface SelectOption<T = string> {
   value: T;
 }
 
+export interface UnitOption extends SelectOption<string> {
+  factor: number;
+}
+
 export interface SchemaBaseData {
   id: SchemaId;
   name: string;

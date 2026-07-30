@@ -42,15 +42,18 @@ export interface EquipmentData {
   modification: AnnotateValue[] | null;
   camoflage: AnnotateValue[] | null;
   alternatives: AnnotateValue[] | null;
+  heading: number | null;
+  speed: number | null;
 }
 
-type MultiAttributeField = "modification" | "camoflage";
+type MultiAttributeField = "modification" | "camoflage" | "alternatives";
+type NumericField = "heading" | "speed";
 
 export type ValidEquipmentData = {
-  [K in keyof EquipmentData as Exclude<K, MultiAttributeField>]-?: NonNullable<
-    EquipmentData[K]
-  >;
-} & Pick<EquipmentData, MultiAttributeField>;
+  [
+    K in keyof EquipmentData as Exclude<K, MultiAttributeField | NumericField>
+  ]-?: NonNullable<EquipmentData[K]>;
+} & Pick<EquipmentData, MultiAttributeField | NumericField>;
 
 interface AttributeMetaData {
   createdByUserId: string;
@@ -167,6 +170,8 @@ export class AnnotateState {
         modification: null,
         camoflage: null,
         alternatives: null,
+        heading: null,
+        speed: null,
       } satisfies EquipmentData;
     }
 

@@ -49,9 +49,8 @@ def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationM
     status = uuid_field(False, False)
     visibility = uuid_field(False, False)
     configuration = uuid_field(False, False)
-    speed_meters_per_second = Field(float)
-    heading_degrees = Field(float)
-    orientation_degrees = Field(float)
+    heading_deg = Field(float)
+    speed_mps = Field(float)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
     createdAtTimestamp = datetime_field(False)
@@ -85,7 +84,9 @@ class AnnotationUpdate(TypedDict):
 
 
 def update_annotations(payloads: list[AnnotationUpdate]):
-  wkt_pattern = re.compile(r"^(?:SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.I)
+  wkt_pattern = re.compile(
+    r"^(?:SRID=\d+;)?(POINT|POLYGON|MULTIPOLYGON)", re.IGNORECASE
+  )
 
   upsert_models: dict[str, list[type[Table]]] = {"equipment": [], "activity": []}
   list_writes: list[tuple[AnnotationModels, uuid.UUID, dict[str, list[uuid.UUID]]]] = []
@@ -94,6 +95,8 @@ def update_annotations(payloads: list[AnnotationUpdate]):
     "geometry",
     "equipment",
     *SINGLE_ATTRIBUTE_FIELDS,
+    "heading_deg",
+    "speed_mps",
     "modifiedByUserId",
     "modifiedAtTimestamp",
   )
@@ -235,6 +238,8 @@ def get_annotations_by_image(image_id: bytes):
       select_fields.append(f"({array_sql}) AS {field}")
 
     select_fields += [
+      "ea.heading_deg AS heading",
+      "ea.speed_mps AS speed",
       "ea.createdByUserId AS createdByUserId",
       "ea.modifiedByUserId AS modifiedByUserId",
       "ea.createdAtTimestamp AS createdAtTimestamp",
@@ -355,6 +360,8 @@ def get_annotation_ghosts_by_geometry(
       array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
+    select_fields += ["ea.heading_deg AS heading", "ea.speed_mps AS speed"]
+
     query = (
       SelectQuery()
       .select(*select_fields)
@@ -452,6 +459,8 @@ def convert_annotation(payload: AnnotationConvertBatch):
       status,
       visibility,
       configuration,
+      heading_deg,
+      speed_mps,
       createdByUserId,
       modifiedByUserId,
       createdAtTimestamp,
@@ -466,6 +475,8 @@ def convert_annotation(payload: AnnotationConvertBatch):
       status,
       visibility,
       configuration,
+      heading_deg,
+      speed_mps,
       createdByUserId,
       :modifiedByUserId,
       createdAtTimestamp,

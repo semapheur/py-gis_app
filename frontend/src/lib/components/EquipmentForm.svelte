@@ -5,7 +5,7 @@
   import MultiSelect from "$lib/components/MultiSelect.svelte";
   import UnitInput from "$lib/components/UnitInput.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
-  import { type SelectOption } from "$lib/utils/types";
+  import { type SelectOption, type UnitOption } from "$lib/utils/types";
   import type {
     AnnotateValue,
     EquipmentData,
@@ -32,10 +32,15 @@
     camoflageOptions,
   } = getEquipmentOptions();
 
-  const speedUnits = [
+  const speedUnits: UnitOption[] = [
     { label: "km/h", value: "kmph", factor: 1.0 / 3.6 },
     { label: "m/s", value: "mps", factor: 1 },
-    { label: "kt", value: "kt", factor: 0.514444 },
+    { label: "kt", value: "kt", factor: 1852.0 / 3600.0 },
+  ];
+
+  const angleUnits: UnitOption[] = [
+    { label: "deg", value: "deg", factor: 1.0 },
+    { label: "mil", value: "mil", factor: 0.05625 },
   ];
 
   const singleAttributeFields = [
@@ -73,12 +78,23 @@
     options: SelectOption[];
   }>;
 
+  const numericFields = [
+    { key: "heading", label: "Heading", units: angleUnits },
+    { key: "speed", label: "Speed", units: speedUnits, min: "0" },
+  ] as const satisfies Array<{
+    key: keyof Pick<EquipmentData, "heading" | "speed">;
+    label: string;
+    units: UnitOption[];
+    min?: string;
+  }>;
+
   type SingleAttributeKey = (typeof singleAttributeFields)[number]["key"];
   type MultiAttributeKey = (typeof multiAttributeFields)[number]["key"];
+  type NumericKey = (typeof numericFields)[number]["key"];
 
   let selectedEquipment = $derived(toSelectOption(value.equipment ?? null));
 
-  let singleAttributeIds = $derived.by(() => {
+  const singleAttributeIds = $derived.by(() => {
     const ids = {} as Record<SingleAttributeKey, string | null>;
     for (const field of singleAttributeFields) {
       ids[field.key] = value[field.key]?.id ?? null;
@@ -86,7 +102,7 @@
     return ids;
   });
 
-  let multiAttributeIds = $derived.by(() => {
+  const multiAttributeIds = $derived.by(() => {
     const ids = {} as Record<MultiAttributeKey, string[]>;
     for (const field of multiAttributeFields) {
       ids[field.key] = (value[field.key] ?? []).map((v) => v.id);
@@ -94,7 +110,12 @@
     return ids;
   });
 
-  let isValid = $derived.by(() => {
+  const numericUnits = $state<Record<NumericKey, string>>({
+    heading: angleUnits[0].value,
+    speed: speedUnits[0].value,
+  });
+
+  const isValid = $derived.by(() => {
     const full = value as EquipmentData;
 
     if (bulk) return true;
@@ -180,6 +201,12 @@
     }
   }
 
+  function factorFor(field: (typeof numericFields)[number]) {
+    return (
+      field.units.find((u) => u.value === numericUnits[field.key])?.factor ?? 1
+    );
+  }
+
   async function searchEquipment(query: string): Promise<SelectOption[]> {
     const response = await fetch("/api/search-equipment", {
       method: "POST",
@@ -228,7 +255,25 @@
       }
     />
   {/each}
-  <UnitInput units={speedUnits} placeholder="Speed" />
+  {#each numericFields as field (field.key)}
+    <UnitInput
+      units={field.units}
+      placeholder={field.label}
+      min={field.min}
+      bind:unit={numericUnits[field.key]}
+      bind:value={
+        () =>
+          value[field.key] != null
+            ? value[field.key]! / factorFor(field)
+            : null,
+        () => {}
+      }
+      bind:baseValue={
+        () => value[field.key] ?? null,
+        (v) => update(field.key, v ?? (bulk ? undefined : null))
+      }
+    />
+  {/each}
 </form>
 
 <style>
