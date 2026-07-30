@@ -17,6 +17,8 @@
 
   let { data }: Props = $props();
 
+  $inspect(data);
+
   const imageViewer = getImageViewerController();
 
   const columns: ColumnDefinition[] = [
@@ -24,6 +26,7 @@
       id: "count",
       label: "Count",
       sortable: true,
+      filterable: false,
     },
     {
       id: "label",

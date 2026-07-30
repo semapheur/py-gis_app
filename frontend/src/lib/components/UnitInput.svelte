@@ -34,9 +34,17 @@
   const selectedUnit = $derived(units.find((u) => u.value === unit));
   const factor = $derived(selectedUnit?.factor ?? 1);
 
+  function roundTo(n: number, decimals: number = 6): number {
+    const f = 10 ** decimals;
+    return Math.round((n * f) / f);
+  }
+
   $effect(() => {
     const n = Number(value);
-    baseValue = Number.isFinite(n) ? n * factor : NaN;
+    const next = Number.isFinite(n) ? roundTo(n * factor) : NaN;
+    if (next !== baseValue) {
+      baseValue = next;
+    }
   });
 
   function handleNumberInput(e: Event) {

@@ -773,6 +773,8 @@ export class ImageViewerController {
             configuration: data.configuration.id,
             modification: data.modification?.map((m) => m.id) ?? [],
             camoflage: data.camoflage?.map((m) => m.id) ?? [],
+            heading_deg: data.heading,
+            speed_mps: data.speed,
             createdByUserId: metaData.createdByUserId,
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,
@@ -799,21 +801,21 @@ export class ImageViewerController {
   public updateInteraction(set: InteractionSet, mode: InteractionMode) {
     if (this.#map === null || this.#interactions === null) return;
 
-    const interactions = this.#interactions[set];
-    const otherSet = set === "annotation" ? "measurement" : "annotation";
-    const otherInteractions = this.#interactions[otherSet];
-
-    if (otherInteractions) {
-      Object.values(otherInteractions).forEach((i) => {
+    for (const key of Object.keys(this.#interactions) as InteractionSet[]) {
+      if (key === set) continue;
+      const other = this.#interactions[key];
+      if (!other) continue;
+      Object.values(other).forEach((i) => {
         if (i) this.#map?.removeInteraction(i);
       });
     }
 
+    const interactions = this.#interactions[set];
     if (!interactions) return;
 
     const { draw, ...editInteractions } = interactions;
 
-    if (mode == "draw") {
+    if (mode === "draw") {
       Object.values(editInteractions).forEach((i) => {
         if (i) this.#map?.removeInteraction(i);
       });

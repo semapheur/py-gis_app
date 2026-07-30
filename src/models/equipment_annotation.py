@@ -29,6 +29,7 @@ EquipmentGeometry = Literal["POINT", "POLYGON"]
 
 SINGLE_ATTRIBUTE_FIELDS = ("confidence", "status", "visibility", "configuration")
 MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage", "alternatives")
+NUMERIC_FIELDS = ("heading", "speed")
 
 
 class AnnotationModels(NamedTuple):
@@ -203,6 +204,9 @@ def get_annotations_by_image(image_id: bytes):
     for field in MULTI_ATTRIBUTE_FIELDS:
       data[field] = json.loads(r[field])
 
+    for field in NUMERIC_FIELDS:
+      data[field] = r[field]
+
     return {
       "id": r["id"],
       "geometry": json.loads(r["geometry"]),
@@ -328,6 +332,9 @@ def get_annotation_ghosts_by_geometry(
     for field in MULTI_ATTRIBUTE_FIELDS:
       attribute_data[field] = json.loads(r[field])
 
+    for field in NUMERIC_FIELDS:
+      attribute_data[field] = r[field]
+
     ghost_result["annotations"].append(
       {
         "id": r["id"],
@@ -366,6 +373,7 @@ def get_annotation_ghosts_by_geometry(
       SelectQuery()
       .select(*select_fields)
       .from_(f"{table} ea")
+      .cross_join("poly")
       .inner_join("i.images", "i.images.id = ea.image")
       .inner_join("ed.equipment", "ed.equipment.id = ea.equipment")
     )
@@ -411,7 +419,7 @@ def get_annotation_ghosts_by_geometry(
       for r in cursor.execute(select_sql, params):
         map_row(r)
 
-      return sorted(data.values(), key=lambda d: d["datetime"])
+      return sorted(ghost_data.values(), key=lambda d: d["datetime"])
 
     finally:
       for statement in detach_sql:

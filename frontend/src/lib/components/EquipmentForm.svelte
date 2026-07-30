@@ -264,7 +264,7 @@
       bind:value={
         () =>
           value[field.key] != null
-            ? value[field.key]! / factorFor(field)
+            ? Math.round((value[field.key]! / factorFor(field)) * 1e6) / 1e6
             : null,
         () => {}
       }

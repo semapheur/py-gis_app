@@ -79,6 +79,9 @@
   }
 
   function isAllChecked(colId: string) {
+    const values = columnValues[colId];
+    if (!values) return true;
+
     const checked = getChecked(colId);
     return columnValues[colId].every((v) => checked.has(v));
   }
@@ -248,7 +251,11 @@
         {#each columns as c}
           <th>
             <div class="th-inner">
-              <span class={{ "filter-active": isFilterActive(c.id) }}>
+              <span
+                class={{
+                  "filter-active": c.filterable && isFilterActive(c.id),
+                }}
+              >
                 {c.label}
               </span>
               {#if c.filterable}

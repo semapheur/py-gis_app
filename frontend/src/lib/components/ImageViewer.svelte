@@ -113,6 +113,7 @@
     if (ghostsOpen) {
       imageViewer.clearGhosts();
       ghostsOpen = false;
+      viewerState.setActiveSet(measurementOpen ? "measurement" : "annotation");
     }
   }
 
@@ -209,19 +210,6 @@
   .left-sidebar-button-group {
     display: flex;
     justify-content: flex-end;
-  }
-
-  .right-sidebar {
-    display: flex;
-    flex-direction: column;
-    position: absolute;
-    top: 0;
-    right: 0;
-    width: 30%;
-    height: 100%;
-    padding: var(--size-md);
-    background-color: oklch(var(--color-primary));
-    z-index: 2;
   }
 
   .enhancement {

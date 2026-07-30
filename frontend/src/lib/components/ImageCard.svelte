@@ -95,13 +95,6 @@
     padding: var(--size-sm);
   }
 
-  .badge {
-    background-color: gray;
-    font-size: var(--text-xs);
-    border-radius: var(--size-sm);
-    padding: 0 var(--size-sm);
-  }
-
   .footer {
     position: absolute;
     bottom: 0;
