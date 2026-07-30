@@ -3,6 +3,7 @@
   import Autocomplete from "$lib/components/Autocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
   import MultiSelect from "$lib/components/MultiSelect.svelte";
+  import UnitInput from "$lib/components/UnitInput.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
   import { type SelectOption } from "$lib/utils/types";
   import type {
@@ -30,6 +31,12 @@
     modificationOptions,
     camoflageOptions,
   } = getEquipmentOptions();
+
+  const speedUnits = [
+    { label: "km/h", value: "kmph", factor: 1.0 / 3.6 },
+    { label: "m/s", value: "mps", factor: 1 },
+    { label: "kt", value: "kt", factor: 0.514444 },
+  ];
 
   const singleAttributeFields = [
     { key: "confidence", label: "Confidence", options: confidenceOptions },
@@ -221,6 +228,7 @@
       }
     />
   {/each}
+  <UnitInput units={speedUnits} placeholder="Speed" />
 </form>
 
 <style>

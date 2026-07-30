@@ -104,9 +104,9 @@
   let polygonSize = $state<number>(2);
   let openConvert = $state<boolean>(false);
 
-  let selectedAnnotations = $derived(viewerController.selectedAnnotations);
+  const selectedAnnotations = $derived(viewerController.selectedAnnotations);
 
-  let tableData = $derived({
+  const tableData = $derived({
     equipment: selectedAnnotations.equipment
       .map((f, i) => {
         const data = f.get("data") as ValidEquipmentData;
@@ -128,17 +128,17 @@
     activity: [],
   });
 
-  let selectedFeatures = $derived(
+  const selectedFeatures = $derived(
     selectedRows
       .map((i) => selectedAnnotations[activeTableTab][i])
       .filter(Boolean),
   );
 
-  let selectedPointFeatures = $derived(
+  const selectedPointFeatures = $derived(
     selectedFeatures.filter((f) => f.getGeometry() instanceof Point),
   );
 
-  let convertTitle = $derived(
+  const convertTitle = $derived(
     `Convert ${selectedPointFeatures.length} ${selectedPointFeatures.length === 1 ? "point" : "points"} to ${selectedPointFeatures.length === 1 ? "polygon" : "polygons"}`,
   );
 

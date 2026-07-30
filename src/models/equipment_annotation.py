@@ -5,7 +5,7 @@ from sqlite3 import Row
 from typing import Literal, NamedTuple, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
-from src.hashing import encode_sha256_to_b64, uuid_bytes_to_str
+from src.hashing import encode_sha256_to_b64
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import (
   DeleteQuery,
@@ -49,6 +49,9 @@ def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationM
     status = uuid_field(False, False)
     visibility = uuid_field(False, False)
     configuration = uuid_field(False, False)
+    speed_meters_per_second = Field(float)
+    heading_degrees = Field(float)
+    orientation_degrees = Field(float)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
     createdAtTimestamp = datetime_field(False)
@@ -169,15 +172,18 @@ def delete_annotations(payload: dict[str, list[str]]):
 
 
 def build_junction_array_sql(
-  child_table: str, reference_table: str, annotation_table: str = "ea"
+  child_table: str,
+  reference_table: str,
+  reference_column: str,
+  annotation_table: str = "ea",
 ) -> str:
   return (
     SelectQuery()
     .select(
-      "COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', r.name)), '[]')"
+      f"COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', r.{reference_column})), '[]')"
     )
     .from_(f"{child_table} c")
-    .inner_join(f"a.{reference_table} r", "r.id = c.value")
+    .inner_join(f"{reference_table} r", "r.id = c.value")
     .where(f"c.parent_id = {annotation_table}.id")
   ).build()[0]
 
@@ -223,8 +229,9 @@ def get_annotations_by_image(image_id: bytes):
       select_fields.append(f"a.equipment_{field}.name AS {field}_label")
 
     for field in MULTI_ATTRIBUTE_FIELDS:
-      ref_table = "equipment" if field == "alternatives" else f"equipment_{field}"
-      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table)
+      ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
+      ref_column = "displayName" if field == "alternatives" else "name"
+      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
     select_fields += [
@@ -343,8 +350,9 @@ def get_annotation_ghosts_by_geometry(
       select_fields.append(f"a.equipment_{field}.name AS {field}_label")
 
     for field in MULTI_ATTRIBUTE_FIELDS:
-      ref_table = "equipment" if field == "alternatives" else f"equipment_{field}"
-      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table)
+      ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
+      ref_column = "displayName" if field == "alternatives" else "name"
+      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
     query = (
