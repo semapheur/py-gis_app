@@ -1,6 +1,7 @@
+import type { Coordinate } from "ol/coordinate";
 import { type FeatureLike } from "ol/Feature";
 import { Point, LineString, Polygon } from "ol/geom";
-import { Projection } from "ol/proj";
+import { Projection, transform } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
 import { vertexStyle } from "$lib/utils/ol_styles";
@@ -295,7 +296,7 @@ const measurementSegmentStyle = new Style({
   }),
 });
 
-function formatLength(line: LineString, projection: Projection): string {
+export function formatLength(line: LineString, projection: Projection): string {
   const length = getLength(line, { projection });
 
   const output =
@@ -306,15 +307,34 @@ function formatLength(line: LineString, projection: Projection): string {
   return output;
 }
 
-function formatArea(polygon: Polygon, projection: Projection): string {
+export function formatArea(polygon: Polygon, projection: Projection): string {
   const area = getArea(polygon, { projection });
 
   const output =
-    area > 10000
-      ? `${(area / 1000000).toFixed(2)} km²`
+    area > 1_000_000
+      ? `${(area / 1_000_000).toFixed(2)} km²`
       : `${area.toFixed(2)} m²`;
 
   return output;
+}
+
+function formatHeading(a: Coordinate, b: Coordinate, projection: Projection) {
+  const [lon1, lat1] = transform(a, projection, "EPSG:4326");
+  const [lon2, lat2] = transform(b, projection, "EPSG:4326");
+
+  const phi1 = (lat1 * Math.PI) / 180;
+  const phi2 = (lat2 * Math.PI) / 180;
+  const delta = ((lon2 - lon1) * Math.PI) / 180;
+
+  const y = Math.sin(delta) * Math.cos(phi2);
+  const x =
+    Math.cos(phi1) * Math.sin(phi2) -
+    Math.sin(phi1) * Math.cos(phi2) * Math.cos(delta);
+
+  const theta = Math.atan2(y, x);
+  const bearing = ((theta * 180) / Math.PI + 360) % 360;
+
+  return `${bearing.toFixed(1)}°`;
 }
 
 export function styleMeasurement(
@@ -354,7 +374,9 @@ export function styleMeasurement(
   if (segments && line) {
     line.forEachSegment((a, b) => {
       const segment = new LineString([a, b]);
-      const segmentLabel = formatLength(segment, projection);
+      const segmentLength = formatLength(segment, projection);
+      const segmentHeading = formatHeading(a, b, projection);
+      const segmentLabel = `${segmentLength}\n${segmentHeading}`;
       const segmentPoint = new Point(segment.getCoordinateAt(0.5));
 
       const segmentStyle = measurementSegmentStyle.clone();

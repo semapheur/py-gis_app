@@ -45,6 +45,8 @@ import {
   ghostStyle,
   defaultEnhancement,
   type Enhancement,
+  formatArea,
+  formatLength,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
   //BandStretchManager,
@@ -65,8 +67,8 @@ import type {
 export type ContextMenuItemType = "equipment" | "measurement" | "ghost";
 
 export interface ContextMenuItem {
-  feature: Feature;
   type: ContextMenuItemType;
+  features: Feature[];
   label: string;
 }
 
@@ -573,6 +575,22 @@ export class ImageViewerController {
       modifiable.remove(e.element);
     });
 
+    const dragBox = new DragBox({
+      condition: shiftKeyOnly,
+    });
+
+    dragBox.on("boxend", () => {
+      const extent = dragBox.getGeometry().getExtent();
+
+      this.#annotationSources.ghost
+        .getFeaturesInExtent(extent)
+        .forEach((f) => select.getFeatures().push(f));
+    });
+
+    dragBox.on("boxstart", () => {
+      select.getFeatures().clear();
+    });
+
     const modify = new Modify({ features: modifiable });
 
     const translate = new Translate({
@@ -586,12 +604,39 @@ export class ImageViewerController {
       modify,
       translate,
       draw: null,
-      dragBox: null,
+      dragBox,
     };
   }
 
   #setupContextMenu() {
     if (this.#map === null) return;
+
+    const getSelectedFeatures = (type: ContextMenuItemType): Feature[] => {
+      switch (type) {
+        case "equipment":
+          return (
+            this.#interactions.annotation?.select
+              .getFeatures()
+              .getArray()
+              .filter((f) => f.get("type") === "equipment") ?? []
+          );
+        case "ghost":
+          return (
+            this.#interactions.ghost?.select.getFeatures().getArray() ?? []
+          );
+        case "measurement":
+          return (
+            this.#interactions.measurement?.select.getFeatures().getArray() ??
+            []
+          );
+      }
+    };
+
+    const pluralLabel: Record<ContextMenuItemType, string> = {
+      equipment: "equipment annotations",
+      ghost: "ghosts",
+      measurement: "measurements",
+    };
 
     this.#map
       .getViewport()
@@ -600,10 +645,6 @@ export class ImageViewerController {
 
         const pixel = this.#map?.getEventPixel(e);
         if (!pixel) return;
-
-        //const rect = (
-        //  this.#map?.getTarget() as HTMLElement
-        //).getBoundingClientRect();
 
         const layerChecks: Array<{
           layer: WebGLVectorLayer | VectorLayer | null;
@@ -625,8 +666,13 @@ export class ImageViewerController {
             type: "measurement",
             getLabel: (f) => {
               const g = f.getGeometry();
-              if (g instanceof Polygon) return "Area";
-              if (g instanceof LineString) return "Length";
+              const projection = this.projection;
+              if (!projection) return "";
+
+              if (g instanceof Polygon)
+                return `Area (${formatArea(g, projection)})`;
+              if (g instanceof LineString)
+                return `Length (${formatLength(g, projection)})`;
               return "";
             },
           },
@@ -636,13 +682,30 @@ export class ImageViewerController {
 
         for (const { layer, type, getLabel } of layerChecks) {
           if (!layer) continue;
+          const selected = getSelectedFeatures(type);
+          let addedMultiForType = items.some(
+            (i) => i.type == type && i.features.length > 1,
+          );
+
           this.#map?.forEachFeatureAtPixel(
             pixel,
             (feature) => {
+              const f = feature as Feature;
+              if (selected.length > 1 && selected.includes(f)) {
+                if (!addedMultiForType) {
+                  items.push({
+                    type,
+                    features: selected,
+                    label: `${selected.length} ${pluralLabel[type]} selected`,
+                  });
+                  addedMultiForType = true;
+                }
+                return;
+              }
               items.push({
-                feature: feature as Feature,
                 type,
-                label: getLabel(feature as Feature),
+                features: [f],
+                label: getLabel(f),
               });
             },
             { layerFilter: (l) => l === layer, hitTolerance: 10 },

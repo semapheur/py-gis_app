@@ -26,6 +26,14 @@
     measurement: "Measurement",
   };
 
+  function itemLabel(item: ContextMenuItem) {
+    if (item.features.length > 1) {
+      return item.label;
+    }
+
+    return `${typePrefix[item.type]}: ${item.label}`;
+  }
+
   function handleBackdropClick(e: PointerEvent) {
     if (e.target === e.currentTarget) imageViewer.closeContextMenu();
   }
@@ -49,15 +57,13 @@
       {/each}
     {:else}
       <!-- action picker -->
-      <li class="menu-header">
-        {`${typePrefix[selected.type]}: ${selected.label}`}
-      </li>
+      <li class="menu-header">{itemLabel(selected)}</li>
       {#if selected.type === "equipment"}
         <li>
           <button
             onclick={() => {
               if (!selected) return;
-              imageViewer.removeAnnotations([selected.feature]);
+              imageViewer.removeAnnotations(selected.features);
               imageViewer.closeContextMenu();
             }}>Delete</button
           >
@@ -67,7 +73,7 @@
           <button
             onclick={() => {
               if (!selected) return;
-              imageViewer.acceptGhosts([selected.feature]);
+              imageViewer.acceptGhosts(selected.features);
               imageViewer.closeContextMenu();
             }}
           >
@@ -78,7 +84,7 @@
           <button
             onclick={() => {
               if (!selected) return;
-              imageViewer.removeGhosts([selected.feature]);
+              imageViewer.removeGhosts(selected.features);
               imageViewer.closeContextMenu();
             }}
           >
@@ -90,7 +96,7 @@
           <button
             onclick={() => {
               if (!selected) return;
-              imageViewer.removeMeasurements([selected.feature]);
+              imageViewer.removeMeasurements(selected.features);
               imageViewer.closeContextMenu();
             }}>Remove</button
           >
