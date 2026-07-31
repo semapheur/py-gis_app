@@ -400,16 +400,16 @@ export function styleSearchMarker(feature: FeatureLike) {
   const label = feature.get("label") ?? "";
   return new Style({
     image: new Circle({
-      radius: 6,
+      radius: 5,
       fill: new Fill({ color: "rgb(255 240 40)" }),
-      stroke: new Stroke({ color: "rgb(255 255 255)", width: 2 }),
+      stroke: new Stroke({ color: "rgb(0 0 0)", width: 1 }),
     }),
     text: new Text({
       text: label,
-      offsetY: -18,
-      font: "12px sans-serif",
+      offsetY: -12,
+      font: "11px sans-serif",
       fill: new Fill({ color: "rgb(255 255 255)" }),
-      stroke: new Stroke({ color: "rgb(0 0 0)", width: 3 }),
+      stroke: new Stroke({ color: "rgb(0 0 0)", width: 1 }),
     }),
   });
 }

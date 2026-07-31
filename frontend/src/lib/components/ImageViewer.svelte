@@ -136,7 +136,7 @@
       toast.error("Unsupported coordinate format");
       return;
     }
-
+    console.log(latlon);
     const success = imageViewer.goToCoordinate(latlon.lonlat);
     if (!success) {
       toast.error("Coordinate is outside the image");
@@ -166,6 +166,7 @@
   </div>
   <div class="top-right">
     <Input
+      class="coordinate-search-input"
       bind:value={coordinates}
       placeholder="Go to coordinates"
       onkeydown={(e) => e.key === "Enter" && submitCoordinates()}
@@ -218,6 +219,10 @@
 </div>
 
 <style>
+  :global(.coordinate-search-input) {
+    --input-font-size: 0.85rem;
+  }
+
   .image-viewer {
     position: relative;
     width: 100%;

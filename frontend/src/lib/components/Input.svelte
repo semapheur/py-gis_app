@@ -19,6 +19,7 @@
     oninput,
     suffix,
     suffixWidth,
+    class: className,
     ...rest
   }: Props = $props();
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
@@ -26,7 +27,7 @@
   const uid = $props.id();
 </script>
 
-<div class="input">
+<div class="input {className ?? ''}">
   <input
     id={uid}
     class:invalid
@@ -66,6 +67,7 @@
   .input {
     position: relative;
     min-width: 0;
+    font-size: var(--input-font-size, inherit);
   }
 
   label {
@@ -103,6 +105,7 @@
       background-color: transparent;
       transform: translateY(0);
       top: var(--size-sm);
+      color: oklch(var(--color-text) / 0.5);
       text-shadow: none;
     }
 
@@ -110,6 +113,7 @@
       font-size: var(--text-2xs);
       top: 0;
       transform: translateY(-50%);
+      color: oklch(var(--color-text));
       text-shadow: var(--text-shadow);
     }
   }

@@ -80,8 +80,8 @@ export class UTM {
 
   public static getHemisphere(band: string) {
     return band.charCodeAt(0) < "N".charCodeAt(0)
-      ? hemisphereCodes.N
-      : hemisphereCodes.S;
+      ? hemisphereCodes.S
+      : hemisphereCodes.N;
   }
 
   public static fromGeographic(lon: number, lat: number) {

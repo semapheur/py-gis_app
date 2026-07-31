@@ -1297,6 +1297,10 @@ export class ImageViewerController {
     return true;
   }
 
+  public clearSearchMarker() {
+    this.#searchMarkerSource.clear();
+  }
+
   public closeContextMenu() {
     this.#contextMenu = null;
   }
