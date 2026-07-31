@@ -27,6 +27,7 @@ from src.models.areas import (
   AreaDelete,
   AreaId,
   AreaUpdate,
+  AreaWkt,
   delete_areas,
   get_area,
   get_areas,
@@ -179,6 +180,10 @@ class ApiRoutes(ApiHandler):
   @api("POST", "/api/get-area")
   def _post_fetch_area(self, payload: AreaId):
     return get_area(payload)
+
+  @api("POST", "/api/get-areas")
+  def _post_get_areas(self, payload: AreaWkt):
+    return get_areas(payload["wkt"])
 
   @api("POST", "/api/update-area")
   def _post_update_area(self, payload: AreaUpdate):

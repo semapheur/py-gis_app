@@ -95,12 +95,26 @@ def get_area_wkt(area_id: str):
     return area[0]
 
 
-def get_areas():
+class AreaWkt:
+  wkt: str
+
+
+def get_areas(polygon_wkt: Optional[str] = None):
   query = (
     SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
     .from_(AreasTable.table_name())
   )
+
+  if polygon_wkt is not None:
+    polygon_cte = (
+      SelectQuery()
+      .select("geom", "ST_Area(geom) AS area")
+      .from_("(SELECT ST_GeomFromText(?, 4326) AS geom) AS tmp", polygon_wkt)
+    )
+    query.with_("poly", polygon_cte).cross_join("poly").where(
+      "ST_Intersects(geometry, poly.geom)"
+    )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
     areas = db.select_model_records(AreasTable, query, True)
