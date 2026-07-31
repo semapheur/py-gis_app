@@ -19,7 +19,12 @@ import {
   Polygon,
   MultiPolygon,
 } from "ol/geom";
-import { extend, createEmpty } from "ol/extent";
+import {
+  containsCoordinate,
+  createEmpty,
+  extend,
+  type Extent,
+} from "ol/extent";
 import { fromExtent } from "ol/geom/Polygon";
 import {
   pointerMove,
@@ -48,6 +53,7 @@ import {
   type Enhancement,
   formatArea,
   formatLength,
+  styleSearchMarker,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
   //BandStretchManager,
@@ -66,6 +72,7 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 import { MGRS } from "$lib/utils/geo/mgrs";
 import type { ImageId } from "$lib/utils/brand";
+import { toLatLon, type CoordinateType } from "$lib/utils/geo/coord";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -107,8 +114,10 @@ interface ZoomOptions {
 }
 
 export class ImageViewerController {
-  #image: ImageId | null = null;
+  #imageId: ImageId | null = null;
   #map: Map | null = null;
+  #imageExtent: Extent | null = null;
+  #maxZoomLevel: number = 0;
   //#bandStretch: BandStretchManager | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
   #equipmentLayer: WebGLVectorLayer | null = null;
@@ -119,6 +128,8 @@ export class ImageViewerController {
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
   #measurementSource = new VectorSource();
+  #searchMarkerSource = new VectorSource();
+  #searchMarkerLayer: VectorLayer | null = null;
 
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedAnnotations = $state<Record<AnnotateForm, Feature[]>>({
@@ -203,6 +214,7 @@ export class ImageViewerController {
     this.#annotationSources.equipment.clear();
     this.#annotationSources.activity.clear();
     this.#measurementSource.clear();
+    this.#searchMarkerSource.clear();
 
     const layers = [
       this.#rasterLayer,
@@ -210,6 +222,7 @@ export class ImageViewerController {
       this.#ghostLayer,
       this.#activityLayer,
       this.#measurementLayer,
+      this.#searchMarkerLayer,
     ];
 
     layers.forEach((layer) => {
@@ -229,12 +242,14 @@ export class ImageViewerController {
     this.#ghostLayer = null;
     this.#activityLayer = null;
     this.#measurementLayer = null;
+    this.#searchMarkerLayer = null;
     this.#equipmentFeatures = [];
     this.#selectedAnnotations = {
       equipment: [],
       activity: [],
     };
-    this.#image = null;
+    this.#imageId = null;
+    this.#imageExtent = null;
   }
 
   public attach(
@@ -260,7 +275,7 @@ export class ImageViewerController {
   ) {
     if (!target) return;
 
-    this.#image = options.imageInfo.id!;
+    this.#imageId = options.imageInfo.id!;
 
     const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
 
@@ -279,6 +294,9 @@ export class ImageViewerController {
 
     const nativeResolutions = viewOptions.resolutions;
     if (!nativeResolutions) return;
+
+    this.#imageExtent = viewOptions.extent ?? null;
+    this.#maxZoomLevel = nativeResolutions.length - 1;
 
     const lastRes = nativeResolutions[nativeResolutions.length - 1];
     const extraLevels = 6;
@@ -331,6 +349,11 @@ export class ImageViewerController {
       style: (feature) => styleMeasurement(this.projection, feature, true),
     });
 
+    this.#searchMarkerLayer = new VectorLayer({
+      source: this.#searchMarkerSource,
+      style: styleSearchMarker,
+    });
+
     this.#map = new Map({
       target: target,
       controls: [],
@@ -340,6 +363,7 @@ export class ImageViewerController {
         this.#ghostLayer,
         this.#activityLayer,
         this.#measurementLayer,
+        this.#searchMarkerLayer,
         ...Object.values(this.#labelLayers),
       ],
       view: new View({
@@ -855,7 +879,7 @@ export class ImageViewerController {
           type: feature.get("type"),
           data: {
             id: feature.get("id"),
-            image: this.#image,
+            image: this.#imageId,
             geometry: format.writeGeometry(geometry4326),
             equipment: data.equipment.id,
             confidence: data.confidence.id,
@@ -1245,6 +1269,32 @@ export class ImageViewerController {
     );
 
     this.zoomToGeometry(fromExtent(extent), options);
+  }
+
+  public goToCoordinate(coordinate: Coordinate): boolean {
+    if (this.#map === null || this.projection === null) return false;
+
+    const mapCoordinate = transform(coordinate, "EPSG:4326", this.projection);
+
+    if (
+      this.#imageExtent &&
+      !containsCoordinate(this.#imageExtent, mapCoordinate)
+    ) {
+      return false;
+    }
+
+    this.#searchMarkerSource.clear();
+    const feature = new Feature({ geometry: new Point(mapCoordinate) });
+    feature.set("label", toStringHDMS(coordinate));
+    this.#searchMarkerSource.addFeature(feature);
+
+    this.#map.getView().animate({
+      center: mapCoordinate,
+      zoom: this.#maxZoomLevel,
+      duration: 300,
+    });
+
+    return true;
   }
 
   public closeContextMenu() {

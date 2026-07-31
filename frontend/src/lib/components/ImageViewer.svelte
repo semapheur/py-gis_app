@@ -14,11 +14,18 @@
   import ImageExtentSearch from "$lib/components/ImageExtentSearch.svelte";
   import GhostSearch from "$lib/components/GhostSearch.svelte";
   import CloseButton from "$lib/components/CloseButton.svelte";
+  import Input from "$lib/components/Input.svelte";
 
   import { startOfDay, type DateRange } from "$lib/utils/date";
   import { toast } from "$lib/stores/toast.svelte";
   import type { ImageMetadata } from "$lib/utils/types";
   import ResizeableSidebar from "./ResizeableSidebar.svelte";
+  import {
+    parseCoordinates,
+    toLatLon,
+    type CoordinateType,
+  } from "$lib/utils/geo/coord";
+  import type { LatLon } from "$lib/utils/geo/latlon";
 
   const imageViewer = getImageViewerController();
   const viewerOptions = getImageViewerOptions();
@@ -33,6 +40,7 @@
   let searchOpen = $state<boolean>(false);
   let ghostsOpen = $state<boolean>(false);
   let images = $state<ImageMetadata[]>([]);
+  let coordinates = $state<string | null>(null);
 
   const initialDateRange = setInitialDateRange(3);
 
@@ -117,6 +125,24 @@
     }
   }
 
+  function submitCoordinates() {
+    if (!coordinates) return;
+    let parsed;
+    let latlon;
+    try {
+      parsed = parseCoordinates(coordinates) as CoordinateType;
+      latlon = toLatLon(parsed) as LatLon;
+    } catch {
+      toast.error("Unsupported coordinate format");
+      return;
+    }
+
+    const success = imageViewer.goToCoordinate(latlon.lonlat);
+    if (!success) {
+      toast.error("Coordinate is outside the image");
+    }
+  }
+
   $effect(() => {
     rightSidebarOpen = imageViewer.hasSelectedAnnotations;
   });
@@ -139,6 +165,11 @@
     {/if}
   </div>
   <div class="top-right">
+    <Input
+      bind:value={coordinates}
+      placeholder="Go to coordinates"
+      onkeydown={(e) => e.key === "Enter" && submitCoordinates()}
+    />
     <Button onclick={() => (enhancementOpen = !enhancementOpen)}
       >Enhancement</Button
     >
@@ -246,6 +277,8 @@
     top: var(--size-sm);
     right: var(--size-sm);
     z-index: 1;
+    display: flex;
+    gap: var(--size-sm);
   }
 
   .top-left {

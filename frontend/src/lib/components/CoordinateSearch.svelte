@@ -4,14 +4,18 @@
   import Input from "$lib/components/Input.svelte";
   import Button from "$lib/components/Button.svelte";
   import LinkButton from "$lib/components/LinkButton.svelte";
-  import { parseCoordinates, type Coordinate } from "$lib/utils/geo/coord";
+  import {
+    parseCoordinates,
+    toLatLon,
+    type CoordinateType,
+  } from "$lib/utils/geo/coord";
   import { LatLon } from "$lib/utils/geo/latlon";
   import { MGRS } from "$lib/utils/geo/mgrs";
   import { UTM } from "$lib/utils/geo/utm";
   import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
 
   let coordinates = $state<string>("");
-  let history = $state<Record<string, Coordinate>>({});
+  let history = $state<Record<string, CoordinateType>>({});
 
   const mapLibre = getMapLibreState();
 
@@ -27,17 +31,8 @@
     history = rest;
   }
 
-  function zoomToPoint(coord: Coordinate) {
-    let latlon: LatLon | null = null;
-
-    if (coord instanceof MGRS) {
-      latlon = coord.toLatLon();
-    } else if (coord instanceof UTM) {
-      latlon = coord.toLatLon();
-    } else {
-      latlon = coord;
-    }
-
+  function zoomToPoint(coord: CoordinateType) {
+    const latlon = toLatLon(coord);
     mapLibre?.zoomToPoint("zoom-point", latlon.toGeoJson());
   }
 
@@ -46,7 +41,7 @@
     mapLibre?.zoomToPolygon("zoom-polygon", gridPolygon, { duration: 1000 });
   }
 
-  function coordinateToWktPoint(coord: Coordinate) {
+  function coordinateToWktPoint(coord: CoordinateType) {
     let latlon: LatLon | null = null;
 
     if (coord instanceof MGRS) {
@@ -60,7 +55,7 @@
     return latlon.toWkt();
   }
 
-  function printCoordinate(coord: Coordinate) {
+  function printCoordinate(coord: CoordinateType) {
     let latlon: LatLon | null = null;
 
     if (coord instanceof MGRS) {

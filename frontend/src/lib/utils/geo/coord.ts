@@ -3,7 +3,7 @@ import { UTM } from "$lib/utils/geo/utm";
 import { MGRS } from "$lib/utils/geo/mgrs";
 import { LatLon } from "$lib/utils/geo/latlon";
 
-export type Coordinate = LatLon | UTM | MGRS;
+export type CoordinateType = LatLon | UTM | MGRS;
 
 function parseLatLon(latlonText: string): LatLon {
   const m = latlonText
@@ -41,9 +41,13 @@ function tryParsers<T>(value: string, parsers: Array<(v: string) => T>): T {
 }
 
 export function parseCoordinates(coordinateText: string) {
-  return tryParsers<Coordinate>(coordinateText, [
+  return tryParsers<CoordinateType>(coordinateText, [
     parseLatLon,
     parseUtm,
     parseMgrs,
   ]);
+}
+
+export function toLatLon(coordinate: CoordinateType): LatLon {
+  return coordinate instanceof LatLon ? coordinate : coordinate.toLatLon();
 }

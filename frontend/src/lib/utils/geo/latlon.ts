@@ -5,8 +5,8 @@ function formatFloat(float: number, decimals: number | null) {
 }
 
 export class LatLon {
-  readonly #longitude: number;
   readonly #latitude: number;
+  readonly #longitude: number;
 
   constructor(longitude: number, latitude: number) {
     const { normalizedLatitude, flipLongitude } =
@@ -27,6 +27,10 @@ export class LatLon {
 
   get longitude() {
     return this.#longitude;
+  }
+
+  get lonlat() {
+    return [this.#longitude, this.#latitude];
   }
 
   public toGeoJson(): GeoJSON.Point {
