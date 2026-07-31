@@ -1,6 +1,7 @@
 # Todo
 
 [] Add "hoverId" to style selected ghost annotations
+[] Fix common form element height
 
 # Usage instructions
 

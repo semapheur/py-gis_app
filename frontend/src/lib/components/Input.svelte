@@ -19,7 +19,6 @@
     oninput,
     suffix,
     suffixWidth,
-    class: className,
     ...rest
   }: Props = $props();
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
@@ -27,7 +26,7 @@
   const uid = $props.id();
 </script>
 
-<div class="input {className ?? ''}">
+<div class="input">
   <input
     id={uid}
     class:invalid
@@ -103,8 +102,8 @@
     &:placeholder-shown + label {
       font-size: inherit;
       background-color: transparent;
-      transform: translateY(0);
-      top: var(--size-sm);
+      transform: translateY(-50%);
+      top: 50%;
       color: oklch(var(--color-text) / 0.5);
       text-shadow: none;
     }

@@ -74,7 +74,13 @@
       {/each}
     {:else}
       <!-- action picker -->
-      <li class="menu-header">{itemLabel(selected)}</li>
+      <li class="menu-header">
+        {#if selected.type === "coordinate"}
+          DMS: {selected.dms}<br />MGRS: {selected.mgrs}
+        {:else}
+          {itemLabel(selected)}
+        {/if}
+      </li>
       {#if selected.type === "equipment"}
         <li>
           <button
@@ -127,6 +133,8 @@
               imageViewer.closeContextMenu();
             }}>Copy DMS</button
           >
+        </li>
+        <li>
           <button
             onclick={() => {
               if (!selected || selected.type !== "coordinate") return;
@@ -134,6 +142,8 @@
               imageViewer.closeContextMenu();
             }}>Copy MGRS</button
           >
+        </li>
+        <li>
           <button
             onclick={() => {
               if (!selected || selected.type !== "coordinate") return;
@@ -160,16 +170,18 @@
     overflow-wrap: break-word;
     overflow-y: auto;
     list-style: none;
+    padding: 0;
     margin: 0;
-    padding: var(--size-sm) var(--size-md);
     background-color: oklch(var(--color-primary));
     border-radius: var(--size-sm);
   }
 
   .menu-header {
+    padding: var(--size-sm) var(--size-md);
     color: oklch(var(--color-text) / 0.5);
-    font-size: var(--text-sm);
+    font-size: var(--text-xs);
     border-bottom: 1px solid oklch(var(--color-secondary-accent));
+    white-space: nowrap;
   }
 
   li button {

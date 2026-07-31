@@ -166,7 +166,6 @@
   </div>
   <div class="top-right">
     <Input
-      class="coordinate-search-input"
       bind:value={coordinates}
       placeholder="Go to coordinates"
       onkeydown={(e) => e.key === "Enter" && submitCoordinates()}
@@ -219,10 +218,6 @@
 </div>
 
 <style>
-  :global(.coordinate-search-input) {
-    --input-font-size: 0.85rem;
-  }
-
   .image-viewer {
     position: relative;
     width: 100%;

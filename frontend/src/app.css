@@ -28,7 +28,6 @@
   --color-positive: 79.2% 0.209 151.711;
   --color-negative: 63.7% 0.237 25.331;
 
-  --input-height: 2rem;
 
   --size-xs: 0.125rem;
   --size-sm: 0.25rem;
@@ -46,6 +45,7 @@
   --font-bold: 700;
 
   --button-line-height: 1;
+  --input-height: calc(1rem + 2*var(--size-md));
 
   --duration-normal: 250ms;
 

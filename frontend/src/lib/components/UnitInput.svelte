@@ -130,8 +130,8 @@
     &:placeholder-shown + label {
       font-size: inherit;
       background-color: transparent;
-      transform: translateY(0);
-      top: var(--size-sm);
+      transform: translateY(-50%);
+      top: 50%;
       text-shadow: none;
     }
 
