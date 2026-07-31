@@ -1,6 +1,5 @@
 import { UTM } from "$lib/utils/geo/utm";
 import { type LatLon } from "$lib/utils/geo/latlon";
-import type { GeoJSONPolygon } from "ol/format/GeoJSON";
 import { polygonToWkt } from "./wkt";
 
 const BAND_Y_BAND_TRIALS: Record<string, number[]> = {
@@ -34,6 +33,17 @@ function bandLatitudeRange(band: string): [number, number] {
   const max = band === "X" ? 84 : min + 8;
 
   return [min, max];
+}
+
+function getBandLetter(lat: number): string {
+  if (lat < -80 || lat > 84) {
+    throw new Error(`Latitude out MGRS range (-80 to 84): ${lat}`);
+  }
+
+  if (lat > 72) return "X";
+  const index = Math.floor((lat + 80) / 8);
+  const bandLetters = "CDEFGHJKLMNPQRSTUVWX";
+  return bandLetters.charAt(index);
 }
 
 export class MGRS {
@@ -153,6 +163,44 @@ export class MGRS {
 
   public toLatLon(): LatLon {
     return this.toUTM().toLatLon();
+  }
+
+  public static fromGeographic(
+    lon: number,
+    lat: number,
+    precision: number = 5,
+  ): MGRS {
+    const utm = UTM.fromGeographic(lon, lat);
+    const band = getBandLetter(lat);
+
+    const column = MGRS.getColumnLetter(utm.zone, utm.easting);
+    const row = MGRS.getRowLetter(utm.zone, utm.northing);
+
+    const easting100k = Math.floor(utm.easting) % 100_000;
+    const northing100k = Math.floor(utm.northing) % 100_000;
+
+    return new MGRS(
+      utm.zone,
+      band,
+      easting100k,
+      northing100k,
+      precision,
+      column,
+      row,
+    );
+  }
+
+  public toString(): string {
+    const divisor = Math.pow(10, 5 - this.#precision);
+    const easting = Math.floor(this.#easting / divisor)
+      .toString()
+      .padStart(this.#precision, "0");
+
+    const northing = Math.floor(this.#northing / divisor)
+      .toString()
+      .padStart(this.#precision, "0");
+
+    return `${this.#zone}${this.#band}${this.#column}${this.#row}${easting}${northing}`;
   }
 
   public getGridPolygon(): GeoJSON.Polygon {

@@ -1,3 +1,7 @@
+# Todo
+
+[] Add "hoverId" to style selected ghost annotations
+
 # Usage instructions
 
 ## Prerequisites

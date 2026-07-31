@@ -1,10 +1,12 @@
 <script lang="ts">
+  import { page } from "$app/state";
   import {
     getImageViewerController,
-    type ContextMenuItemType,
+    type ContextMenuFeatureType,
     type ContextMenuItem,
   } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import { portal } from "$lib/actions/portal";
+  import { toast } from "$lib/stores/toast.svelte";
 
   interface Props {
     x: number;
@@ -13,20 +15,29 @@
   }
 
   let { x, y, items }: Props = $props();
-
   const imageViewer = getImageViewerController();
 
-  let selected = $state<ContextMenuItem | null>(
-    items.length === 1 ? items[0] : null,
+  let manualSelection = $state<ContextMenuItem | null>(null);
+  let selected = $derived(
+    manualSelection ?? (items.length === 1 ? items[0] : null),
   );
 
-  const typePrefix: Record<ContextMenuItemType, string> = {
+  $effect(() => {
+    items;
+    manualSelection = null;
+  });
+
+  const typePrefix: Record<ContextMenuFeatureType, string> = {
     equipment: "Equipment",
     ghost: "Ghost",
     measurement: "Measurement",
   };
 
   function itemLabel(item: ContextMenuItem) {
+    if (item.type === "coordinate") {
+      return `DMS: ${item.dms}\nMGRS: ${item.mgrs}`;
+    }
+
     if (item.features.length > 1) {
       return item.label;
     }
@@ -34,8 +45,14 @@
     return `${typePrefix[item.type]}: ${item.label}`;
   }
 
-  function handleBackdropClick(e: PointerEvent) {
-    if (e.target === e.currentTarget) imageViewer.closeContextMenu();
+  async function copyToClipboard(text: string) {
+    try {
+      await navigator.clipboard.writeText(text);
+      toast.success("Copied to clipboard");
+    } catch (error) {
+      console.error("Failed to copy:", error);
+      toast.error("Failed to copy");
+    }
   }
 </script>
 
@@ -50,8 +67,8 @@
       <li class="menu-header">Select feature</li>
       {#each items as item}
         <li>
-          <button class="picker-row" onclick={() => (selected = item)}>
-            {`${typePrefix[item.type]}: ${item.label}`}
+          <button class="picker-row" onclick={() => (manualSelection = item)}>
+            {itemLabel(item)}
           </button>
         </li>
       {/each}
@@ -62,7 +79,7 @@
         <li>
           <button
             onclick={() => {
-              if (!selected) return;
+              if (!selected || selected.type !== "equipment") return;
               imageViewer.removeAnnotations(selected.features);
               imageViewer.closeContextMenu();
             }}>Delete</button
@@ -72,7 +89,7 @@
         <li>
           <button
             onclick={() => {
-              if (!selected) return;
+              if (!selected || selected.type !== "ghost") return;
               imageViewer.acceptGhosts(selected.features);
               imageViewer.closeContextMenu();
             }}
@@ -83,7 +100,7 @@
         <li>
           <button
             onclick={() => {
-              if (!selected) return;
+              if (!selected || selected.type !== "ghost") return;
               imageViewer.removeGhosts(selected.features);
               imageViewer.closeContextMenu();
             }}
@@ -95,10 +112,35 @@
         <li>
           <button
             onclick={() => {
-              if (!selected) return;
+              if (!selected || selected.type !== "measurement") return;
               imageViewer.removeMeasurements(selected.features);
               imageViewer.closeContextMenu();
             }}>Remove</button
+          >
+        </li>
+      {:else if selected.type === "coordinate"}
+        <li>
+          <button
+            onclick={() => {
+              if (!selected || selected.type !== "coordinate") return;
+              copyToClipboard(selected.dms);
+              imageViewer.closeContextMenu();
+            }}>Copy DMS</button
+          >
+          <button
+            onclick={() => {
+              if (!selected || selected.type !== "coordinate") return;
+              copyToClipboard(selected.mgrs);
+              imageViewer.closeContextMenu();
+            }}>Copy MGRS</button
+          >
+          <button
+            onclick={() => {
+              if (!selected || selected.type !== "coordinate") return;
+              const link = `${page.url.host}${page.url.pathname}?wkt=${selected.wkt}`;
+              copyToClipboard(link);
+              imageViewer.closeContextMenu();
+            }}>Copy link</button
           >
         </li>
       {/if}

@@ -31,6 +31,7 @@ import {
 import { Style } from "ol/style";
 import WKT from "ol/format/WKT";
 import GeoJSON from "ol/format/GeoJSON";
+import { type Coordinate, toStringHDMS } from "ol/coordinate";
 
 import {
   type InteractionMode,
@@ -63,14 +64,25 @@ import type {
   AnnotationBaseInfo,
   ValidEquipmentData,
 } from "$lib/contexts/annotate.svelte";
+import { MGRS } from "$lib/utils/geo/mgrs";
+import type { ImageId } from "$lib/utils/brand";
 
-export type ContextMenuItemType = "equipment" | "measurement" | "ghost";
+export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
-export interface ContextMenuItem {
-  type: ContextMenuItemType;
+export interface ContextMenuFeature {
+  type: ContextMenuFeatureType;
   features: Feature[];
   label: string;
 }
+
+export interface ContextMenuCoordinate {
+  type: "coordinate";
+  dms: string;
+  mgrs: string;
+  wkt: string;
+}
+
+export type ContextMenuItem = ContextMenuFeature | ContextMenuCoordinate;
 
 interface ViewerInteractions {
   hover: Select;
@@ -95,7 +107,7 @@ interface ZoomOptions {
 }
 
 export class ImageViewerController {
-  #image: string | null = null;
+  #image: ImageId | null = null;
   #map: Map | null = null;
   //#bandStretch: BandStretchManager | null = null;
   #rasterLayer: WebGLTileLayer | null = null;
@@ -611,7 +623,7 @@ export class ImageViewerController {
   #setupContextMenu() {
     if (this.#map === null) return;
 
-    const getSelectedFeatures = (type: ContextMenuItemType): Feature[] => {
+    const getSelectedFeatures = (type: ContextMenuFeatureType): Feature[] => {
       switch (type) {
         case "equipment":
           return (
@@ -632,7 +644,7 @@ export class ImageViewerController {
       }
     };
 
-    const pluralLabel: Record<ContextMenuItemType, string> = {
+    const pluralLabel: Record<ContextMenuFeatureType, string> = {
       equipment: "equipment annotations",
       ghost: "ghosts",
       measurement: "measurements",
@@ -648,7 +660,7 @@ export class ImageViewerController {
 
         const layerChecks: Array<{
           layer: WebGLVectorLayer | VectorLayer | null;
-          type: ContextMenuItemType;
+          type: ContextMenuFeatureType;
           getLabel: (f: Feature) => string;
         }> = [
           {
@@ -696,7 +708,7 @@ export class ImageViewerController {
                   items.push({
                     type,
                     features: selected,
-                    label: `${selected.length} ${pluralLabel[type]} selected`,
+                    label: `${selected.length} ${pluralLabel[type]}`,
                   });
                   addedMultiForType = true;
                 }
@@ -713,8 +725,24 @@ export class ImageViewerController {
         }
 
         if (items.length === 0) {
-          this.#contextMenu = null;
-          return;
+          const coordinate = this.#map?.getCoordinateFromPixel(pixel);
+          const projection = this.projection;
+          if (!coordinate || !projection) {
+            this.#contextMenu = null;
+            return;
+          }
+
+          const lonlat = transform(coordinate, projection, "EPSG:4326");
+          const [lon, lat] = lonlat;
+
+          const point = new Point(lonlat);
+
+          items.push({
+            type: "coordinate",
+            dms: toStringHDMS(lonlat),
+            mgrs: MGRS.fromGeographic(lon, lat).toString(),
+            wkt: new WKT().writeGeometry(point),
+          });
         }
 
         this.#contextMenu = {
