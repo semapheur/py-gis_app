@@ -49,6 +49,7 @@ import {
   styleAnnotationLabel,
   equipmentStyle,
   ghostStyle,
+  areaStyle,
   defaultEnhancement,
   type Enhancement,
   formatArea,

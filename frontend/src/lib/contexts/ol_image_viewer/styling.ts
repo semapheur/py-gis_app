@@ -177,6 +177,16 @@ export const ghostStyle = [
   },
 ];
 
+export const areaStyle = [
+  {
+    filter: ["==", ["geometry-type"], "Polygon"],
+    style: {
+      "stroke-color": "oklch(54.6% 0.245 262.881)",
+      "stroke-width": 2,
+    },
+  },
+];
+
 export function styleText(
   label: string,
   font: string,
