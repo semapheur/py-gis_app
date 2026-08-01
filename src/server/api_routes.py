@@ -27,10 +27,10 @@ from src.models.areas import (
   AreaDelete,
   AreaId,
   AreaUpdate,
-  AreaWkt,
   delete_areas,
   get_area,
   get_areas,
+  get_areas_by_image,
   update_area,
 )
 from src.models.attributes import (

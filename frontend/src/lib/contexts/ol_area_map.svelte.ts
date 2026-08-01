@@ -18,6 +18,7 @@ import { buildOlLayers, type LayerInfo } from "$lib/utils/map/layers";
 
 export class AreaMapState {
   #map: Map | null = null;
+  #mapReady = $state<boolean>(false);
   #baseLayers: TileLayer[] = $state([]);
   #polygonSource = new VectorSource();
   #drawInteraction: Draw | null = null;
@@ -102,6 +103,8 @@ export class AreaMapState {
       );
       mapView.fit(extent, { padding: [40, 40, 40, 40] });
     }
+
+    this.#mapReady = true;
   }
 
   private createDrawInteraction(areaEditorState: AreaEditorState) {
@@ -141,7 +144,7 @@ export class AreaMapState {
   }
 
   public updateDrawInteraction(areaEditorState: AreaEditorState) {
-    if (!this.#map) return;
+    if (!this.#mapReady || !this.#map) return;
 
     if (this.#drawInteraction) {
       this.#map.removeInteraction(this.#drawInteraction);

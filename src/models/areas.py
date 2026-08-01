@@ -124,7 +124,7 @@ def get_areas(polygon_wkt: Optional[str] = None):
 def get_areas_by_image(image_id: bytes) -> list[dict]:
   with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as idx_db:
     cursor = idx_db.conn.cursor()
-    cursor.execute("SELECT footprint FROM image WHERE id = ?", (image_id,))
+    cursor.execute("SELECT footprint FROM images WHERE id = ?", (image_id,))
     row = cursor.fetchone()
     if row is None:
       return []

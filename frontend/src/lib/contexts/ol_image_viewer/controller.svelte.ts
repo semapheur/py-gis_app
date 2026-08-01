@@ -55,6 +55,7 @@ import {
   formatArea,
   formatLength,
   styleSearchMarker,
+  styleAreaLabel,
 } from "$lib/contexts/ol_image_viewer/styling";
 import {
   //BandStretchManager,
@@ -118,7 +119,7 @@ export class ImageViewerController {
   #equipmentLayer: WebGLVectorLayer | null = null;
   #ghostLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
-  #labelLayers: Record<AnnotateForm | "ghost", VectorLayer | null>;
+  #labelLayers: Record<AnnotateForm | "ghost" | "area", VectorLayer | null>;
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
@@ -345,6 +346,11 @@ export class ImageViewerController {
     this.#labelLayers.ghost = new VectorLayer({
       source: this.#annotationSources.ghost,
       style: (feature) => styleAnnotationLabel(feature),
+    });
+
+    this.#labelLayers.area = new VectorLayer({
+      source: this.#areaSource,
+      style: (feature) => styleAreaLabel(feature),
     });
 
     this.#measurementLayer = new VectorLayer({

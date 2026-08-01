@@ -181,8 +181,8 @@ export const areaStyle = [
   {
     filter: ["==", ["geometry-type"], "Polygon"],
     style: {
-      "stroke-color": "oklch(54.6% 0.245 262.881)",
-      "stroke-width": 2,
+      "stroke-color": "oklch(48.8% 0.243 264.376)",
+      "stroke-width": 1,
     },
   },
 ];
@@ -218,6 +218,35 @@ export function styleAnnotationLabel(
 
   return new Style({
     text: styleText(label, font, strokeWidth, offsetY),
+  });
+}
+
+export function styleAreaLabel(feature: FeatureLike) {
+  const geometry = feature.getGeometry()?.getType();
+  if (!geometry) return null;
+
+  const label = feature.get("name");
+  if (!label) return null;
+
+  const font = "10px sans-serif";
+  const strokeWidth = 2;
+
+  return new Style({
+    geometry: (feature) => {
+      const geom = feature.getGeometry();
+      if (geom instanceof Polygon) {
+        return new LineString(geom.getCoordinates()[0]);
+      }
+      return geom;
+    },
+    text: new Text({
+      text: label,
+      font,
+      placement: "line",
+      textBaseline: "middle",
+      fill: new Fill({ color: "#fff" }),
+      stroke: new Stroke({ color: "#000", width: strokeWidth }),
+    }),
   });
 }
 

@@ -48,8 +48,8 @@ export const load: PageLoad = async ({ params, fetch }) => {
     body: encode({ id }),
   };
 
-  const [attributeResults, imageInfoWithoutId, annotations] = await Promise.all(
-    [
+  const [attributeResults, imageInfoWithoutId, annotations, areas] =
+    await Promise.all([
       Promise.all(
         Object.values(ATTRIBUTE_FIELDS).map((table) =>
           fetchMsgPack(
@@ -78,8 +78,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
         undefined,
         `Failed to fetch areas for ${id}`,
       ),
-    ],
-  );
+    ]);
 
   const attributes = Object.fromEntries(
     Object.keys(ATTRIBUTE_FIELDS).map((name, i) => [name, attributeResults[i]]),
@@ -105,5 +104,6 @@ export const load: PageLoad = async ({ params, fetch }) => {
     radiometricParams,
     ...attributes,
     annotations,
+    areas,
   };
 };
