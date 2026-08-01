@@ -1,26 +1,27 @@
-import json
-from pathlib import Path
-
-from src.bootstrap import load_env
-from src.gdal_utils import gdalinfo
-from src.parse.iceye_metadata import parse_iceye_xml
+from src.bootstrap import get_settings, load_env
+from src.hashing import decode_sha256_from_b64
+from src.sqlite.connect import SqliteDatabase
 
 if __name__ == "__main__":
   load_env()
+  app_settings = get_settings()
 
-  tif = Path(
-    r"C:\Users\danfy\Documents\Projects\py-gis_app\data\056965205010_01_P001_PAN\17APR18154116-P2AS_R1C1-056965205010_01_P001.TIF"
-  )
+  image_id = decode_sha256_from_b64("N5Cmu4MkV0vjxw5aI039wgFYDzm0-hFfs1UIGEhRC7E")
 
-  xml_path = Path(
-    r"C:\Users\danfy\Documents\Projects\py-gis_app\data\2631302_2024-12-04T17_15_25Z\2631302\ICEYE_X8_GRD_SM_2631302_20230903T192621.xml"
-  )
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:
+    cursor = db.conn.cursor()
+    cursor.execute(f"ATTACH DATABASE '{app_settings.INDEX_DB}' AS i")
 
-  test = parse_iceye_xml(xml_path)
+    cursor.execute(
+      """
+          EXPLAIN QUERY PLAN
+          SELECT areas.name, AsGeoJSON(areas.geometry)
+          FROM areas
+          WHERE ST_Intersects(areas.geometry, (SELECT footprint FROM i.images WHERE id = ?))
+          """,
+      (image_id,),
+    )
+    for row in cursor.fetchall():
+      print(row)
 
-  # test = gdalinfo(tif)
-  # metadata = info["metadata"][""]["TIFFTAG_IMAGEDESCRIPTION"]
-  # test = json.loads(metadata)
-
-  with open("data/test.json", "w") as f:
-    json.dump(test, f)
+    cursor.execute("DETACH DATABASE i")

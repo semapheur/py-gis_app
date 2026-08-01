@@ -121,6 +121,30 @@ def get_areas(polygon_wkt: Optional[str] = None):
     return areas
 
 
+def get_areas_by_image(image_id: bytes) -> list[dict]:
+  with SqliteDatabase(app_settings.INDEX_DB, spatial=True) as idx_db:
+    cursor = idx_db.conn.cursor()
+    cursor.execute("SELECT footprint FROM image WHERE id = ?", (image_id,))
+    row = cursor.fetchone()
+    if row is None:
+      return []
+    footprint = row[0]
+
+  query, params = (
+    SelectQuery()
+    .select("name, AsGeoJSON(geometry) AS polygon")
+    .from_("areas")
+    .where("ST_Intersects(geometry, ?)", footprint)
+  ).build()
+
+  with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as loc_db:
+    cursor = loc_db.conn.cursor()
+    cursor.execute(query, params)
+    rows = cursor.fetchall()
+
+  return [{"name": name, "polygon": polygon} for name, polygon in rows]
+
+
 class AreaDelete(TypedDict):
   delete: list[str]
 

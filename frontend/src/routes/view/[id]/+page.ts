@@ -7,6 +7,7 @@ import type {
   SelectOption,
 } from "$lib/utils/types";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
+import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
 
 export const prerender = false;
 
@@ -67,9 +68,15 @@ export const load: PageLoad = async ({ params, fetch }) => {
       ),
       fetchMsgPack<AnnotationInfo[]>(
         fetch,
-        `/api/get-annotations/${id}`,
+        `/api/get-annotations-by-image/${id}`,
         undefined,
         `Failed to fetch annotations for ${id}`,
+      ),
+      fetchMsgPack<AreaInfo[]>(
+        fetch,
+        `/api/get-areas-by-image/${id}`,
+        undefined,
+        `Failed to fetch areas for ${id}`,
       ),
     ],
   );

@@ -87,6 +87,11 @@ class ApiRoutes(ApiHandler):
   def _get_areas(self):
     return get_areas()
 
+  @api("GET", "/api/get-areas-by-image/{image_id}")
+  def _post_get_areas(self, image_id: str):
+    image_hash = decode_sha256_from_b64(image_id)
+    return get_areas_by_image(image_hash)
+
   @api("GET", "/api/get-catalogs-index")
   def _get_catalogs_index(self):
     return {"catalogs": get_catalog_index_data()}
@@ -95,7 +100,7 @@ class ApiRoutes(ApiHandler):
   def _get_catalogs_edit(self):
     return {"catalogs": get_catalog_edit_data()}
 
-  @api("GET", "/api/get-annotations/{image_id}")
+  @api("GET", "/api/get-annotations-by-image/{image_id}")
   def _get_annotations(self, image_id: str):
     image_hash = decode_sha256_from_b64(image_id)
     return get_annotations_by_image(image_hash)
@@ -119,7 +124,7 @@ class ApiRoutes(ApiHandler):
   @api("GET", "/api/security-data/{table}")
   def _get_security_data(self, table: str):
     if not table or table not in ATTRIBUTE_TABLES:
-      raise ApiError(404, "Invalid POST endpoint")
+      raise ApiError(404, "Invalid GET endpoint")
 
     security_data = get_security_data(table)
     return {"data": security_data}
@@ -180,10 +185,6 @@ class ApiRoutes(ApiHandler):
   @api("POST", "/api/get-area")
   def _post_fetch_area(self, payload: AreaId):
     return get_area(payload)
-
-  @api("POST", "/api/get-areas")
-  def _post_get_areas(self, payload: AreaWkt):
-    return get_areas(payload["wkt"])
 
   @api("POST", "/api/update-area")
   def _post_update_area(self, payload: AreaUpdate):
