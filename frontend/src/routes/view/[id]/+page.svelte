@@ -20,6 +20,7 @@
       imageInfo: data.imageInfo,
       radiometricParams: data.radiometricParams,
       annotations: data.annotations,
+      areas: data.areas,
     })),
   );
 

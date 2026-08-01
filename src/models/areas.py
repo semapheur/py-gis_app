@@ -132,7 +132,7 @@ def get_areas_by_image(image_id: bytes) -> list[dict]:
 
   query, params = (
     SelectQuery()
-    .select("name, AsGeoJSON(geometry) AS polygon")
+    .select("name, AsGeoJSON(geometry) AS geometry")
     .from_("areas")
     .where("ST_Intersects(geometry, ?)", footprint)
   ).build()
@@ -142,7 +142,7 @@ def get_areas_by_image(image_id: bytes) -> list[dict]:
     cursor.execute(query, params)
     rows = cursor.fetchall()
 
-  return [{"name": name, "polygon": polygon} for name, polygon in rows]
+  return [{"name": name, "geometry": geometry} for name, geometry in rows]
 
 
 class AreaDelete(TypedDict):

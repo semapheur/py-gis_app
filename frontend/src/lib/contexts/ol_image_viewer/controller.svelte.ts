@@ -60,7 +60,6 @@ import {
   buildStyleExpression,
 } from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
 import { vertexStyle } from "$lib/utils/ol_styles";
-import type { ImageInfo, RadiometricParams } from "$lib/utils/types";
 import type {
   AnnotateForm,
   AnnotateState,
@@ -72,7 +71,8 @@ import type {
 } from "$lib/contexts/annotate.svelte";
 import { MGRS } from "$lib/utils/geo/mgrs";
 import type { ImageId } from "$lib/utils/brand";
-import { toLatLon, type CoordinateType } from "$lib/utils/geo/coord";
+import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
+import type { ImageViewerOptions } from "$lib/contexts/common.svelte";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -100,12 +100,6 @@ interface ViewerInteractions {
   dragBox: DragBox | null;
 }
 
-interface Options {
-  imageInfo: ImageInfo;
-  radiometricParams: RadiometricParams | null;
-  annotations?: AnnotationInfo[];
-}
-
 interface ZoomOptions {
   padding?: [number, number, number, number];
   maxZoom?: number;
@@ -127,6 +121,8 @@ export class ImageViewerController {
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
   #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
+  #areaSource = new VectorSource();
+  #areaLayer: WebGLVectorLayer | null = null;
   #measurementSource = new VectorSource();
   #searchMarkerSource = new VectorSource();
   #searchMarkerLayer: VectorLayer | null = null;
@@ -254,7 +250,7 @@ export class ImageViewerController {
 
   public attach(
     target: HTMLElement,
-    options: Options,
+    options: ImageViewerOptions,
     interactionSet: InteractionSet,
     interactionMode: InteractionMode,
   ) {
@@ -269,7 +265,7 @@ export class ImageViewerController {
 
   async #setupMap(
     target: HTMLElement,
-    options: Options,
+    options: ImageViewerOptions,
     interactionSet: InteractionSet,
     interactionMode: InteractionMode,
   ) {
@@ -334,6 +330,12 @@ export class ImageViewerController {
       source: this.#annotationSources.activity,
       style: (feature) => styleAnnotation(feature, activityColor, 0.7, 0.0),
     });
+
+    this.#areaLayer = new WebGLVectorLayer({
+      source: this.#areaSource,
+      style: areaStyle,
+    });
+
     this.#labelLayers.equipment = new VectorLayer({
       source: this.#annotationSources.equipment,
       style: (feature) => styleAnnotationLabel(feature),
@@ -362,6 +364,7 @@ export class ImageViewerController {
         this.#equipmentLayer,
         this.#ghostLayer,
         this.#activityLayer,
+        this.#areaLayer,
         this.#measurementLayer,
         this.#searchMarkerLayer,
         ...Object.values(this.#labelLayers),
@@ -394,6 +397,10 @@ export class ImageViewerController {
 
     if (options.annotations?.length) {
       this.#loadAnnotations(options.annotations);
+    }
+
+    if (options.areas?.length) {
+      this.#loadAreas(options.areas);
     }
 
     this.#setupContextMenu();
@@ -858,6 +865,27 @@ export class ImageViewerController {
       features.push(feature);
     }
     this.#annotationSources.equipment.addFeatures(features);
+  }
+
+  #loadAreas(records: AreaInfo[]) {
+    if (this.#map === null || this.projection === null) return;
+
+    const format = new GeoJSON({
+      dataProjection: "EPSG:4326",
+      featureProjection: this.projection,
+    });
+
+    const features: Feature[] = [];
+    for (const record of records) {
+      const geometry = format.readGeometry(record.geometry);
+      const feature = new Feature({ geometry });
+
+      feature.setProperties({
+        name: record.name,
+      });
+      features.push(feature);
+    }
+    this.#areaSource.addFeatures(features);
   }
 
   async #persistFeatures(features: Feature[], mode: "draw" | "edit") {

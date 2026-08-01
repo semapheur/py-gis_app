@@ -5,6 +5,7 @@ import type {
 } from "$lib/utils/types";
 import { createContext } from "svelte";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
+import type { AreaInfo } from "./area_editor.svelte";
 
 interface EquipmentOptions {
   confidenceOptions: SelectOption[];
@@ -22,6 +23,7 @@ export interface ImageViewerOptions {
   imageInfo: ImageInfo;
   radiometricParams: RadiometricParams;
   annotations: AnnotationInfo[];
+  areas: AreaInfo[];
 }
 
 export const [getImageViewerOptions, setImageViewerOptions] =
