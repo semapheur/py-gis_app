@@ -1306,6 +1306,43 @@ export class ImageViewerController {
     this.zoomToGeometry(fromExtent(extent), options);
   }
 
+  public toggleLayerVisibility(
+    layer: "equipment" | "activity" | "area" | "measurement" | "labels",
+    visible?: boolean,
+  ) {
+    if (this.#map === null) return;
+
+    const apply = (
+      l: WebGLTileLayer | WebGLVectorLayer | VectorLayer | null,
+    ) => {
+      if (!l) return;
+      l.setVisible(visible ?? !l.getVisible());
+    };
+
+    switch (layer) {
+      case "equipment":
+        apply(this.#equipmentLayer);
+        break;
+      case "activity":
+        apply(this.#activityLayer);
+        break;
+      case "area":
+        apply(this.#areaLayer);
+        break;
+      case "measurement":
+        apply(this.#areaLayer);
+        break;
+      case "labels":
+        const layers = Object.values(this.#labelLayers).filter(
+          (l): l is VectorLayer => l !== null,
+        );
+        if (!layers.length) return;
+        const next = visible ?? !layers[0].getVisible();
+        layers.forEach((l) => l.setVisible(next));
+        break;
+    }
+  }
+
   public goToCoordinate(coordinate: Coordinate): boolean {
     if (this.#map === null || this.projection === null) return false;
 

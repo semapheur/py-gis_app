@@ -229,7 +229,6 @@ export function styleAreaLabel(feature: FeatureLike) {
   if (!label) return null;
 
   const font = "10px sans-serif";
-  const strokeWidth = 2;
 
   return new Style({
     geometry: (feature) => {
@@ -245,7 +244,7 @@ export function styleAreaLabel(feature: FeatureLike) {
       placement: "line",
       textBaseline: "middle",
       fill: new Fill({ color: "#fff" }),
-      stroke: new Stroke({ color: "#000", width: strokeWidth }),
+      stroke: new Stroke({ color: "#000", width: 2 }),
     }),
   });
 }
