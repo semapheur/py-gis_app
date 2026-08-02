@@ -26,6 +26,7 @@
     type CoordinateType,
   } from "$lib/utils/geo/coord";
   import type { LatLon } from "$lib/utils/geo/latlon";
+  import ImageLayerToggle from "./ImageLayerToggle.svelte";
 
   const imageViewer = getImageViewerController();
   const viewerOptions = getImageViewerOptions();
@@ -36,6 +37,7 @@
   let annotateOpen = $state<boolean>(false);
   let summaryOpen = $state<boolean>(false);
   let enhancementOpen = $state<boolean>(false);
+  let layerToggleOpen = $state<boolean>(false);
   let measurementOpen = $state<boolean>(false);
   let searchOpen = $state<boolean>(false);
   let ghostsOpen = $state<boolean>(false);
@@ -173,6 +175,7 @@
     <Button onclick={() => (enhancementOpen = !enhancementOpen)}
       >Enhancement</Button
     >
+    <Button onclick={() => (layerToggleOpen = !layerToggleOpen)}>Layers</Button>
   </div>
   <div class="top-left">
     <Button onclick={() => openSearch()}>Extent search</Button>
@@ -181,6 +184,11 @@
   {#if enhancementOpen}
     <div class="enhancement">
       <ImageEnhacement bind:isOpen={enhancementOpen} />
+    </div>
+  {/if}
+  {#if layerToggleOpen}
+    <div class="layer-toggle">
+      <ImageLayerToggle bind:isOpen={layerToggleOpen} />
     </div>
   {/if}
   {#if annotateOpen}
@@ -244,6 +252,13 @@
   }
 
   .enhancement {
+    position: absolute;
+    top: var(--size-sm);
+    right: var(--size-sm);
+    z-index: 1;
+  }
+
+  .layer-toggle {
     position: absolute;
     top: var(--size-sm);
     right: var(--size-sm);
