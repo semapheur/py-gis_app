@@ -8,7 +8,7 @@
   let { checked = $bindable(), label, onchange }: Props = $props();
 
   const uid = $props.id();
-  const labelId = $derived(`${uid}-label`)
+  const labelId = $derived(`${uid}-label`);
 
   function toggle() {
     checked = !checked;
@@ -30,10 +30,10 @@
     type="button"
     role="switch"
     aria-checked={checked}
-    aria-labelledby={label ? labelId : undefined}"
+    aria-labelledby={label ? labelId : undefined}
     onclick={toggle}
     onkeydown={handleKeydown}
-  />
+  ></button>
   {#if label}
     <label id={labelId} for={uid}>
       {label}
