@@ -8,19 +8,12 @@ import type {
 } from "$lib/utils/types";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
 import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
+import {
+  equipmentAttributeTables,
+  type EquipmentAttributeName,
+} from "$lib/schemas/equipment_annotation";
 
 export const prerender = false;
-
-const ATTRIBUTE_FIELDS = {
-  confidenceOptions: "equipment_confidence",
-  statusOptions: "equipment_status",
-  visibilityOptions: "equipment_visibility",
-  configurationOptions: "equipment_configuration",
-  modificationOptions: "equipment_modification",
-  camoflageOptions: "equipment_camoflage",
-} as const;
-
-type AttributeOptionsName = keyof typeof ATTRIBUTE_FIELDS;
 
 async function fetchMsgPack<T>(
   fetch: typeof globalThis.fetch,
@@ -51,7 +44,7 @@ export const load: PageLoad = async ({ params, fetch }) => {
   const [attributeResults, imageInfoWithoutId, annotations, areas] =
     await Promise.all([
       Promise.all(
-        Object.values(ATTRIBUTE_FIELDS).map((table) =>
+        Object.values(equipmentAttributeTables).map((table) =>
           fetchMsgPack(
             fetch,
             `/api/get-attributes/${table}`,
@@ -81,8 +74,11 @@ export const load: PageLoad = async ({ params, fetch }) => {
     ]);
 
   const attributes = Object.fromEntries(
-    Object.keys(ATTRIBUTE_FIELDS).map((name, i) => [name, attributeResults[i]]),
-  ) as Record<AttributeOptionsName, { options: SelectOption[] }>;
+    Object.keys(equipmentAttributeTables).map((name, i) => [
+      name,
+      attributeResults[i],
+    ]),
+  ) as Record<EquipmentAttributeName, { options: SelectOption[] }>;
 
   const radiometricParams =
     imageInfoWithoutId.image_type === "slc"

@@ -5,16 +5,21 @@ import type {
 } from "$lib/utils/types";
 import { createContext } from "svelte";
 import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
-import type { AreaInfo } from "./area_editor.svelte";
+import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
+import type {
+  EquipmentFieldKey,
+  equipmentSchema,
+} from "$lib/schemas/equipment_annotation";
 
-interface EquipmentOptions {
-  confidenceOptions: SelectOption[];
-  visibilityOptions: SelectOption[];
-  statusOptions: SelectOption[];
-  configurationOptions: SelectOption[];
-  modificationOptions: SelectOption[];
-  camoflageOptions: SelectOption[];
-}
+type EquipmentOptionKey = {
+  [K in EquipmentFieldKey]: (typeof equipmentSchema)[K] extends {
+    table: string;
+  }
+    ? K
+    : never;
+}[EquipmentFieldKey];
+
+export type EquipmentOptions = Record<EquipmentOptionKey, SelectOption[]>;
 
 export const [getEquipmentOptions, setEquipmentOptions] =
   createContext<EquipmentOptions>();

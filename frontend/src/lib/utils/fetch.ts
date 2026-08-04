@@ -1,4 +1,5 @@
 import { encode, decode } from "@msgpack/msgpack";
+import type { SelectOption } from "$lib/utils/types";
 
 export interface MsgpackError {
   message?: string;
@@ -6,8 +7,7 @@ export interface MsgpackError {
 }
 
 type FetchMsgpackResult<TResponse> =
-  | { ok: true; data: TResponse }
-  | { ok: false; error: MsgpackError };
+  { ok: true; data: TResponse } | { ok: false; error: MsgpackError };
 
 export async function fetchMsgpack<TResponse, TBody = unknown>(
   url: string,

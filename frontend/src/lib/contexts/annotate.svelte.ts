@@ -1,3 +1,8 @@
+import {
+  createDefaultEquipmentData,
+  equipmentRequiredFields,
+  type EquipmentData,
+} from "$lib/schemas/equipment_annotation";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
@@ -21,29 +26,11 @@ type AnnotateGeometryOptions = typeof annotateGeometryByForm;
 export type AnnotateGeometry<F extends keyof AnnotateGeometryOptions> =
   AnnotateGeometryOptions[F][number]["value"];
 
-export interface AnnotateValue {
-  id: string;
-  label: string;
-}
-
 export interface ActivityData {
   summary: string;
   type: string;
   observed: string;
   comment: string;
-}
-
-export interface EquipmentData {
-  equipment: AnnotateValue | null;
-  confidence: AnnotateValue | null;
-  status: AnnotateValue | null;
-  visibility: AnnotateValue | null;
-  configuration: AnnotateValue | null;
-  modification: AnnotateValue[] | null;
-  camoflage: AnnotateValue[] | null;
-  alternatives: AnnotateValue[] | null;
-  heading: number | null;
-  speed: number | null;
 }
 
 type MultiAttributeField = "modification" | "camoflage" | "alternatives";
@@ -84,21 +71,13 @@ export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 const defaultLayer = "equipment";
 
-const equipmentSingleAttributeFields = [
-  "equipment",
-  "confidence",
-  "status",
-  "visibility",
-  "configuration",
-] as const satisfies Array<keyof EquipmentData>;
-
 export class AnnotateState {
   layer = $state<AnnotateForm>(defaultLayer);
   geometry = $state<AnnotateGeometry<AnnotateForm>>(
     annotateGeometryByForm[defaultLayer][0].value,
   );
   data = $state<EquipmentData | ActivityData>(
-    this.createDefaultData(defaultLayer),
+    this.#createDefaultData(defaultLayer),
   );
 
   value = $derived.by(() => {
@@ -128,7 +107,7 @@ export class AnnotateState {
   isValid = $derived.by(() => {
     if (this.layer === "equipment") {
       const d = this.data as EquipmentData;
-      return equipmentSingleAttributeFields.every((field) => d[field] != null);
+      return equipmentRequiredFields.every((field) => d[field] != null);
     }
 
     if (this.layer === "activity") {
@@ -148,7 +127,7 @@ export class AnnotateState {
 
     this.layer = layer;
     this.geometry = annotateGeometryByForm[layer][0].value;
-    this.data = this.createDefaultData(layer);
+    this.data = this.#createDefaultData(layer);
   }
 
   setGeometry(value: AnnotateGeometry<AnnotateForm>) {
@@ -159,20 +138,9 @@ export class AnnotateState {
     this.data = data;
   }
 
-  private createDefaultData(layer: AnnotateForm) {
+  #createDefaultData(layer: AnnotateForm) {
     if (layer === "equipment") {
-      return {
-        equipment: null,
-        confidence: null,
-        status: null,
-        visibility: null,
-        configuration: null,
-        modification: null,
-        camoflage: null,
-        alternatives: null,
-        heading: null,
-        speed: null,
-      } satisfies EquipmentData;
+      return createDefaultEquipmentData();
     }
 
     if (layer === "activity") {

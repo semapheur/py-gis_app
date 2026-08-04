@@ -70,6 +70,11 @@ export interface UnitOption extends SelectOption<string> {
   factor: number;
 }
 
+export interface AttributeValue {
+  id: string;
+  label: string;
+}
+
 export interface SchemaBaseData {
   id: SchemaId;
   name: string;

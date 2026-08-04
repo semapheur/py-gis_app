@@ -1,16 +1,19 @@
 <script lang="ts">
   import { encode, decode } from "@msgpack/msgpack";
   import Autocomplete from "$lib/components/Autocomplete.svelte";
+  import MultiAutocomplete from "$lib/components/MultiAutocomplete.svelte";
   import Select from "$lib/components/Select.svelte";
   import MultiSelect from "$lib/components/MultiSelect.svelte";
   import UnitInput from "$lib/components/UnitInput.svelte";
   import { getEquipmentOptions } from "$lib/contexts/common.svelte";
-  import { type SelectOption, type UnitOption } from "$lib/utils/types";
-  import type {
-    AnnotateValue,
-    EquipmentData,
-  } from "$lib/contexts/annotate.svelte";
+  import { type AttributeValue, type SelectOption } from "$lib/utils/types";
   import { toast } from "$lib/stores/toast.svelte";
+  import {
+    equipmentSchema,
+    type EquipmentData,
+    type EquipmentFieldDef,
+    type EquipmentFieldKey,
+  } from "$lib/schemas/equipment_annotation";
 
   type EquipmentPatch = Partial<EquipmentData>;
 
@@ -23,110 +26,44 @@
 
   let { value, onchange, onvalid, bulk = false }: Props = $props();
 
-  const {
-    confidenceOptions,
-    statusOptions,
-    visibilityOptions,
-    configurationOptions,
-    modificationOptions,
-    camoflageOptions,
-  } = getEquipmentOptions();
+  const options = getEquipmentOptions();
 
-  const speedUnits: UnitOption[] = [
-    { label: "km/h", value: "kmph", factor: 1.0 / 3.6 },
-    { label: "m/s", value: "mps", factor: 1 },
-    { label: "kt", value: "kt", factor: 1852.0 / 3600.0 },
-  ];
+  const fieldEntries = Object.entries(equipmentSchema) as [
+    EquipmentFieldKey,
+    (typeof equipmentSchema)[EquipmentFieldKey],
+  ][];
 
-  const angleUnits: UnitOption[] = [
-    { label: "deg", value: "deg", factor: 1.0 },
-    { label: "mil", value: "mil", factor: 0.05625 },
-  ];
+  const numericFieldEntries = fieldEntries.filter(
+    (
+      entry,
+    ): entry is [
+      EquipmentFieldKey,
+      Extract<EquipmentFieldDef, { kind: "numeric" }>,
+    ] => entry[1].kind === "numeric",
+  );
 
-  const singleAttributeFields = [
-    { key: "confidence", label: "Confidence", options: confidenceOptions },
-    { key: "status", label: "Status", options: statusOptions },
-    { key: "visibility", label: "Visibility", options: visibilityOptions },
-    {
-      key: "configuration",
-      label: "Configuration",
-      options: configurationOptions,
-    },
-  ] as const satisfies Array<{
-    key: keyof Pick<
-      EquipmentData,
-      "confidence" | "status" | "visibility" | "configuration"
-    >;
-    label: string;
-    options: SelectOption[];
-  }>;
+  const selectableFieldEntries = fieldEntries.filter(
+    (
+      entry,
+    ): entry is [
+      EquipmentFieldKey,
+      Extract<EquipmentFieldDef, { kind: "single" | "multi" | "search" }>,
+    ] => entry[1].kind !== "numeric",
+  );
 
-  const multiAttributeFields = [
-    {
-      key: "modification",
-      label: "Modification",
-      options: modificationOptions,
-    },
-    {
-      key: "camoflage",
-      label: "Camoflage",
-      options: camoflageOptions,
-    },
-  ] as const satisfies Array<{
-    key: keyof Pick<EquipmentData, "modification" | "camoflage">;
-    label: string;
-    options: SelectOption[];
-  }>;
-
-  const numericFields = [
-    { key: "heading", label: "Heading", units: angleUnits },
-    { key: "speed", label: "Speed", units: speedUnits, min: "0" },
-  ] as const satisfies Array<{
-    key: keyof Pick<EquipmentData, "heading" | "speed">;
-    label: string;
-    units: UnitOption[];
-    min?: string;
-  }>;
-
-  type SingleAttributeKey = (typeof singleAttributeFields)[number]["key"];
-  type MultiAttributeKey = (typeof multiAttributeFields)[number]["key"];
-  type NumericKey = (typeof numericFields)[number]["key"];
-
-  let selectedEquipment = $derived(toSelectOption(value.equipment ?? null));
-
-  const singleAttributeIds = $derived.by(() => {
-    const ids = {} as Record<SingleAttributeKey, string | null>;
-    for (const field of singleAttributeFields) {
-      ids[field.key] = value[field.key]?.id ?? null;
-    }
-    return ids;
-  });
-
-  const multiAttributeIds = $derived.by(() => {
-    const ids = {} as Record<MultiAttributeKey, string[]>;
-    for (const field of multiAttributeFields) {
-      ids[field.key] = (value[field.key] ?? []).map((v) => v.id);
-    }
-    return ids;
-  });
-
-  const numericUnits = $state<Record<NumericKey, string>>({
-    heading: angleUnits[0].value,
-    speed: speedUnits[0].value,
-  });
+  const numericUnits = $state(
+    Object.fromEntries(
+      numericFieldEntries.map(([key, def]) => [key, def.units[0].value]),
+    ),
+  );
 
   const isValid = $derived.by(() => {
-    const full = value as EquipmentData;
-
     if (bulk) return true;
 
-    if (!full.equipment) return false;
-
-    for (const field of singleAttributeFields) {
-      if (!full[field.key]) return false;
-    }
-
-    return true;
+    const full = value as EquipmentData;
+    return fieldEntries
+      .filter(([, def]) => def.required)
+      .every(([key]) => !!full[key]);
   });
 
   $effect(() => {
@@ -136,17 +73,21 @@
   $effect(() => {
     if (bulk) return;
 
-    const missing = singleAttributeFields.filter(
-      (field) => !value[field.key] && field.options?.[0],
+    const missing = selectableFieldEntries.filter(
+      ([key, def]) =>
+        def.kind === "single" &&
+        def.required &&
+        !value[key] &&
+        options[key]?.[0],
     );
     if (missing.length === 0) return;
 
     const next = { ...value } as EquipmentData;
 
-    for (const field of missing) {
-      next[field.key] = toAnnotateValue(
-        field.options[0],
-      ) as EquipmentData[typeof field.key];
+    for (const [key] of missing) {
+      next[key] = toAttributeValue(
+        options[key][0],
+      ) as EquipmentData[typeof key];
     }
 
     onchange(next);
@@ -167,44 +108,58 @@
     onchange(next);
   }
 
-  function toAnnotateValue(option: SelectOption | null): AnnotateValue | null {
+  function toAttributeValue(
+    option: SelectOption | null,
+  ): AttributeValue | null {
     return option ? { id: option.value, label: option.label } : null;
   }
-  function toSelectOption(value: AnnotateValue | null): SelectOption | null {
+  function toSelectOption(value: AttributeValue | null): SelectOption | null {
     return value ? { value: value.id, label: value.label } : null;
+  }
+  function toAnnotateValues(options: SelectOption[]): AttributeValue[] {
+    return options.map((o) => ({ id: o.value, label: o.label }));
+  }
+  function toSelectOptions(values: AttributeValue[] | null): SelectOption[] {
+    return (values ?? []).map((v) => ({ value: v.id, label: v.label }));
   }
 
   function handleSingleAttributeChange(
-    field: (typeof singleAttributeFields)[number],
+    key: EquipmentFieldKey,
     id: string | null,
   ) {
-    const option = field.options.find((o) => o.value === id) ?? null;
-    update(
-      field.key,
-      option ? toAnnotateValue(option) : bulk ? undefined : null,
-    );
+    const option = options[key].find((o) => o.value === id) ?? null;
+    update(key, option ? toAttributeValue(option) : bulk ? undefined : null);
   }
 
-  function handleMultiAttributeChange(
-    field: (typeof multiAttributeFields)[number],
-    ids: string[],
-  ) {
+  function handleMultiAttributeChange(key: EquipmentFieldKey, ids: string[]) {
     const values = ids
-      .map((id) => field.options.find((o) => o.value === id))
+      .map((id) => options[key]?.find((o) => o.value === id))
       .filter((o): o is SelectOption => o != null)
-      .map((o) => toAnnotateValue(o));
+      .map((o) => toAttributeValue(o));
 
     if (bulk && values.length === 0) {
-      update(field.key, undefined);
+      update(key, undefined);
     } else {
-      update(field.key, values);
+      update(key, values);
     }
   }
 
-  function factorFor(field: (typeof numericFields)[number]) {
-    return (
-      field.units.find((u) => u.value === numericUnits[field.key])?.factor ?? 1
-    );
+  function handleMultiSearchChange(
+    key: EquipmentFieldKey,
+    selected: SelectOption[],
+  ) {
+    if (bulk && selected.length === 0) {
+      update(key, undefined);
+    } else {
+      update(key, toAnnotateValues(selected));
+    }
+  }
+
+  function factorFor(
+    key: EquipmentFieldKey,
+    def: Extract<EquipmentFieldDef, { kind: "numeric" }>,
+  ) {
+    return def.units.find((u) => u.value === numericUnits[key])?.factor ?? 1;
   }
 
   async function searchEquipment(query: string): Promise<SelectOption[]> {
@@ -224,53 +179,62 @@
 </script>
 
 <form class="equipment-annotation">
-  <Autocomplete
-    value={selectedEquipment}
-    placeholder="Equipment"
-    fetchOptions={searchEquipment}
-    onchange={(option) => {
-      selectedEquipment = option;
-      update(
-        "equipment",
-        option ? toAnnotateValue(option) : bulk ? undefined : null,
-      );
-    }}
-  />
-  {#each singleAttributeFields as field (field.key)}
-    <Select
-      options={field.options}
-      placeholder={field.label}
-      value={singleAttributeIds[field.key]}
-      onchange={(e) =>
-        handleSingleAttributeChange(field, e.currentTarget.value)}
-    />
+  {#each selectableFieldEntries as [key, def] (key)}
+    {#if def.kind === "search"}
+      <Autocomplete
+        value={toSelectOption(value[key] as AttributeValue | null)}
+        placeholder={def.label}
+        fetchOptions={searchEquipment}
+        onchange={(option) =>
+          update(
+            key,
+            option ? toAttributeValue(option) : bulk ? undefined : null,
+          )}
+      />
+    {:else if def.kind === "multi-search"}
+      <MultiAutocomplete
+        selected={toSelectOptions(value[key] as AttributeValue[] | null)}
+        placeholder={def.label}
+        fetchOptions={searchEquipment}
+        onchange={(selected) => handleMultiSearchChange(key, selected)}
+      />
+    {:else if def.kind === "single"}
+      <Select
+        options={options[key] ?? []}
+        placeholder={def.label}
+        value={(value[key] as AttributeValue | null)?.id ?? null}
+        onchange={(e) =>
+          handleSingleAttributeChange(key, e.currentTarget.value)}
+      />
+    {:else if def.kind === "multi"}
+      <MultiSelect
+        options={options[key] ?? []}
+        placeholder={def.label}
+        bind:selected={
+          () => (value[key] as AttributeValue[] | null)?.map((v) => v.id) ?? [],
+          (ids) => handleMultiAttributeChange(key, ids)
+        }
+      />
+    {/if}
   {/each}
-  {#each multiAttributeFields as field (field.key)}
-    <MultiSelect
-      options={field.options}
-      placeholder={field.label}
-      bind:selected={
-        () => multiAttributeIds[field.key],
-        (ids) => handleMultiAttributeChange(field, ids)
-      }
-    />
-  {/each}
-  {#each numericFields as field (field.key)}
+
+  {#each numericFieldEntries as [key, def] (key)}
     <UnitInput
-      units={field.units}
-      placeholder={field.label}
-      min={field.min}
-      bind:unit={numericUnits[field.key]}
+      units={def.units}
+      placeholder={def.label}
+      min={def.min}
+      bind:unit={numericUnits[key]}
       bind:value={
         () =>
-          value[field.key] != null
-            ? Math.round((value[field.key]! / factorFor(field)) * 1e6) / 1e6
+          value[key] != null
+            ? Math.round(((value[key] as number) / factorFor(key, def)) * 1e6) /
+              1e6
             : null,
         () => {}
       }
       bind:baseValue={
-        () => value[field.key] ?? null,
-        (v) => update(field.key, v ?? (bulk ? undefined : null))
+        () => (value[key] as number | null) ?? null,
+        (v) => update(key, v ?? (bulk ? undefined : null))
       }
     />
   {/each}

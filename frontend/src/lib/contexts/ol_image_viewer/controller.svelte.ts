@@ -8,7 +8,14 @@ import VectorSource from "ol/source/Vector";
 import WebGLTileLayer from "ol/layer/WebGLTile";
 import WebGLVectorLayer from "ol/layer/WebGLVector";
 import GeoTIFF from "ol/source/GeoTIFF";
-import { DragBox, Draw, Modify, Select, Translate } from "ol/interaction";
+import {
+  DragBox,
+  DragRotate,
+  Draw,
+  Modify,
+  Select,
+  Translate,
+} from "ol/interaction";
 import Collection from "ol/Collection";
 import Feature from "ol/Feature";
 import {
@@ -399,6 +406,7 @@ export class ImageViewerController {
     this.#setupAnnotationInteractions();
     this.#setupMeasurementInteractions();
     this.#setupGhostInteractions();
+    this.#setupRotateInteraction();
 
     this.updateInteraction(interactionSet, interactionMode);
 
@@ -411,6 +419,16 @@ export class ImageViewerController {
     }
 
     this.#setupContextMenu();
+  }
+
+  #setupRotateInteraction() {
+    if (this.#map === null) return;
+
+    const rotateInteraction = new DragRotate({
+      condition: platformModifierKeyOnly,
+    });
+
+    this.#map.addInteraction(rotateInteraction);
   }
 
   #setupAnnotationInteractions() {
@@ -1367,6 +1385,10 @@ export class ImageViewerController {
     });
 
     return true;
+  }
+
+  public resetRotation() {
+    this.#map?.getView().animate({ rotation: 0 });
   }
 
   public clearSearchMarker() {

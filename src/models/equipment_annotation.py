@@ -27,7 +27,13 @@ app_settings = get_settings()
 
 EquipmentGeometry = Literal["POINT", "POLYGON"]
 
-SINGLE_ATTRIBUTE_FIELDS = ("confidence", "status", "visibility", "configuration")
+SINGLE_ATTRIBUTE_FIELDS = (
+  "confidence",
+  "affiliation",
+  "status",
+  "visibility",
+  "configuration",
+)
 MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage", "alternatives")
 NUMERIC_FIELDS = ("heading", "speed")
 
@@ -47,6 +53,7 @@ def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationM
     geometry = GeometryField(str, geometry_type=geometry_type)
     equipment = uuid_field(False, False)
     confidence = uuid_field(False, False)
+    affiliation = uuid_field(False, False)
     status = uuid_field(False, False)
     visibility = uuid_field(False, False)
     configuration = uuid_field(False, False)

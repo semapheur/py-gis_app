@@ -8,10 +8,12 @@
   import {
     setEquipmentOptions,
     setImageViewerOptions,
+    type EquipmentOptions,
     type ImageViewerOptions,
   } from "$lib/contexts/common.svelte";
 
   import ImageViewer from "$lib/components/ImageViewer.svelte";
+  import { equipmentAttributeTables } from "$lib/schemas/equipment_annotation";
 
   let { data } = $props<{ data: PageData }>();
 
@@ -28,18 +30,17 @@
     viewerOptions.imageInfo = data.imageInfo;
     viewerOptions.radiometricParams = data.radiometricParams;
     viewerOptions.annotations = data.annotations;
+    viewerOptions.areas = data.areas;
   });
 
   setImageViewerOptions(viewerOptions);
   setEquipmentOptions(
-    untrack(() => ({
-      confidenceOptions: data.confidenceOptions.options,
-      visibilityOptions: data.visibilityOptions.options,
-      statusOptions: data.statusOptions.options,
-      configurationOptions: data.configurationOptions.options,
-      modificationOptions: data.modificationOptions.options,
-      camoflageOptions: data.camoflageOptions.options,
-    })),
+    Object.fromEntries(
+      Object.keys(equipmentAttributeTables).map((key) => [
+        key,
+        data[key].options,
+      ]),
+    ) as EquipmentOptions,
   );
   setAnnotateState();
   setImageViewerController();
