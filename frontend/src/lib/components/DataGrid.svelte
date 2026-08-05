@@ -444,24 +444,27 @@
   <form class="grid-form" onsubmit={saveForm}>
     {#each editColumns as column}
       {#if column.editor === "text"}
-        <Input bind:value={inputRow[column.id]} placeholder={column.header} />
+        <Input
+          bind:value={inputRow[column.id]}
+          placeholder={`${column.header}${column.required ? "*" : ""}`}
+        />
       {:else if column.editor === "number"}
         <Input
           bind:value={inputRow[column.id]}
-          placeholder={column.header}
+          placeholder={`${column.header}${column.required ? "*" : ""}`}
           type="number"
           min="0"
         />
       {:else if column.editor === "textarea"}
         <TextArea
           bind:value={inputRow[column.id]}
-          placeholder={column.header}
+          placeholder={`${column.header}${column.required ? "*" : ""}`}
         />
       {:else if column.editor === "select"}
         <Select
           bind:value={inputRow[column.id]}
           options={column.selectOptions}
-          placeholder={column.header}
+          placeholder={`${column.header}${column.required ? "*" : ""}`}
         />
       {/if}
       {#if columnErrors[column.id]}

@@ -122,7 +122,7 @@
         lineNumberConfig.reconfigure(
           vimMode ? relativeLineNumbers() : absoluteLineNumbers(),
         ),
-        wrapConfig.reconfigure(wrapText ? EditorView.lineWrappoing : []),
+        wrapConfig.reconfigure(wrapText ? EditorView.lineWrapping : []),
       ],
     });
   });
