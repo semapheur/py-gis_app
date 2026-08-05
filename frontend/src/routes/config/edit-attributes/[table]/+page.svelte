@@ -3,6 +3,7 @@
   import { page } from "$app/state";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
+  import type { DataGridColumn } from "$lib/utils/types";
 
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
@@ -11,7 +12,7 @@
     {
       id: "name",
       header: "Name",
-      nullable: false,
+      required: false,
       unique: true,
       editor: "text",
       flexgrow: 1,
@@ -19,18 +20,18 @@
     {
       id: "description",
       header: "Description",
-      nullable: true,
+      required: true,
       editor: "textarea",
       flexgrow: 1,
     },
     {
       id: "ordering",
       header: "Ordering",
-      nullable: true,
+      required: true,
       editor: "number",
       flexgrow: 1,
     },
-  ];
+  ] satisfies DataGridColumn[];
 
   let insertApi = $derived(`/api/insert-attribute/${table}`);
   let updateApi = $derived(`/api/update-attribute/${table}`);

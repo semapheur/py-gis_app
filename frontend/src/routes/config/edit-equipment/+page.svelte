@@ -2,52 +2,59 @@
   import type { PageData } from "./$types";
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
-  import { formatDatetime } from "$lib/utils/date";
+  import type { DataGridColumn } from "$lib/utils/types";
 
   const columns = [
-    { id: "id", header: "ID" },
-    { id: "identifier", header: "Identifier", editor: "text" },
-    { id: "displayName", header: "Display name", editor: "text", unique: true },
-    { id: "description", header: "Description", editor: "textarea" },
-    { id: "descriptionShort", header: "Description (short)", editor: "text" },
-    { id: "natoName", header: "NATO name", editor: "text" },
-    { id: "nativeName", header: "Native name", editor: "text" },
-    { id: "alternativeNames", header: "Alternative names", editor: "text" },
-    { id: "source", header: "Source", editor: "text" },
-    { id: "sourceData", header: "Source data", editor: "textarea" },
+    { id: "identifier", header: "Identifier", editor: "text", required: true },
     {
-      id: "createdAtTimestamp",
-      header: "Created at",
-      template: formatDatetime,
+      id: "displayName",
+      header: "Display name",
+      editor: "text",
+      required: true,
+      unique: true,
     },
-    { id: "modifiedByUserId", header: "Modified by" },
     {
-      id: "modifiedAtTimestamp",
-      header: "Modified at",
-      template: formatDatetime,
+      id: "description",
+      header: "Description",
+      editor: "textarea",
+      required: true,
     },
-  ];
+    {
+      id: "descriptionShort",
+      header: "Description (short)",
+      editor: "text",
+      required: true,
+    },
+    { id: "natoName", header: "NATO name", editor: "text", required: false },
+    {
+      id: "nativeName",
+      header: "Native name",
+      editor: "text",
+      required: false,
+    },
+    {
+      id: "alternativeNames",
+      header: "Alternative names",
+      editor: "text",
+      required: false,
+    },
+    { id: "source", header: "Source", editor: "text", required: false },
+    {
+      id: "sourceData",
+      header: "Source data",
+      editor: "textarea",
+      required: false,
+    },
+  ] satisfies DataGridColumn[];
   let { data }: { data: PageData } = $props();
-
-  const addFill = {
-    createdByUserId: () => "",
-    createdAtTimestamp: () => Date.now(),
-    modifiedByUserId: () => null,
-    modifiedAtTimestamp: () => null,
-  };
-
-  const editFill = {
-    modifiedByUserId: () => "",
-    modifiedAtTimestamp: () => Date.now(),
-  };
 </script>
 
 {#if browser}
   <DataGrid
     {columns}
     data={data.equipment}
-    {addFill}
-    {editFill}
-    saveApi="/api/update-equipment"
+    insertApi="/api/insert-equipment"
+    updateApi="/api/update-equipment"
+    deleteApi=""
   />
 {/if}

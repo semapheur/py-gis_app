@@ -53,7 +53,14 @@ from src.models.equipment_annotation import (
   get_annotations_by_image,
   update_annotations,
 )
-from src.models.equipment_list import get_equipment, search_equipment, update_equipment
+from src.models.equipment_list import (
+  InsertEquipment,
+  UpdateEquipment,
+  get_equipment,
+  insert_equipment,
+  search_equipment,
+  update_equipment,
+)
 from src.models.security import (
   SECURITY_TABLES,
   SecurityInsert,
@@ -178,8 +185,12 @@ class ApiRoutes(ApiHandler):
     query = payload["query"]
     return search_equipment(query)
 
+  @api("POST", "/api/insert-equipment")
+  def _post_insert_equipment(self, payload: InsertEquipment):
+    return insert_equipment(payload)
+
   @api("POST", "/api/update-equipment")
-  def _post_update_equipment(self, payload: TableUpdate):
+  def _post_update_equipment(self, payload: UpdateEquipment):
     return update_equipment(payload)
 
   @api("POST", "/api/get-area")

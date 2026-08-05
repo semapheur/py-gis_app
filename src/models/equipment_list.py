@@ -32,6 +32,12 @@ class EquipmentList(Table):
   sourceData = Field(str)
 
 
+class EquipmentList_(Table):
+  _table_name = "equipment"
+  id = uuid_field(True, False)
+  identifier = Field(str, nullable=False)
+
+
 class EquipmentSearch(Table):
   _table_name = "equipment_fts"
   value = uuid_field(True, False)

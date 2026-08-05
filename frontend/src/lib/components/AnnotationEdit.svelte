@@ -19,6 +19,10 @@
   import { exportFile } from "$lib/utils/io";
   import type { ColumnDefinition } from "$lib/utils/types";
   import { Point } from "ol/geom";
+  import {
+    equipmentSchema,
+    type EquipmentFieldKey,
+  } from "$lib/schemas/equipment_annotation";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 
@@ -31,55 +35,20 @@
       sortable: true,
       filterable: true,
     },
-    {
-      id: "equipment",
-      label: "Equipment",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "geometry",
-      label: "Geometry",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "confidence",
-      label: "Confidence",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "status",
-      label: "Status",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "visibility",
-      label: "Visibility",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "configuration",
-      label: "Configuration",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "modification",
-      label: "Modification",
-      sortable: true,
-      filterable: true,
-    },
-    {
-      id: "camoflage",
-      label: "Camoflage",
-      sortable: true,
-      filterable: true,
-    },
-  ] as const;
+    ...(
+      Object.entries(equipmentSchema) as [
+        EquipmentFieldKey,
+        (typeof equipmentSchema)[EquipmentFieldKey],
+      ][]
+    )
+      .filter(([, def]) => def.column)
+      .map(([key, def]) => ({
+        id: key,
+        label: def.label,
+        sortable: true,
+        filterable: true,
+      })),
+  ];
 
   const activityColumns = [];
 

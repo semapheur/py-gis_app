@@ -3,13 +3,14 @@
   import { browser } from "$app/environment";
   import DataGrid from "$lib/components/DataGrid.svelte";
   import { fetchMsgpack } from "$lib/utils/fetch";
+  import type { DataGridColumn } from "$lib/utils/types";
 
-  async function validateCatalogPath(path: string) {
-    const result = await fetchMsgpack<void, { path: string }>(
+  async function validateCatalogPath(input: string) {
+    const result = await fetchMsgpack<void, { input: string }>(
       "/api/validate-catalog-dir",
       {
         method: "POST",
-        body: { path },
+        body: { input },
       },
     );
 
@@ -24,7 +25,7 @@
     {
       id: "name",
       header: "Name",
-      nullable: false,
+      required: false,
       unique: true,
       editor: "text",
       flexgrow: 1,
@@ -32,13 +33,13 @@
     {
       id: "path",
       header: "Folder path",
-      nullable: false,
+      required: false,
       unique: true,
       editor: "text",
       flexgrow: 1,
       validate: validateCatalogPath,
     },
-  ];
+  ] satisfies DataGridColumn[];
 
   let { data }: { data: PageData } = $props();
 </script>

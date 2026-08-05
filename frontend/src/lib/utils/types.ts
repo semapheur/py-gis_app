@@ -6,6 +6,7 @@ import type {
   SchemaId,
   SecurityId,
 } from "$lib/utils/brand";
+import type { IColumnConfig } from "@svar-ui/svelte-grid";
 
 export type ComponentExports<TComponent extends Component<any, any>> =
   TComponent extends Component<any, infer TExports> ? TExports : never;
@@ -118,4 +119,11 @@ export interface ColumnDefinition {
   label?: string;
   sortable?: boolean;
   filterable?: boolean;
+}
+
+export interface DataGridColumn extends IColumnConfig {
+  required: boolean;
+  validate?: (input: unknown) => Promise<boolean>;
+  unique?: boolean;
+  selectOptions?: SelectOption[];
 }

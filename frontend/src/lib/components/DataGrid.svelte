@@ -2,13 +2,7 @@
   lang="ts"
   generics="T extends Record<string, unknown> = Record<string, unknown>"
 >
-  import {
-    Grid,
-    HeaderMenu,
-    Tooltip,
-    Willow,
-    type IColumnConfig,
-  } from "@svar-ui/svelte-grid";
+  import { Grid, HeaderMenu, Tooltip, Willow } from "@svar-ui/svelte-grid";
   import Button from "$lib/components/Button.svelte";
   import DropdownMenu from "$lib/components/DropdownMenu.svelte";
   import Input from "$lib/components/Input.svelte";
@@ -18,7 +12,7 @@
   import { toast } from "$lib/stores/toast.svelte";
   import { fetchMsgpack } from "$lib/utils/fetch";
   import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
-  import type { ComponentExports, SelectOption } from "$lib/utils/types";
+  import type { ComponentExports, DataGridColumn } from "$lib/utils/types";
 
   type FormMode = "add" | "edit";
 
@@ -30,20 +24,13 @@
     rowId: string | null;
   }
 
-  interface Column extends IColumnConfig {
-    nullable: boolean;
-    validate?: (input: unknown) => Promise<boolean>;
-    unique?: boolean;
-    selectOptions?: SelectOption[];
-  }
-
   interface ValidationResult {
     valid: boolean;
     message: string | null;
   }
 
   interface Props {
-    columns: Column[];
+    columns: DataGridColumn[];
     data: T[];
     insertApi: string;
     updateApi: string;
@@ -182,7 +169,7 @@
   }
 
   async function validateColumn(
-    column: Column,
+    column: DataGridColumn,
     value: T,
     rowId: string | null,
   ): Promise<string | null> {
@@ -208,7 +195,7 @@
       }
     }
 
-    if (!column.nullable && value == null) {
+    if (column.required && value == null) {
       return "Value cannot be empty";
     }
 
@@ -459,7 +446,12 @@
       {#if column.editor === "text"}
         <Input bind:value={inputRow[column.id]} placeholder={column.header} />
       {:else if column.editor === "number"}
-        <Input bind:value={inputRow[column.id]} placeholder={column.header} type="number" min="0"/>
+        <Input
+          bind:value={inputRow[column.id]}
+          placeholder={column.header}
+          type="number"
+          min="0"
+        />
       {:else if column.editor === "textarea"}
         <TextArea
           bind:value={inputRow[column.id]}
