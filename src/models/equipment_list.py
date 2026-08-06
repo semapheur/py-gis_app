@@ -22,14 +22,14 @@ class EquipmentList(Table):
   _table_name = "equipment"
   id = uuid_field(True, False)
   identifier = Field(str, nullable=False)
-  displayName = Field(str, nullable=False)
+  display_name = Field(str, nullable=False)
   description = Field(str)
-  descriptionShort = Field(str)
-  natoName = Field(str)
-  nativeName = Field(str)
-  alternativeNames = Field(str)
+  description_short = Field(str)
+  nato_name = Field(str)
+  native_name = Field(str)
+  alternative_names = Field(str)
   source = Field(str)
-  sourceData = Field(str)
+  source_data = Field(str)
 
 
 class EquipmentList_(Table):
@@ -61,7 +61,7 @@ def get_equipment():
 def search_equipment(search_query: str):
   query = (
     SelectQuery()
-    .select("e.id AS value", "e.displayName AS label")
+    .select("e.id AS value", "e.display_name AS label")
     .from_(EquipmentSearch.table_name())
     .inner_join("equipment e", "e.rowid = equipment_fts.rowid")
     .where("equipment_fts MATCH ?", f'"{search_query}"')
@@ -72,6 +72,7 @@ def search_equipment(search_query: str):
 
 
 class InsertEquipment(TypedDict):
+  identifier: str
   display_name: str
   description: str
   description_short: str
@@ -93,6 +94,7 @@ def insert_equipment(payload: InsertEquipment):
 
   record = {
     "id": new_id,
+    "identifier": payload["identifier"],
     "display_name": payload["display_name"],
     "nato_name": nato_name,
     "native_name": native_name,
@@ -108,6 +110,7 @@ def insert_equipment(payload: InsertEquipment):
 
   return {
     "id": str(new_id),
+    "identifier": payload["identifier"],
     "display_name": payload["display_name"],
     "nato_name": nato_name,
     "native_name": native_name,
@@ -131,6 +134,7 @@ def update_equipment(payload: UpdateEquipment):
 
   record = {
     "id": update_id,
+    "identifier": payload["identifier"],
     "display_name": payload["display_name"],
     "nato_name": nato_name,
     "native_name": native_name,

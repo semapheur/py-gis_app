@@ -12,7 +12,8 @@
     {
       id: "name",
       header: "Name",
-      required: false,
+      sort: true,
+      required: true,
       unique: true,
       editor: "text",
       flexgrow: 1,
@@ -20,14 +21,15 @@
     {
       id: "description",
       header: "Description",
-      required: true,
+      required: false,
       editor: "textarea",
       flexgrow: 1,
     },
     {
       id: "ordering",
       header: "Ordering",
-      required: true,
+      sort: true,
+      required: false,
       editor: "number",
       flexgrow: 1,
     },

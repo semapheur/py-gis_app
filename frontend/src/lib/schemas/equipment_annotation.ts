@@ -1,8 +1,4 @@
-import type {
-  AttributeValue,
-  SelectOption,
-  UnitOption,
-} from "$lib/utils/types";
+import type { AttributeValue, UnitOption } from "$lib/utils/types";
 
 export const speedUnits: UnitOption[] = [
   { label: "km/h", value: "kmph", factor: 1 / 3.6 },
@@ -29,6 +25,7 @@ interface NumericFieldDef {
   units: UnitOption[];
   min?: string;
   column?: boolean;
+  backendKey?: string;
 }
 
 type FieldDef = SelectFieldDef | NumericFieldDef;
@@ -54,6 +51,13 @@ export const equipmentSchema = {
     required: true,
     column: true,
   },
+  affiliation: {
+    kind: "single",
+    label: "Affiliation",
+    table: "equipment_affiliation",
+    required: true,
+    column: true,
+  },
   visibility: {
     kind: "single",
     label: "Visibility",
@@ -67,12 +71,6 @@ export const equipmentSchema = {
     table: "equipment_configuration",
     required: true,
     column: true,
-  },
-  affiliation: {
-    kind: "single",
-    label: "Affiliation",
-    table: "equipment_affiliation",
-    column: false,
   },
   modification: {
     kind: "multi",
@@ -96,6 +94,7 @@ export const equipmentSchema = {
     label: "Heading",
     units: angleUnits,
     column: true,
+    backendKey: "heading_deg",
   },
   speed: {
     kind: "numeric",
@@ -103,6 +102,7 @@ export const equipmentSchema = {
     units: speedUnits,
     min: "0",
     column: true,
+    backendKey: "speed_mps",
   },
 } as const satisfies Record<string, FieldDef>;
 
@@ -138,3 +138,52 @@ export const equipmentAttributeTables = Object.fromEntries(
 ) as Record<string, string>;
 
 export type EquipmentAttributeName = keyof typeof equipmentAttributeTables;
+
+export const equipmentColumnFields = (
+  Object.entries(equipmentSchema) as [EquipmentFieldKey, EquipmentFieldKey][]
+).filter(([, def]) => def.column);
+
+export function equipmentDisplayRow(
+  data: ValidEquipmentData,
+): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+
+  for (const [key, def] of equipmentColumnFields) {
+    const value = data[key];
+
+    if (def.kind === "multi" || def.kind === "multi-search") {
+      row[key] = (value as AnnotateValue[] | null)?.map((v) => v.label) ?? [];
+    } else if (def.kind === "single" || def.kind === "search") {
+      row[key] = (value as AnnotateValue | null)?.label ?? "";
+    } else {
+      // numeric
+      row[key] = value ?? null;
+    }
+  }
+
+  return row;
+}
+
+export function serializeEquipmentData(
+  data: EquipmentData,
+): Record<string, unknown> {
+  const out: Record<string, unknown> = {};
+
+  for (const [key, def] of Object.entries(equipmentSchema) as [
+    EquipmentFieldKey,
+    EquipmentFieldDef,
+  ][]) {
+    const wireKey = def?.backendKey ?? key;
+    const value = data[key];
+
+    if (def.kind === "multi" || def.kind === "multi-search") {
+      out[wireKey] = (value as AttributeValue[] | null)?.map((v) => v.id) ?? [];
+    } else if (def.kind === "single" || def.kind === "search") {
+      out[wireKey] = (value as AttributeValue | null)?.id ?? null;
+    } else {
+      out[wireKey] = (value as number | null) ?? null;
+    }
+  }
+
+  return out;
+}

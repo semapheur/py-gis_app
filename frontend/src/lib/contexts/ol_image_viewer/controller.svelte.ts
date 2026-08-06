@@ -73,7 +73,6 @@ import type {
   AnnotateForm,
   AnnotateState,
   AnnotationInfo,
-  EquipmentData,
   ActivityData,
   AnnotationBaseInfo,
   ValidEquipmentData,
@@ -82,6 +81,10 @@ import { MGRS } from "$lib/utils/geo/mgrs";
 import type { ImageId } from "$lib/utils/brand";
 import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
 import type { ImageViewerOptions } from "$lib/contexts/common.svelte";
+import {
+  serializeEquipmentData,
+  type EquipmentData,
+} from "$lib/schemas/equipment_annotation";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -934,15 +937,7 @@ export class ImageViewerController {
             id: feature.get("id"),
             image: this.#imageId,
             geometry: format.writeGeometry(geometry4326),
-            equipment: data.equipment.id,
-            confidence: data.confidence.id,
-            status: data.status.id,
-            visibility: data.visibility.id,
-            configuration: data.configuration.id,
-            modification: data.modification?.map((m) => m.id) ?? [],
-            camoflage: data.camoflage?.map((m) => m.id) ?? [],
-            heading_deg: data.heading,
-            speed_mps: data.speed,
+            ...serializeEquipmentData(data),
             createdByUserId: metaData.createdByUserId,
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,

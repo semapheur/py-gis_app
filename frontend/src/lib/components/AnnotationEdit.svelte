@@ -12,7 +12,6 @@
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
   import {
     type AnnotateForm,
-    type EquipmentData,
     type ValidEquipmentData,
     annotateTabs,
   } from "$lib/contexts/annotate.svelte";
@@ -20,7 +19,10 @@
   import type { ColumnDefinition } from "$lib/utils/types";
   import { Point } from "ol/geom";
   import {
+    equipmentColumnFields,
+    equipmentDisplayRow,
     equipmentSchema,
+    type EquipmentData,
     type EquipmentFieldKey,
   } from "$lib/schemas/equipment_annotation";
 
@@ -35,19 +37,13 @@
       sortable: true,
       filterable: true,
     },
-    ...(
-      Object.entries(equipmentSchema) as [
-        EquipmentFieldKey,
-        (typeof equipmentSchema)[EquipmentFieldKey],
-      ][]
-    )
-      .filter(([, def]) => def.column)
-      .map(([key, def]) => ({
-        id: key,
-        label: def.label,
-        sortable: true,
-        filterable: true,
-      })),
+    { id: "geometry", label: "Geometry", sortable: true, filterable: true },
+    ...equipmentColumnFields.map(([key, def]) => ({
+      id: key,
+      label: def.label,
+      sortable: true,
+      filterable: true,
+    })),
   ];
 
   const activityColumns = [];
@@ -85,12 +81,7 @@
           id: i + 1,
           equipment: data.equipment.label,
           geometry: f.getGeometry()?.getType(),
-          confidence: data.confidence.label,
-          status: data.status.label,
-          visibility: data.visibility.label,
-          configuration: data.configuration.label,
-          modification: data.modification?.map((m) => m.label) ?? [],
-          camoflage: data.camoflage?.map((c) => c.label) ?? [],
+          ...equipmentDisplayRow(data),
         };
       })
       .filter(Boolean),

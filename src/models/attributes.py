@@ -17,6 +17,7 @@ ATTRIBUTE_TABLES = (
   "activity_likelihood",
   "equipment_confidence",
   "equipment_status",
+  "equipment_affiliation",
   "equipment_visibility",
   "equipment_configuration",
   "equipment_modification",

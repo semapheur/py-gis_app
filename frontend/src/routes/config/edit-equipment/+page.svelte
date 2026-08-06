@@ -7,7 +7,7 @@
   const columns = [
     { id: "identifier", header: "Identifier", editor: "text", required: true },
     {
-      id: "displayName",
+      id: "display_name",
       header: "Display name",
       editor: "text",
       required: true,
@@ -20,27 +20,27 @@
       required: true,
     },
     {
-      id: "descriptionShort",
+      id: "description_short",
       header: "Description (short)",
       editor: "text",
       required: true,
     },
     { id: "natoName", header: "NATO name", editor: "text", required: false },
     {
-      id: "nativeName",
+      id: "native_name",
       header: "Native name",
       editor: "text",
       required: false,
     },
     {
-      id: "alternativeNames",
+      id: "alternative_names",
       header: "Alternative names",
       editor: "text",
       required: false,
     },
     { id: "source", header: "Source", editor: "text", required: false },
     {
-      id: "sourceData",
+      id: "source_data",
       header: "Source data",
       editor: "textarea",
       required: false,

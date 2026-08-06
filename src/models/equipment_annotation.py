@@ -233,9 +233,9 @@ def get_annotations_by_image(image_id: bytes):
     select_fields = [
       "uuid_blob_to_str(ea.id) AS id",
       "AsGeoJSON(ea.geometry) AS geometry",
-      "ed.equipment.displayname || '\n' || a.equipment_confidence.name  AS label",
+      "ed.equipment.display_name || '\n' || a.equipment_confidence.name  AS label",
       "uuid_blob_to_str(ea.equipment) AS equipment_id",
-      "ed.equipment.displayname AS equipment_label",
+      "ed.equipment.display_name AS equipment_label",
     ]
 
     for field in SINGLE_ATTRIBUTE_FIELDS:
@@ -244,7 +244,7 @@ def get_annotations_by_image(image_id: bytes):
 
     for field in MULTI_ATTRIBUTE_FIELDS:
       ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
-      ref_column = "displayName" if field == "alternatives" else "name"
+      ref_column = "display_name" if field == "alternatives" else "name"
       array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
@@ -359,9 +359,9 @@ def get_annotation_ghosts_by_geometry(
       "ea.image AS image",
       "i.images.datetime_collected AS datetime",
       "AsGeoJSON(ea.geometry) AS geometry",
-      "ed.equipment.displayname || '\n' || a.equipment_confidence.name  AS label",
+      "ed.equipment.display_name || '\n' || a.equipment_confidence.name  AS label",
       "uuid_blob_to_str(ea.equipment) AS equipment_id",
-      "ed.equipment.displayname AS equipment_label",
+      "ed.equipment.display_name AS equipment_label",
     ]
 
     for field in SINGLE_ATTRIBUTE_FIELDS:
@@ -370,7 +370,7 @@ def get_annotation_ghosts_by_geometry(
 
     for field in MULTI_ATTRIBUTE_FIELDS:
       ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
-      ref_column = "displayName" if field == "alternatives" else "name"
+      ref_column = "display_name" if field == "alternatives" else "name"
       array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
@@ -472,6 +472,7 @@ def convert_annotation(payload: AnnotationConvertBatch):
       equipment,
       confidence,
       status,
+      affiliation,
       visibility,
       configuration,
       heading_deg,
@@ -488,6 +489,7 @@ def convert_annotation(payload: AnnotationConvertBatch):
       equipment,
       confidence,
       status,
+      affiliation,
       visibility,
       configuration,
       heading_deg,

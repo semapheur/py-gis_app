@@ -122,6 +122,11 @@ export interface ColumnDefinition {
 }
 
 export interface DataGridColumn extends IColumnConfig {
+  id: string;
+  header: string;
+  editor: string;
+  sort: true;
+  flexgrow: number;
   required: boolean;
   validate?: (input: unknown) => Promise<boolean>;
   unique?: boolean;
