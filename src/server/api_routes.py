@@ -88,7 +88,7 @@ class ApiRoutes(ApiHandler):
 
   @api("GET", "/api/get-equipment")
   def _get_equipment(self):
-    return get_equipment()
+    return {"equipment": get_equipment()}
 
   @api("GET", "/api/get-areas")
   def _get_areas(self):

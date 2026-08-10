@@ -4,7 +4,7 @@ from typing import TypedDict
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
 from src.sqlite.query_builder import SelectQuery, UpdateQuery
-from src.sqlite.table import Field, Table, uuid_field
+from src.sqlite.table import Field, Index, Table, uuid_field, uuid_fk_field
 
 app_settings = get_settings()
 
@@ -32,10 +32,24 @@ class EquipmentList(Table):
   source_data = Field(str)
 
 
-class EquipmentList_(Table):
+junction = ("system",)
+
+
+class Equipment(Table):
   _table_name = "equipment"
   id = uuid_field(True, False)
   identifier = Field(str, nullable=False)
+  display_name = Field(str, nullable=False)
+
+
+class Designation(Table):
+  _table = "designation"
+  _indexes = tuple(Index(("equipment_id", "designation"), True))
+  id = uuid_field(True, True)
+  equipment_id = uuid_fk_field("equipment", "id")
+  designation = Field(str, nullable=False)
+  designation_type = Field(str, nullable=False)
+  script_type = Field(str, nullable=False)
 
 
 class EquipmentSearch(Table):
@@ -51,10 +65,13 @@ def create_equipment_table():
 
 
 def get_equipment():
-  query = SelectQuery().from_(EquipmentList.table_name())
+  query = (
+    SelectQuery()
+    .select(*EquipmentList.column_names())
+    .from_(EquipmentList.table_name())
+  )
 
   with SqliteDatabase(app_settings.EQUIPMENT_DB) as db:
-    query = query.select("*")
     return db.select_model_records(EquipmentList, query, True)
 
 
@@ -96,6 +113,8 @@ def insert_equipment(payload: InsertEquipment):
     "id": new_id,
     "identifier": payload["identifier"],
     "display_name": payload["display_name"],
+    "description": payload["description"],
+    "description_short": payload["description_short"],
     "nato_name": nato_name,
     "native_name": native_name,
     "alternative_names": alternative_names,
@@ -112,6 +131,8 @@ def insert_equipment(payload: InsertEquipment):
     "id": str(new_id),
     "identifier": payload["identifier"],
     "display_name": payload["display_name"],
+    "description": payload["description"],
+    "description_short": payload["description_short"],
     "nato_name": nato_name,
     "native_name": native_name,
     "alternative_names": alternative_names,
@@ -125,7 +146,7 @@ class UpdateEquipment(InsertEquipment):
 
 
 def update_equipment(payload: UpdateEquipment):
-  update_id = payload["id"]
+  update_id = uuid.UUID(payload["id"])
   nato_name = payload.get("nato_name")
   native_name = payload.get("native_name")
   alternative_names = payload.get("alternative_names")
@@ -136,6 +157,8 @@ def update_equipment(payload: UpdateEquipment):
     "id": update_id,
     "identifier": payload["identifier"],
     "display_name": payload["display_name"],
+    "description": payload["description"],
+    "description_short": payload["description_short"],
     "nato_name": nato_name,
     "native_name": native_name,
     "alternative_names": alternative_names,

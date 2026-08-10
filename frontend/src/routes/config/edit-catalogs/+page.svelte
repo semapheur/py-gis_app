@@ -6,11 +6,11 @@
   import type { DataGridColumn } from "$lib/utils/types";
 
   async function validateCatalogPath(input: string) {
-    const result = await fetchMsgpack<void, { input: string }>(
+    const result = await fetchMsgpack<void, { path: string }>(
       "/api/validate-catalog-dir",
       {
         method: "POST",
-        body: { input },
+        body: { path: input },
       },
     );
 

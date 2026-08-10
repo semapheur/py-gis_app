@@ -195,13 +195,15 @@ class TableMeta(type):
         del attributes[k]
 
     attributes["_fields"] = fields
+    attributes["_indexes"] = tuple(attributes.get("_indexes", ()))
+
     return super().__new__(cls, name, bases, attributes)
 
 
 class Table(metaclass=TableMeta):
   _table_name: Optional[str] = None
-  _fields: dict[str, Union[Field, GeometryField]] = {}
-  _indexes: list[Index] = []
+  _fields: dict[str, Union[Field, GeometryField]]
+  _indexes: tuple[Index, ...]
   _without_rowid: bool = False
 
   def __init_subclass__(cls, **kwargs):
@@ -397,8 +399,8 @@ def uuid_field(primary: bool, nullable: bool):
 
 
 def uuid_fk_field(
-  references_table: str,
-  references_column: str = "id",
+  reference_table: str,
+  reference_column: str = "id",
   primary: bool = False,
   nullable: bool = False,
   on_delete: ForeignKeyAction = "CASCADE",
@@ -408,7 +410,7 @@ def uuid_fk_field(
     sql_type=ColumnType.BLOB,
     primary_key=primary,
     nullable=False if primary else nullable,
-    foreign_key=ForeignKey(references_table, references_column, on_delete=on_delete),
+    foreign_key=ForeignKey(reference_table, reference_column, on_delete=on_delete),
     to_sql=lambda u: u.bytes,
     from_sql=lambda b: uuid.UUID(bytes=b),
     to_json=lambda u: str(u),
@@ -483,7 +485,7 @@ def uuid_list_junction_model(parent_model: type[Table], column_name: str):
     parent_id = uuid_fk_field(parent_table, "id", primary=True)
     value = uuid_field(True, False)
 
-    _indexes = [Index(("value",), name=f"ix_{junction_table_name}_value")]
+    _indexes = tuple(Index(("value",), name=f"ix_{junction_table_name}_value"))
 
   Junction.__name__ = f"{junction_table_name.title().replace('_', '')}Table"
   return Junction
