@@ -5,7 +5,8 @@
 <nav>
   <LinkText href="config/index-images" label="Index images" />
   <LinkText href="config/edit-catalogs" label="Edit catalogs" />
-  <LinkText href="config/edit-attributes" label="Edit attributes" />
+  <LinkText href="config/edit-security" label="Edit security attributes" />
+  <LinkText href="config/edit-attributes" label="Edit annotation attributes" />
   <LinkText href="config/edit-equipment" label="Edit equipment" />
 </nav>
 

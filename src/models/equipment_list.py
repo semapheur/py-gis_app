@@ -49,7 +49,20 @@ class Designation(Table):
   equipment_id = uuid_fk_field("equipment", "id")
   designation = Field(str, nullable=False)
   designation_type = Field(str, nullable=False)
-  script_type = Field(str, nullable=False)
+  script = Field(str, nullable=False)
+  reference = uuid_field(True, False)
+  classification = uuid_field(True, False)
+
+
+class Dimension(Table):
+  _table = "dimension"
+  _indexes = tuple(Index(("equipment_id", "meters", "dimension_type"), True))
+  id = uuid_field(True, True)
+  equipment_id = uuid_fk_field("equipment", "id")
+  meters = Field(float, nullable=False)
+  dimension_type = Field(str, nullable=False)
+  reference = uuid_field(True, False)
+  classification = uuid_field(True, False)
 
 
 class EquipmentSearch(Table):

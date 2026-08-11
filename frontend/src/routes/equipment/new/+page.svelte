@@ -2,11 +2,17 @@
   import Button from "$lib/components/Button.svelte";
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
+  import UnitInput from "$lib/components/UnitInput.svelte";
 
   interface DesignationRow {
     designation: string;
     designationType: (typeof designationTypes)[number]["value"];
     script: (typeof scriptOptions)[number]["value"];
+  }
+
+  interface DimensionRow {
+    meters: number;
+    dimensionType: (typeof dimensionTypes)[number]["value"];
   }
 
   const designationTypes = [
@@ -22,9 +28,16 @@
     { label: "Cyrillic", value: "cyrillic" },
   ] as const;
 
+  const dimensionTypes = [
+    { label: "Hull length", value: "length_hull" },
+    { label: "Overal length (gun forward)", value: "length_overall" },
+    { label: "beam", value: "beam" },
+  ] as const;
+
   let identifier = $state<string | null>(null);
   let displayName = $state<string | null>(null);
   let designations = $state<DesignationRow[]>([]);
+  let dimensions = $state<DimensionRow[]>([]);
 
   function addDesignation() {
     designations.push({
@@ -36,6 +49,17 @@
 
   function removeDesignation(index: number) {
     designations.splice(index, 1);
+  }
+
+  function addDimension() {
+    dimensions.push({
+      meters: 0,
+      dimensionType: dimensionTypes[0].value,
+    });
+  }
+
+  function removeDimension(index: number) {
+    dimensions.splice(index, 1);
   }
 
   async function handleSubmit() {
@@ -86,6 +110,27 @@
 
     <Button type="button" onclick={addDesignation}>Add</Button>
   </fieldset>
+  <fieldset>
+    <legend>Dimension</legend>
+    <UnitInput
+      units={def.units}
+      placeholder="Measure"
+      min="0"
+      bind:unit={numericUnits[key]}
+      bind:value={
+        () =>
+          value[key] != null
+            ? Math.round(((value[key] as number) / factorFor(key, def)) * 1e6) /
+              1e6
+            : null,
+        () => {}
+      }
+      bind:baseValue={
+        () => (value[key] as number | null) ?? null,
+        (v) => update(key, v ?? (bulk ? undefined : null))
+      }
+    />
+  </fieldset>
   <Button type="submit">Save</Button>
 </div>
 
@@ -97,6 +142,6 @@
   .designation-fields {
     display: flex;
     flex-direction: column;
-    gap: var(--size-sm);
+    gap: var(--size-md);
   }
 </style>
