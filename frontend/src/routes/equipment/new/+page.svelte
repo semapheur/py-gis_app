@@ -3,6 +3,7 @@
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
   import UnitInput from "$lib/components/UnitInput.svelte";
+  import type { UnitOption } from "$lib/utils/types";
 
   interface DesignationRow {
     designation: string;
@@ -11,7 +12,9 @@
   }
 
   interface DimensionRow {
-    meters: number;
+    meters: number | null;
+    displayValue: number | null;
+    unit: string;
     dimensionType: (typeof dimensionTypes)[number]["value"];
   }
 
@@ -34,6 +37,12 @@
     { label: "beam", value: "beam" },
   ] as const;
 
+  export const lengthUnits = [
+    { label: "m", value: "m", factor: 1 },
+    { label: "cm", value: "cm", factor: 100 },
+    { label: "mm", value: "mm", factor: 1000 },
+  ] satisfies UnitOption[];
+
   let identifier = $state<string | null>(null);
   let displayName = $state<string | null>(null);
   let designations = $state<DesignationRow[]>([]);
@@ -53,7 +62,9 @@
 
   function addDimension() {
     dimensions.push({
-      meters: 0,
+      meters: null,
+      displayValue: null,
+      unit: lengthUnits[0].value,
       dimensionType: dimensionTypes[0].value,
     });
   }
@@ -112,24 +123,30 @@
   </fieldset>
   <fieldset>
     <legend>Dimension</legend>
-    <UnitInput
-      units={def.units}
-      placeholder="Measure"
-      min="0"
-      bind:unit={numericUnits[key]}
-      bind:value={
-        () =>
-          value[key] != null
-            ? Math.round(((value[key] as number) / factorFor(key, def)) * 1e6) /
-              1e6
-            : null,
-        () => {}
-      }
-      bind:baseValue={
-        () => (value[key] as number | null) ?? null,
-        (v) => update(key, v ?? (bulk ? undefined : null))
-      }
-    />
+    {#each dimensions as row, i (i)}
+      <UnitInput
+        units={lengthUnits}
+        placeholder="Measure"
+        min="0"
+        bind:unit={row.unit}
+        bind:value={row.displayValue}
+        bind:baseValue={row.meters}
+      />
+      <Select
+        bind:value={row.dimensionType}
+        options={dimensionTypes}
+        placeholder="Type"
+      />
+      <button
+        type="button"
+        onclick={() => removeDimension(i)}
+        disabled={dimensions.length === 1}
+        aria-label="Remove dimension"
+      >
+        ✕
+      </button>
+    {/each}
+    <Button type="button" onclick={addDimension}>Add</Button>
   </fieldset>
   <Button type="submit">Save</Button>
 </div>

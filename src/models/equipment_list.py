@@ -44,7 +44,7 @@ class Equipment(Table):
 
 class Designation(Table):
   _table = "designation"
-  _indexes = tuple(Index(("equipment_id", "designation"), True))
+  _indexes = (Index(("equipment_id", "designation"), True),)
   id = uuid_field(True, True)
   equipment_id = uuid_fk_field("equipment", "id")
   designation = Field(str, nullable=False)
@@ -56,7 +56,7 @@ class Designation(Table):
 
 class Dimension(Table):
   _table = "dimension"
-  _indexes = tuple(Index(("equipment_id", "meters", "dimension_type"), True))
+  _indexes = (Index(("equipment_id", "meters", "dimension_type"), True),)
   id = uuid_field(True, True)
   equipment_id = uuid_fk_field("equipment", "id")
   meters = Field(float, nullable=False)

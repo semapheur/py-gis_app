@@ -1,15 +1,15 @@
 import type { AttributeValue, UnitOption } from "$lib/utils/types";
 
-export const speedUnits: UnitOption[] = [
+export const speedUnits = [
   { label: "km/h", value: "kmph", factor: 1 / 3.6 },
   { label: "m/s", value: "mps", factor: 1 },
   { label: "kt", value: "kt", factor: 1852 / 3600 },
-];
+] satisfies UnitOption[];
 
-export const angleUnits: UnitOption[] = [
+export const angleUnits = [
   { label: "deg", value: "deg", factor: 1 },
   { label: "mil", value: "mil", factor: 0.05625 },
-];
+] satisfies UnitOption[];
 
 interface SelectFieldDef {
   kind: "search" | "multi-search" | "single" | "multi";

@@ -36,7 +36,7 @@
 
   function roundTo(n: number, decimals: number = 6): number {
     const f = 10 ** decimals;
-    return Math.round((n * f) / f);
+    return Math.round(n * f) / f;
   }
 
   $effect(() => {

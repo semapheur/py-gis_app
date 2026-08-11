@@ -485,7 +485,7 @@ def uuid_list_junction_model(parent_model: type[Table], column_name: str):
     parent_id = uuid_fk_field(parent_table, "id", primary=True)
     value = uuid_field(True, False)
 
-    _indexes = tuple(Index(("value",), name=f"ix_{junction_table_name}_value"))
+    _indexes = (Index(("value",), name=f"ix_{junction_table_name}_value"),)
 
   Junction.__name__ = f"{junction_table_name.title().replace('_', '')}Table"
   return Junction
