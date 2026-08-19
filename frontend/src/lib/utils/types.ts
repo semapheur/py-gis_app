@@ -4,7 +4,8 @@ import type {
   AttributeId,
   ImageId,
   SchemaId,
-  SecurityId,
+  ClassificationId,
+  ReleasabilityId,
 } from "$lib/utils/brand";
 import type { IColumnConfig } from "@svar-ui/svelte-grid";
 
@@ -103,7 +104,7 @@ export interface AttributeTableInfo {
 }
 
 export interface SecurityData {
-  id: SecurityId;
+  id: ClassificationId | ReleasabilityId;
   name: string;
   level: number;
   ordering: number;

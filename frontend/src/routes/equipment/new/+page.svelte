@@ -3,12 +3,16 @@
   import Input from "$lib/components/Input.svelte";
   import Select from "$lib/components/Select.svelte";
   import UnitInput from "$lib/components/UnitInput.svelte";
-  import type { UnitOption } from "$lib/utils/types";
+  import type { ClassificationId, ReleasabilityId } from "$lib/utils/brand";
+  import type { SelectOption, UnitOption } from "$lib/utils/types";
 
   interface DesignationRow {
     designation: string;
     designationType: (typeof designationTypes)[number]["value"];
     script: (typeof scriptOptions)[number]["value"];
+    reference: SelectOption<ReferenceId> | null;
+    classification: SelectOption<ClassificationId>;
+    releasability: SelectOption<ReleasabilityId> | null;
   }
 
   interface DimensionRow {
@@ -16,6 +20,8 @@
     displayValue: number | null;
     unit: string;
     dimensionType: (typeof dimensionTypes)[number]["value"];
+    classification: string;
+    releasability: string;
   }
 
   const designationTypes = [

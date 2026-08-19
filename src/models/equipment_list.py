@@ -52,6 +52,7 @@ class Designation(Table):
   script = Field(str, nullable=False)
   reference = uuid_field(True, False)
   classification = uuid_field(True, False)
+  releasability = uuid_field(True, True)
 
 
 class Dimension(Table):
@@ -63,6 +64,7 @@ class Dimension(Table):
   dimension_type = Field(str, nullable=False)
   reference = uuid_field(True, False)
   classification = uuid_field(True, False)
+  releasability = uuid_field(True, True)
 
 
 class EquipmentSearch(Table):
