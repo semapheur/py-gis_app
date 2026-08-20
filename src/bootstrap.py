@@ -37,6 +37,10 @@ class Settings:
     return self.DB_DIR / "location.db"
 
   @property
+  def REFERENCE_DB(self) -> Path:
+    return self.DB_DIR / "reference.db"
+
+  @property
   def LOG_DB(self) -> Path:
     return self.DB_DIR / "log.db"
 
