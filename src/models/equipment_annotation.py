@@ -35,7 +35,7 @@ SINGLE_ATTRIBUTE_FIELDS = (
   "configuration",
 )
 MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage", "alternatives")
-NUMERIC_FIELDS = ("heading", "speed")
+NUMERIC_FIELDS = ("heading", "elevation", "speed")
 
 
 class AnnotationModels(NamedTuple):
@@ -58,6 +58,7 @@ def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationM
     visibility = uuid_field(False, False)
     configuration = uuid_field(False, False)
     heading_deg = Field(float)
+    elevation_deg = Field(float)
     speed_mps = Field(float)
     createdByUserId = Field(str)
     modifiedByUserId = Field(str)
