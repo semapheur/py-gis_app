@@ -10,8 +10,8 @@
     getAnnotateState,
     annotateTabs,
     type ActivityData,
-    type EquipmentData,
   } from "$lib/contexts/annotate.svelte";
+  import { type EquipmentData } from "$lib/schemas/equipment_annotation";
   import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
   import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
 

@@ -7,12 +7,17 @@ import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
   { name: "Equipment", value: "equipment" },
+  { name: "Personnel", value: "personnel" },
   { name: "Activity", value: "activity" },
 ] as const;
 export type AnnotateForm = (typeof annotateTabs)[number]["value"];
 
 export const annotateGeometryByForm = {
   equipment: [
+    { label: "Point", value: "Point" },
+    { label: "Polygon", value: "Polygon" },
+  ],
+  personnel: [
     { label: "Point", value: "Point" },
     { label: "Polygon", value: "Polygon" },
   ],
