@@ -20,4 +20,9 @@
 </form>
 
 <style>
+  .personnel-annotation {
+    display: flex;
+    flex-direction: column;
+    gap: var(--size-lg);
+  }
 </style>

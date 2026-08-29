@@ -3,6 +3,7 @@ import {
   equipmentRequiredFields,
   type EquipmentData,
 } from "$lib/schemas/equipment_annotation";
+import { createDefaultPersonnelData } from "$lib/schemas/personnel_annotation";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
@@ -146,6 +147,11 @@ export class AnnotateState {
   #createDefaultData(layer: AnnotateForm) {
     if (layer === "equipment") {
       return createDefaultEquipmentData();
+    }
+
+    if (layer === "personnel") {
+      if (!this.geometry) return;
+      createDefaultPersonnelData(this.geometry);
     }
 
     if (layer === "activity") {
