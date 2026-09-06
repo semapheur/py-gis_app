@@ -97,12 +97,12 @@ export const equipmentSchema = {
     backendKey: "heading_deg",
   },
   elevation: {
-      kind: "numeric",
-      label: "Elevation",
-      units: angleUnits,
-      column: true,
-      backendKey: "elevation_deg",
-    },,
+    kind: "numeric",
+    label: "Elevation",
+    units: angleUnits,
+    column: true,
+    backendKey: "elevation_deg",
+  },
   speed: {
     kind: "numeric",
     label: "Speed",
