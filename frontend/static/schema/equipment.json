@@ -1,0 +1,89 @@
+{
+  "nature": ["military", "civilian"],
+  "category": ["aircraft", "vehicle", "vessel"],
+  "vehicle": {
+    "function": [
+      "fighting",
+      "artillery",
+      "engineering",
+      "command/communication",
+      "electronic warfare",
+      "missile launcher",
+      "CRBN",
+      "radar"
+    ],
+    "role": {
+      "fighting": {
+        "tank": ["main battle", "light", "medium", "heavy"],
+        "infantry fighting": [],
+        "armored personnel carrier": ["infantry mobility vehicle"]
+      },
+      "artillery": {
+        "gun": ["field gun", "howitzer", "mortar"],
+        "rocket": ["single-barrel", "multi-barrel"]
+      },
+      "engineering": {
+        "combat": [
+          "bridge-layer",
+          "obstacle-clearing",
+          "mine-thrower",
+          "mine-layer"
+        ],
+        "construction": []
+      }
+    },
+    "chassis": {
+      "propulsion": ["wheeled", "tracked", "halftrack"],
+      "mobility": ["self-propelled", "towed"],
+      "hull": ["rigid", "articulated"],
+      "engine_position": [
+        "front_external",
+        "front_internal",
+        "mid",
+        "rear",
+        "unknown"
+      ],
+      "cab": {
+        "position": [
+          "behind_front_axle",
+          "over_front_axle",
+          "ahead_of_front_axle"
+        ],
+        "front_profile": [
+          "vertical_flat",
+          "vertical_split",
+          "sloped",
+          "stepped",
+          "rounded",
+          "unknown"
+        ],
+        "lateral_alignment": [
+          "centered",
+          "left_offset",
+          "right_offset",
+          "unknown"
+        ]
+      },
+      "box_body": {
+        "roof_profile": ["flat", "arched", "chamfered", "loaf"]
+      },
+      "tools": {
+        "crane": {
+          "type": ["a-frame", "hydraulic"],
+          "mount": ["hook", "graple"]
+        },
+        "dozer_blade": [],
+        "loader": ["front", "back-hoe"],
+        "power_shovel": ["back-hoe"],
+        "trench_wheel": ["along", "across"],
+        "mine:clearing": [
+          "mine_roller",
+          "mine_flail",
+          "mine_plow",
+          "mine_clearing_line_charge"
+        ]
+      },
+      "modifiers": ["armored", "amphibious", "unmanned"]
+    }
+  }
+}

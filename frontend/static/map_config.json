@@ -1,0 +1,29 @@
+{
+  "layers": [
+    {
+      "type": "xyz",
+      "id": "osm",
+      "label": "OpenStreetMap",
+      "url": "https://a.tile.openstreetmap.org/{z}/{x}/{y}.png",
+      "tileSize": 256,
+      "maxzoom": 19,
+      "attribution": "&copy; OpenStreetMap Contributors"
+    },
+    {
+      "type": "wms",
+      "id": "my-wms",
+      "label": "My WMS Layer",
+      "url": "https://example.com/wms",
+      "layers": "layer_name",
+      "tileSize": 256,
+      "attribution": "My WMS Provider"
+    },
+    {
+      "type": "wmts",
+      "id": "my-wmts",
+      "label": "My WMTS Layer",
+      "url": "https://example.com/wmts/tile/{z}/{x}/{y}.png",
+      "tileSize": 256
+    }
+  ]
+}
