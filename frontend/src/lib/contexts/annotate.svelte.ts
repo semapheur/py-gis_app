@@ -1,9 +1,14 @@
 import {
   createDefaultEquipmentData,
   equipmentRequiredFields,
+  isEquipmentValid,
   type EquipmentData,
 } from "$lib/schemas/equipment_annotation";
-import { createDefaultPersonnelData } from "$lib/schemas/personnel_annotation";
+import {
+  createDefaultPersonnelData,
+  isPersonnelValid,
+  type PersonnelData,
+} from "$lib/schemas/personnel_annotation";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [
@@ -82,8 +87,11 @@ export class AnnotateState {
   geometry = $state<AnnotateGeometry<AnnotateForm>>(
     annotateGeometryByForm[defaultLayer][0].value,
   );
-  data = $state<EquipmentData | ActivityData>(
-    this.#createDefaultData(defaultLayer),
+  data = $state<EquipmentData | PersonnelData | ActivityData>(
+    this.#createDefaultData(
+      defaultLayer,
+      annotateGeometryByForm[defaultLayer][0].value,
+    ),
   );
 
   value = $derived.by(() => {
@@ -112,8 +120,11 @@ export class AnnotateState {
 
   isValid = $derived.by(() => {
     if (this.layer === "equipment") {
-      const d = this.data as EquipmentData;
-      return equipmentRequiredFields.every((field) => d[field] != null);
+      return isEquipmentValid(this.data as EquipmentData);
+    }
+
+    if (this.layer === "personnel") {
+      return isPersonnelValid(this.data as PersonnelData, this.geometry);
     }
 
     if (this.layer === "activity") {
@@ -133,31 +144,36 @@ export class AnnotateState {
 
     this.layer = layer;
     this.geometry = annotateGeometryByForm[layer][0].value;
-    this.data = this.#createDefaultData(layer);
+    this.data = this.#createDefaultData(layer, this.geometry);
   }
 
   setGeometry(value: AnnotateGeometry<AnnotateForm>) {
     this.geometry = value;
+    if (this.layer === "personnel") {
+      this.data = this.#createDefaultData("personnel", value);
+    }
   }
 
   setData(data: EquipmentData | ActivityData) {
     this.data = data;
   }
 
-  #createDefaultData(layer: AnnotateForm) {
-    if (layer === "equipment") {
-      return createDefaultEquipmentData();
-    }
-
-    if (layer === "personnel") {
-      if (!this.geometry) return;
-      createDefaultPersonnelData(this.geometry);
-    }
-
-    if (layer === "activity") {
-      return {
-        type: "deployment",
-      };
+  #createDefaultData(
+    layer: AnnotateForm,
+    geometry: AnnotateGeometry<AnnotateForm>,
+  ) {
+    switch (layer) {
+      case "equipment":
+        return createDefaultEquipmentData();
+      case "personnel":
+        return createDefaultPersonnelData(geometry as "Point" | "Polygon");
+      case "activity":
+        return {
+          type: "deployment",
+          summary: "",
+          observed: "",
+          comment: "",
+        } satisfies ActivityData;
     }
   }
 }

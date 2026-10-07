@@ -69,7 +69,6 @@ from src.models.security import (
   insert_sequrity,
   update_security,
 )
-from src.models.update import TableUpdate
 from src.server.api_handler import ApiError, ApiHandler, api
 
 

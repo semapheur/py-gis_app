@@ -77,105 +77,66 @@ const stretchExpression = (bandR: number, bandG: number, bandB: number) => ({
 export const multibandStyle = stretchExpression(1, 2, 3);
 export const panchromaticStyle = stretchExpression(1, 1, 1);
 
-const equipmentPointStyle = {
-  base: {
-    "circle-radius": 5,
-    "circle-fill-color": "oklch(70.4% 0.191 22.216 / 0.5)",
-    "circle-stroke-color": "rgba(255 255 255 / 0.5)",
-    "circle-stroke-width": 1,
-  },
-  selected: {
-    "circle-radius": 5,
-    "circle-fill-color": "oklch(57.7% 0.245 27.325)",
-    "circle-stroke-color": "rgba(255 255 255)",
-    "circle-stroke-width": 2,
-  },
-};
-
-const equipmentPolygonStyle = {
-  base: {
-    "stroke-color": "oklch(70.4% 0.191 22.216 / 0.5)",
-    "stroke-width": 2,
-    "fill-color": "rgba(0 0 0 / 0)",
-  },
-  selected: {
-    "stroke-color": "oklch(70.4% 0.191 22.216)",
-    "stroke-width": 1,
-    "fill-color": "oklch(70.4% 0.191 22.216 / 0.1)",
-  },
-};
-
 const selectFilter = [
   "any",
   ["==", ["var", "hoverId"], ["get", "id"]],
   ["==", ["get", "selected"], 1],
 ];
 
-export const equipmentStyle = [
-  {
-    filter: ["all", ["==", ["geometry-type"], "Polygon"], selectFilter],
-    style: equipmentPolygonStyle.selected,
-  },
-  {
-    filter: ["all", ["==", ["geometry-type"], "Point"], selectFilter],
-    style: equipmentPointStyle.selected,
-  },
-  {
-    filter: ["==", ["geometry-type"], "Polygon"],
-    style: equipmentPolygonStyle.base,
-  },
-  {
-    filter: ["==", ["geometry-type"], "Point"],
-    style: equipmentPointStyle.base,
-  },
-];
+const isGeom = (type: "Point" | "Polygon") => ["==", ["geometry-type"], type];
 
-const ghostPointStyle = {
-  base: {
-    "circle-radius": 5,
-    "circle-fill-color": "oklch(58.5% 0.233 277.117 / 0.5)",
-    "circle-stroke-color": "rgba(0 0 0 / 0.5)",
-    "circle-stroke-width": 1,
-  },
-  selected: {
-    "circle-radius": 5,
-    "circle-fill-color": "oklch(58.5% 0.233 277.117)",
-    "circle-stroke-color": "rgba(0 0 0)",
-    "circle-stroke-width": 2,
-  },
-};
+function createStyle(lch: string, ink: string, selectedLch = lch) {
+  const c = (alpha?: number) =>
+    `oklch(${lch}${alpha === undefined ? "" : ` / ${alpha}`})`;
+  const rgb = (alpha?: number) =>
+    `rgba(${ink}${alpha === undefined ? "" : ` / ${alpha}`})`;
 
-const ghostPolygonStyle = {
-  base: {
-    "stroke-color": "oklch(58.5% 0.233 277.117 / 0.5)",
-    "stroke-width": 2,
-    "fill-color": "rgba(0 0 0 / 0)",
-  },
-  selected: {
-    "stroke-color": "oklch(58.5% 0.233 277.117)",
-    "stroke-width": 1,
-    "fill-color": "oklch(58.5% 0.233 277.117 / 0.1)",
-  },
-};
+  const point = {
+    base: {
+      "circle-radius": 5,
+      "circle-fill-color": c(0.5),
+      "circle-stroke-color": rgb(0.5),
+      "circle-stroke-width": 1,
+    },
+    selected: {
+      "circle-radius": 5,
+      "circle-fill-color": `oklch(${selectedLch})`,
+      "circle-stroke-color": rgb(),
+      "circle-stroke-width": 2,
+    },
+  };
 
-export const ghostStyle = [
-  {
-    filter: ["all", ["==", ["geometry-type"], "Polygon"], selectFilter],
-    style: ghostPolygonStyle.selected,
-  },
-  {
-    filter: ["all", ["==", ["geometry-type"], "Point"], selectFilter],
-    style: ghostPointStyle.selected,
-  },
-  {
-    filter: ["==", ["geometry-type"], "Polygon"],
-    style: ghostPolygonStyle.base,
-  },
-  {
-    filter: ["==", ["geometry-type"], "Point"],
-    style: ghostPointStyle.base,
-  },
-];
+  const polygon = {
+    base: {
+      "stroke-color": c(0.5),
+      "stroke-width": 2,
+      "fill-color": "rgba(0 0 0 / 0)",
+    },
+    selected: {
+      "stroke-color": c(),
+      "stroke-width": 1,
+      "fill-color": c(0.1),
+    },
+  };
+
+  return [
+    {
+      filter: ["all", isGeom("Polygon"), selectFilter],
+      style: polygon.selected,
+    },
+    { filter: ["all", isGeom("Point"), selectFilter], style: point.selected },
+    { filter: isGeom("Polygon"), style: polygon.base },
+    { filter: isGeom("Point"), style: point.base },
+  ];
+}
+
+export const equipmentStyle = createStyle(
+  "70.4% 0.191 22.216",
+  "255 255 255",
+  "57.7% 0.245 27.325",
+);
+
+export const ghostStyle = createStyle("58.5% 0.233 277.117", "0 0 0");
 
 export const areaStyle = [
   {

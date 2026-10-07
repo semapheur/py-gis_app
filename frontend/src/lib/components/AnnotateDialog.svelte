@@ -1,6 +1,7 @@
 <script lang="ts">
   import EquipmentForm from "$lib/components/EquipmentForm.svelte";
   import ActivityForm from "$lib/components/ActivityForm.svelte";
+  import PersonnelForm from "$lib/components/PersonnelForm.svelte";
   import Select from "$lib/components/Select.svelte";
   import Tabs from "$lib/components/Tabs.svelte";
   import Button from "$lib/components/Button.svelte";
@@ -22,6 +23,8 @@
   const annotateState = getAnnotateState();
   const viewerController = getImageViewerController();
   const viewerState = getImageViewerState();
+
+  $inspect(annotateState.isValid);
 
   let { open = $bindable() }: Props = $props();
   let isAnnotating = $state<boolean>(false);
@@ -60,6 +63,12 @@
       {#if annotateState.layer === "equipment"}
         <EquipmentForm
           value={annotateState.data as EquipmentData}
+          onchange={(d) => annotateState.setData(d)}
+        />
+      {:else if annotateState.layer === "personnel"}
+        <PersonnelForm
+          value={annotateState.data}
+          geometry={annotateState.geometry}
           onchange={(d) => annotateState.setData(d)}
         />
       {:else if annotateState.layer === "activity"}

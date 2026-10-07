@@ -85,6 +85,7 @@ import {
   serializeEquipmentData,
   type EquipmentData,
 } from "$lib/schemas/equipment_annotation";
+import { serializePersonnelData } from "$lib/schemas/personnel_annotation";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -119,6 +120,11 @@ interface ZoomOptions {
   sourceProjection?: string;
 }
 
+const serializers = {
+  equipment: serializeEquipmentData,
+  personnel: serializePersonnelData,
+} as const;
+
 export class ImageViewerController {
   #imageId: ImageId | null = null;
   #map: Map | null = null;
@@ -129,6 +135,7 @@ export class ImageViewerController {
   #equipmentLayer: WebGLVectorLayer | null = null;
   #ghostLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
+  #personnelLayer: WebGLVectorLayer | null = null;
   #labelLayers: Record<AnnotateForm | "ghost" | "area", VectorLayer | null>;
   #measurementLayer: VectorLayer | null = null;
   #interactions: Record<InteractionSet, ViewerInteractions | null>;
@@ -142,12 +149,11 @@ export class ImageViewerController {
   #equipmentFeatures = $state<Feature[]>([]);
   #selectedAnnotations = $state<Record<AnnotateForm, Feature[]>>({
     equipment: [],
+    personnel: [],
     activity: [],
   });
   #hasSelectedAnnotations = $derived(
-    this.#selectedAnnotations.activity.length +
-      this.#selectedAnnotations.equipment.length >
-      0,
+    Object.values(this.#selectedAnnotations).some((a) => a.length > 0),
   );
   enhancement = $state<Enhancement>({ ...defaultEnhancement });
   #contextMenu = $state<{
@@ -190,9 +196,10 @@ export class ImageViewerController {
     };
 
     this.#annotationSources = {
+      activity: new VectorSource(),
       equipment: new VectorSource(),
       ghost: new VectorSource(),
-      activity: new VectorSource(),
+      personnel: new VectorSource(),
     };
 
     this.#annotationSources.equipment.on("addfeature", () => {
@@ -219,10 +226,14 @@ export class ImageViewerController {
       this.#map!.removeInteraction(i);
     });
 
-    this.#annotationSources.equipment.clear();
-    this.#annotationSources.activity.clear();
-    this.#measurementSource.clear();
-    this.#searchMarkerSource.clear();
+    const sources = [
+      ...Object.values(this.#annotationSources),
+      this.#areaSource,
+      this.#measurementSource,
+      this.#searchMarkerSource,
+    ];
+
+    for (const source of sources) source.clear(true);
 
     const layers = [
       this.#rasterLayer,
@@ -249,11 +260,13 @@ export class ImageViewerController {
     this.#equipmentLayer = null;
     this.#ghostLayer = null;
     this.#activityLayer = null;
+    this.#personnelLayer = null;
     this.#measurementLayer = null;
     this.#searchMarkerLayer = null;
     this.#equipmentFeatures = [];
     this.#selectedAnnotations = {
       equipment: [],
+      personnel: [],
       activity: [],
     };
     this.#imageId = null;
@@ -337,6 +350,13 @@ export class ImageViewerController {
         hoverId: "",
       },
     });
+    this.#personnelLayer = new WebGLVectorLayer({
+      source: this.#annotationSources.personnel,
+      style: equipmentStyle,
+      variables: {
+        hoverId: "",
+      },
+    });
 
     this.#activityLayer = new VectorLayer({
       source: this.#annotationSources.activity,
@@ -381,6 +401,7 @@ export class ImageViewerController {
         this.#equipmentLayer,
         this.#ghostLayer,
         this.#activityLayer,
+        this.#personnelLayer,
         this.#areaLayer,
         this.#measurementLayer,
         this.#searchMarkerLayer,
@@ -414,7 +435,8 @@ export class ImageViewerController {
     this.updateInteraction(interactionSet, interactionMode);
 
     if (options.annotations?.length) {
-      this.#loadAnnotations(options.annotations);
+      this.#loadAnnotations(options.annotations, "equipment");
+      this.#loadAnnotations(options.annotations, "personnel");
     }
 
     if (options.areas?.length) {
@@ -436,6 +458,8 @@ export class ImageViewerController {
 
   #setupAnnotationInteractions() {
     if (this.#map === null || this.#equipmentLayer === null) return;
+
+    const layers = [this.#equipmentLayer, this.#personnelLayer];
 
     const handleFeatureEdit = async (features: Feature[]): Promise<void> => {
       const originalGeometries = features.map((feature) => ({
@@ -460,6 +484,7 @@ export class ImageViewerController {
       const hoverId = feature ? feature.get("id") : "";
 
       this.#equipmentLayer?.updateStyleVariables({ hoverId });
+      this.#personnelLayer?.updateStyleVariables({ hoverId });
     };
 
     const modifiable = new Collection<Feature>();
@@ -467,7 +492,7 @@ export class ImageViewerController {
     const hover = new Select({
       condition: pointerMove,
       hitTolerance: 20,
-      layers: [this.#equipmentLayer],
+      layers,
       filter: (feature) => !select.getFeatures().getArray().includes(feature),
       style: (feature) => styleAnnotationLabel(feature, true),
     });
@@ -478,7 +503,7 @@ export class ImageViewerController {
     const select: Select = new Select({
       addCondition: platformModifierKeyOnly,
       hitTolerance: 20,
-      layers: [this.#equipmentLayer],
+      layers: layers,
       style: (feature) => {
         const features = select.getFeatures();
         const index = features.getArray().indexOf(feature);
@@ -519,7 +544,11 @@ export class ImageViewerController {
     dragBox.on("boxend", () => {
       const extent = dragBox.getGeometry().getExtent();
 
-      [this.#annotationSources.equipment, this.#annotationSources.activity]
+      [
+        this.#annotationSources.activity,
+        this.#annotationSources.equipment,
+        this.#annotationSources.personnel,
+      ]
         .flatMap((source) => source.getFeaturesInExtent(extent))
         //.filter((f) => !select.getFeatures().getArray().includes(f));
         .forEach((f) => select.getFeatures().push(f));
@@ -853,8 +882,9 @@ export class ImageViewerController {
     if (!this.#interactions.annotation?.select) return;
 
     const selectedAnnotations: Record<AnnotateForm, Feature[]> = {
-      equipment: [],
       activity: [],
+      personnel: [],
+      equipment: [],
     };
 
     for (const feature of this.#interactions.annotation.select
@@ -870,7 +900,7 @@ export class ImageViewerController {
     this.#selectedAnnotations = selectedAnnotations;
   }
 
-  #loadAnnotations(records: AnnotationInfo[]) {
+  #loadAnnotations(records: AnnotationInfo[], type: AnnotateForm) {
     if (this.#map === null || this.projection === null) return;
 
     const format = new GeoJSON({
@@ -878,20 +908,19 @@ export class ImageViewerController {
       featureProjection: this.projection,
     });
 
-    const features: Feature[] = [];
-    for (const record of records) {
+    const features = records.map((record) => {
       const geometry = format.readGeometry(record.geometry);
       const feature = new Feature({ geometry });
 
       feature.setProperties({
         id: record.id,
-        type: "equipment",
+        type,
         label: record.label,
         data: record.data,
         metaData: record.metaData,
       });
-      features.push(feature);
-    }
+      return feature;
+    });
     this.#annotationSources.equipment.addFeatures(features);
   }
 
@@ -922,6 +951,8 @@ export class ImageViewerController {
 
     const payload = features
       .map((feature) => {
+        const type = feature.get("type") as AnnotateForm;
+        const serialize = serializers[type as keyof typeof serializers];
         const geometry = feature.getGeometry();
         if (geometry === undefined) return null;
 
@@ -937,7 +968,7 @@ export class ImageViewerController {
             id: feature.get("id"),
             image: this.#imageId,
             geometry: format.writeGeometry(geometry4326),
-            ...serializeEquipmentData(data),
+            ...serialize(data),
             createdByUserId: metaData.createdByUserId,
             modifiedByUserId: mode === "edit" ? "" : metaData.modifiedByUserId,
             createdAtTimestamp: metaData.createdAtTimestamp,
@@ -1320,7 +1351,13 @@ export class ImageViewerController {
   }
 
   public toggleLayerVisibility(
-    layer: "equipment" | "activity" | "area" | "measurement" | "labels",
+    layer:
+      | "equipment"
+      | "personnel"
+      | "activity"
+      | "area"
+      | "measurement"
+      | "labels",
     visible?: boolean,
   ) {
     if (this.#map === null) return;
@@ -1333,14 +1370,17 @@ export class ImageViewerController {
     };
 
     switch (layer) {
-      case "equipment":
-        apply(this.#equipmentLayer);
-        break;
       case "activity":
         apply(this.#activityLayer);
         break;
       case "area":
         apply(this.#areaLayer);
+        break;
+      case "equipment":
+        apply(this.#equipmentLayer);
+        break;
+      case "personnel":
+        apply(this.#personnelLayer);
         break;
       case "measurement":
         apply(this.#areaLayer);

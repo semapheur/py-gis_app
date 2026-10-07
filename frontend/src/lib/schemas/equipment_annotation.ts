@@ -1,4 +1,6 @@
+import type { ValidEquipmentData } from "$lib/contexts/annotate.svelte";
 import type { AttributeValue, UnitOption } from "$lib/utils/types";
+import { isSet } from "$lib/utils/validation";
 
 export const speedUnits = [
   { label: "km/h", value: "kmph", factor: 1 / 3.6 },
@@ -193,4 +195,8 @@ export function serializeEquipmentData(
   }
 
   return out;
+}
+
+export function isEquipmentValid(data?: EquipmentData) {
+  return !!data && equipmentRequiredFields.every((f) => isSet(data[f]));
 }

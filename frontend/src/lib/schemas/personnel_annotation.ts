@@ -1,4 +1,5 @@
 import type { AttributeValue } from "$lib/utils/types";
+import { isSet } from "$lib/utils/validation";
 
 export interface PersonnelPointData {
   confidence: AttributeValue | null;
@@ -32,4 +33,38 @@ export function createDefaultPersonnelData(
   }
 
   return;
+}
+
+export function isPersonnelValid(
+  data: PersonnelData | undefined,
+  geometry: GeoJSON.GeoJsonGeometryTypes,
+) {
+  if (!data) return false;
+
+  if (geometry === "Point") {
+    const p = data as PersonnelPointData;
+    return isSet(p.affiliation) && isSet(p.confidence);
+  }
+
+  if (geometry === "Polygon") {
+    const p = data as PersonnelPolygonData;
+    return (
+      isSet(p.affiliation) &&
+      Number.isInteger(p.min_count) &&
+      Number.isInteger(p.max_count) &&
+      p.min_count >= 1 &&
+      p.min_count <= p.max_count
+    );
+  }
+
+  return false;
+}
+
+export function serializePersonnelData(data: PersonnelData) {
+  return {
+    affiliation: data.affiliation?.id ?? null,
+    confidence: "confidence" in data ? (data.confidence?.id ?? null) : null,
+    minCount: "min_count" in data ? data.min_count : null,
+    maxCount: "max_count" in data ? data.max_count : null,
+  };
 }

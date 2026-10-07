@@ -11,11 +11,28 @@
     value: PersonnelData;
     onchange: (value: PersonnelData) => void;
     geometry: "Point" | "Polygon";
+    bulk?: boolean;
   }
 
-  let { value, geometry }: Props = $props();
+  let { value, onchange, geometry, bulk = false }: Props = $props();
 
   const options = getEquipmentOptions();
+
+  function update<K extends keyof PersonnelData>(
+    key: K,
+    newValue: PersonnelData[K] | undefined,
+  ) {
+    const next: Record<string, unknown> = { ...value };
+
+    if (newValue === undefined) {
+      if (bulk) delete next[key];
+      else next[key] = null;
+    } else {
+      next[key] = newValue;
+    }
+
+    onchange(next as PersonnelData);
+  }
 </script>
 
 <form class="personnel-annotation">
@@ -24,6 +41,7 @@
       value={(value as PersonnelPointData).confidence?.id ?? null}
       options={options.confidence}
       placeholder="Confidence"
+      onchange={(e) => update("confidence", e.currentTarget.value)}
     />
   {:else if geometry === "Polygon"}
     <Input placeholder="Min count" type="number" min="0" step="1" />
@@ -33,6 +51,7 @@
     value={(value as PersonnelPointData).affiliation?.id ?? null}
     options={options.affiliation}
     placeholder="Affiliation"
+    onchange={(e) => update("affiliation", e.currentTarget.value)}
   />
 </form>
 
