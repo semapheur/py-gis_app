@@ -1,20 +1,20 @@
 <script lang="ts">
-  import EquipmentForm from "$lib/components/EquipmentForm.svelte";
-  import ActivityForm from "$lib/components/ActivityForm.svelte";
-  import PersonnelForm from "$lib/components/PersonnelForm.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import Tabs from "$lib/components/Tabs.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
+  import EquipmentForm from "#lib/components/EquipmentForm.svelte";
+  import ActivityForm from "#lib/components/ActivityForm.svelte";
+  import PersonnelForm from "#lib/components/PersonnelForm.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import Tabs from "#lib/components/Tabs.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
 
   import {
     getAnnotateState,
     annotateTabs,
     type ActivityData,
-  } from "$lib/contexts/annotate.svelte";
-  import { type EquipmentData } from "$lib/schemas/equipment_annotation";
-  import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  } from "#lib/contexts/annotate.svelte.js";
+  import { type EquipmentData } from "#lib/schemas/equipment_annotation.js";
+  import { getImageViewerState } from "#lib/contexts/ol_image_viewer/state.svelte.js";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
 
   interface Props {
     open: boolean;
@@ -23,8 +23,6 @@
   const annotateState = getAnnotateState();
   const viewerController = getImageViewerController();
   const viewerState = getImageViewerState();
-
-  $inspect(annotateState.isValid);
 
   let { open = $bindable() }: Props = $props();
   let isAnnotating = $state<boolean>(false);

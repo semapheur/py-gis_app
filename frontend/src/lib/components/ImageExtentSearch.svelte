@@ -1,9 +1,9 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import ImageGrid from "$lib/components/ImageGrid.svelte";
-  import ImageSearchExtentForm from "$lib/components/ImageExtentSearchForm.svelte";
-  import { type ImageMetadata } from "$lib/utils/types";
-  import type { DateRange } from "$lib/utils/date";
+  import ImageGrid from "#lib/components/ImageGrid.svelte";
+  import ImageSearchExtentForm from "#lib/components/ImageExtentSearchForm.svelte";
+  import { type ImageMetadata } from "#lib/utils/types.js";
+  import type { DateRange } from "#lib/utils/date.js";
 
   interface Props {
     initialImages: ImageMetadata[];

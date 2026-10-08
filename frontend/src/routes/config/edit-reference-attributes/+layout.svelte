@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import LinkText from "$lib/components/LinkText.svelte";
+  import LinkText from "#lib/components/LinkText.svelte";
 
   interface Props {
     children: Snippet;

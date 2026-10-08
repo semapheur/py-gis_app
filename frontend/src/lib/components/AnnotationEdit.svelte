@@ -1,22 +1,22 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import ActivityForm from "$lib/components/ActivityForm.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import EquipmentForm from "$lib/components/EquipmentForm.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import KebabMenu from "$lib/components/KebabMenu.svelte";
-  import Modal from "$lib/components/Modal.svelte";
-  import SplitPanes from "$lib/components/SplitPanes.svelte";
-  import Table from "$lib/components/Table.svelte";
-  import Tabs from "$lib/components/Tabs.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import ActivityForm from "#lib/components/ActivityForm.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import EquipmentForm from "#lib/components/EquipmentForm.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import KebabMenu from "#lib/components/KebabMenu.svelte";
+  import Modal from "#lib/components/Modal.svelte";
+  import SplitPanes from "#lib/components/SplitPanes.svelte";
+  import Table from "#lib/components/Table.svelte";
+  import Tabs from "#lib/components/Tabs.svelte";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
   import {
     type AnnotateForm,
     type ValidEquipmentData,
     annotateTabs,
-  } from "$lib/contexts/annotate.svelte";
-  import { exportFile } from "$lib/utils/io";
-  import type { ColumnDefinition } from "$lib/utils/types";
+  } from "#lib/contexts/annotate.svelte.js";
+  import { exportFile } from "#lib/utils/io.js";
+  import type { ColumnDefinition } from "#lib/utils/types.js";
   import { Point } from "ol/geom";
   import {
     equipmentColumnFields,
@@ -24,7 +24,7 @@
     equipmentSchema,
     type EquipmentData,
     type EquipmentFieldKey,
-  } from "$lib/schemas/equipment_annotation";
+  } from "#lib/schemas/equipment_annotation.js";
 
   type BulkEquipmentPatch = Partial<EquipmentData>;
 

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import Input from "$lib/components/Input.svelte";
+  import Input from "#lib/components/Input.svelte";
 
   interface Props {
     min: number;

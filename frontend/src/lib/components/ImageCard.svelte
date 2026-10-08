@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Badge from "$lib/components/Badge.svelte";
-  import { type ImageMetadata } from "$lib/utils/types";
+  import Badge from "#lib/components/Badge.svelte";
+  import { type ImageMetadata } from "#lib/utils/types.js";
 
   interface Props {
     image: ImageMetadata;

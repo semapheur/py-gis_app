@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Switch from "$lib/components/Switch.svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import Switch from "#lib/components/Switch.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
 
   interface Props {
     isOpen: boolean;

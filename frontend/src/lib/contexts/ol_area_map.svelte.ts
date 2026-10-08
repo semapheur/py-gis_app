@@ -10,11 +10,11 @@ import { Polygon } from "ol/geom";
 import { Fill, Stroke, Style } from "ol/style";
 import GeoJSON from "ol/format/GeoJSON";
 
-import type { AreaEditorState } from "$lib/contexts/area_editor.svelte";
-import { vertexStyle } from "$lib/utils/ol_styles";
-import type { BBox } from "$lib/utils/geo/bbox";
+import type { AreaEditorState } from "#lib/contexts/area_editor.svelte.js";
+import { vertexStyle } from "#lib/utils/ol_styles.js";
+import type { BBox } from "#lib/utils/geo/bbox.js";
 import { transformExtent } from "ol/proj";
-import { buildOlLayers, type LayerInfo } from "$lib/utils/map/layers";
+import { buildOlLayers, type LayerInfo } from "#lib/utils/map/layers.js";
 
 export class AreaMapState {
   #map: Map | null = null;

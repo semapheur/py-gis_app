@@ -1,8 +1,8 @@
 <script lang="ts">
   import MdiTextBoxEditOutline from "@iconify-svelte/mdi/text-box-edit-outline";
-  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
-  import TextEditor from "$lib/components/TextEditor.svelte";
-  import Window from "$lib/components/Window.svelte";
+  import ButtonIcon from "#lib/components/ButtonIcon.svelte";
+  import TextEditor from "#lib/components/TextEditor.svelte";
+  import Window from "#lib/components/Window.svelte";
   import type { HTMLTextareaAttributes } from "svelte/elements";
 
   type Resize =

@@ -1,12 +1,12 @@
 import { getContext, setContext } from "svelte";
 import * as maplibre from "maplibre-gl";
-import { bboxToWkt, type BBox } from "$lib/utils/geo/bbox";
-import { type ImagePreviewInfo } from "$lib/utils/types";
+import { bboxToWkt, type BBox } from "#lib/utils/geo/bbox.js";
+import { type ImagePreviewInfo } from "#lib/utils/types.js";
 import {
   buildMapLibreStyle,
   type MapConfig,
   type LayerInfo,
-} from "$lib/utils/map/layers";
+} from "#lib/utils/map/layers.js";
 
 type Coordinates = [
   [number, number],

@@ -5,8 +5,8 @@ import type {
   BandStretchResult,
   BandStretchError,
   Extent,
-} from "$lib/workers/bandstretch.worker";
-import type { BandStatistics } from "$lib/utils/types";
+} from "#lib/workers/bandstretch.worker.js";
+import type { BandStatistics } from "#lib/utils/types.js";
 
 function isComplexBand(band: BandStatistics): boolean {
   return band.data_type.toLowerCase().startsWith("c");
@@ -188,7 +188,7 @@ export class BandStretchManager {
     if (this.#worker) return;
 
     this.#worker = new Worker(
-      new URL("$lib/workers/bandstretch.worker.ts", import.meta.url),
+      new URL("../../workers/bandstretch.worker.ts", import.meta.url),
       { type: "module" },
     );
 

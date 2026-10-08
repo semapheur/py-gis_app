@@ -2,7 +2,7 @@
 import { error } from "@sveltejs/kit";
 import { decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
-import type { SecurityData } from "$lib/utils/types";
+import type { SecurityData } from "#lib/utils/types.js";
 
 export const load: PageLoad = async ({ params, fetch }) => {
   const table = params.table;

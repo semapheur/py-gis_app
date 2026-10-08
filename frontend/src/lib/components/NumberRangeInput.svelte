@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { type AngleRange } from "$lib/utils/types";
+  import { type AngleRange } from "#lib/utils/types.js";
   import { tick } from "svelte";
 
   interface Props {

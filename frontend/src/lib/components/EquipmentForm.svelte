@@ -1,19 +1,19 @@
 <script lang="ts">
   import { encode, decode } from "@msgpack/msgpack";
-  import Autocomplete from "$lib/components/Autocomplete.svelte";
-  import MultiAutocomplete from "$lib/components/MultiAutocomplete.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import MultiSelect from "$lib/components/MultiSelect.svelte";
-  import UnitInput from "$lib/components/UnitInput.svelte";
-  import { getEquipmentOptions } from "$lib/contexts/common.svelte";
-  import { type AttributeValue, type SelectOption } from "$lib/utils/types";
-  import { toast } from "$lib/stores/toast.svelte";
+  import Autocomplete from "#lib/components/Autocomplete.svelte";
+  import MultiAutocomplete from "#lib/components/MultiAutocomplete.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import MultiSelect from "#lib/components/MultiSelect.svelte";
+  import UnitInput from "#lib/components/UnitInput.svelte";
+  import { getEquipmentOptions } from "#lib/contexts/common.svelte.js";
+  import { type AttributeValue, type SelectOption } from "#lib/utils/types.js";
+  import { toast } from "#lib/stores/toast.svelte.js";
   import {
     equipmentSchema,
     type EquipmentData,
     type EquipmentFieldDef,
     type EquipmentFieldKey,
-  } from "$lib/schemas/equipment_annotation";
+  } from "#lib/schemas/equipment_annotation.js";
 
   type EquipmentPatch = Partial<EquipmentData>;
 

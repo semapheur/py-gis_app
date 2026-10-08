@@ -4,9 +4,9 @@
     getImageViewerController,
     type ContextMenuFeatureType,
     type ContextMenuItem,
-  } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { portal } from "$lib/actions/portal";
-  import { toast } from "$lib/stores/toast.svelte";
+  } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import { portal } from "#lib/actions/portal.js";
+  import { toast } from "#lib/stores/toast.svelte.js";
 
   interface Props {
     x: number;

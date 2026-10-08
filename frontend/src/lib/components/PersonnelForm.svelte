@@ -1,11 +1,13 @@
 <script lang="ts">
-  import Input from "$lib/components/Input.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import { getEquipmentOptions } from "$lib/contexts/common.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import { getEquipmentOptions } from "#lib/contexts/common.svelte.js";
   import type {
     PersonnelData,
+    PersonnelPatch,
     PersonnelPointData,
-  } from "$lib/schemas/personnel_annotation";
+  } from "#lib/schemas/personnel_annotation.js";
+  import type { AttributeValue } from "#lib/utils/types.js";
 
   interface Props {
     value: PersonnelData;
@@ -18,9 +20,9 @@
 
   const options = getEquipmentOptions();
 
-  function update<K extends keyof PersonnelData>(
+  function update<K extends keyof PersonnelPatch>(
     key: K,
-    newValue: PersonnelData[K] | undefined,
+    newValue: AttributeValue | number | null | undefined,
   ) {
     const next: Record<string, unknown> = { ...value };
 
@@ -33,6 +35,22 @@
 
     onchange(next as PersonnelData);
   }
+
+  function handleAttributeChange(
+    key: "confidence" | "affiliation",
+    id: string | null,
+  ) {
+    const option = options[key]?.find((o) => o.value === id) ?? null;
+    const attribute: AttributeValue | null = option
+      ? { id: option.value, label: option.label }
+      : null;
+    update(key, attribute ?? undefined);
+  }
+
+  function handleCountChange(key: "min_count" | "max_count", raw: string) {
+    const n = raw === "" ? undefined : Number(raw);
+    update(key, n);
+  }
 </script>
 
 <form class="personnel-annotation">
@@ -41,17 +59,31 @@
       value={(value as PersonnelPointData).confidence?.id ?? null}
       options={options.confidence}
       placeholder="Confidence"
-      onchange={(e) => update("confidence", e.currentTarget.value)}
+      onchange={(e) =>
+        handleAttributeChange("confidence", e.currentTarget.value)}
     />
   {:else if geometry === "Polygon"}
-    <Input placeholder="Min count" type="number" min="0" step="1" />
-    <Input placeholder="Max count" type="number" min="0" step="1" />
+    <Input
+      placeholder="Min count"
+      type="number"
+      min="0"
+      step="1"
+      oninput={(e) => handleCountChange("min_count", e.currentTarget.value)}
+    />
+    <Input
+      placeholder="Max count"
+      type="number"
+      min="0"
+      step="1"
+      oninput={(e) => handleCountChange("max_count", e.currentTarget.value)}
+    />
   {/if}
   <Select
     value={(value as PersonnelPointData).affiliation?.id ?? null}
     options={options.affiliation}
     placeholder="Affiliation"
-    onchange={(e) => update("affiliation", e.currentTarget.value)}
+    onchange={(e) =>
+      handleAttributeChange("affiliation", e.currentTarget.value)}
   />
 </form>
 

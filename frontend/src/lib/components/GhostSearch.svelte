@@ -1,11 +1,11 @@
 <script lang="ts">
   import { encode, decode } from "@msgpack/msgpack";
-  import type { GhostCollection } from "$lib/contexts/annotate.svelte";
-  import { getImageViewerOptions } from "$lib/contexts/common.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { toast } from "$lib/stores/toast.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import GhostBrowser from "$lib/components/GhostBrowser.svelte";
+  import type { GhostCollection } from "#lib/contexts/annotate.svelte.js";
+  import { getImageViewerOptions } from "#lib/contexts/common.svelte.js";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import Button from "#lib/components/Button.svelte";
+  import GhostBrowser from "#lib/components/GhostBrowser.svelte";
 
   const imageViewer = getImageViewerController();
   const imageInfo = getImageViewerOptions();

@@ -1,13 +1,13 @@
 <script lang="ts">
-  import { browser } from "$app/environment";
+  import { browser } from "$app/env";
   import { goto } from "$app/navigation";
   import { page } from "$app/state";
   import "maplibre-gl/dist/maplibre-gl.css";
-  import { type ImagePreviewInfo } from "$lib/utils/types";
-  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import Button from "$lib/components/Button.svelte";
+  import { type ImagePreviewInfo } from "#lib/utils/types.js";
+  import { getMapLibreState } from "#lib/contexts/ml_map.svelte.js";
+  import Button from "#lib/components/Button.svelte";
   import MdiLayersOutline from "@iconify-svelte/mdi/layers-outline";
-  import { parseBbox } from "$lib/utils/geo/bbox";
+  import { parseBbox } from "#lib/utils/geo/bbox.js";
 
   interface Props {
     imagePreview?: ImagePreviewInfo | null;
@@ -48,8 +48,7 @@
       params.set("bbox", bbox);
       goto(`?${params}`, {
         replaceState: true,
-        keepFocus: true,
-        noScroll: true,
+        reset: false,
       });
     });
 

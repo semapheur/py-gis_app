@@ -1,10 +1,10 @@
 from src.index.catalog import create_catalog_table
 from src.index.images import create_index_table
 from src.index.radiometric import create_radiometric_table
+from src.models.annotation_commit import create_annotation_tables
 from src.models.annotation_schema import create_schema_table
 from src.models.areas import create_areas_tables
 from src.models.attributes import create_attribute_tables
-from src.models.equipment_annotation import create_annotation_tables
 from src.models.equipment_list import create_equipment_table
 
 

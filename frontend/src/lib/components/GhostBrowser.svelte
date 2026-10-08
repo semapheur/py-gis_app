@@ -1,15 +1,15 @@
 <script lang="ts">
   import { untrack } from "svelte";
-  import Button from "$lib/components/Button.svelte";
-  import LinkButton from "$lib/components/LinkButton.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import LinkButton from "#lib/components/LinkButton.svelte";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
   import type {
     AnnotationBaseInfo,
     GhostCollection,
-  } from "$lib/contexts/annotate.svelte";
-  import { type ColumnDefinition } from "$lib/utils/types";
-  import { formatDatetime } from "$lib/utils/date";
-  import Table from "$lib/components/Table.svelte";
+  } from "#lib/contexts/annotate.svelte.js";
+  import { type ColumnDefinition } from "#lib/utils/types.js";
+  import { formatDatetime } from "#lib/utils/date.js";
+  import Table from "#lib/components/Table.svelte";
 
   interface Props {
     data: GhostCollection[];

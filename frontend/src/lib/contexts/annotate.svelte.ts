@@ -3,12 +3,12 @@ import {
   equipmentRequiredFields,
   isEquipmentValid,
   type EquipmentData,
-} from "$lib/schemas/equipment_annotation";
+} from "#lib/schemas/equipment_annotation.js";
 import {
   createDefaultPersonnelData,
   isPersonnelValid,
   type PersonnelData,
-} from "$lib/schemas/personnel_annotation";
+} from "#lib/schemas/personnel_annotation.js";
 import { getContext, setContext } from "svelte";
 
 export const annotateTabs = [

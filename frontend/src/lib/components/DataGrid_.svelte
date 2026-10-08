@@ -7,13 +7,13 @@
     Willow,
     type IColumnConfig,
   } from "@svar-ui/svelte-grid";
-  import Modal from "$lib/components/Modal.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import DropdownMenu from "$lib/components/DropdownMenu.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import TextArea from "$lib/components/TextArea.svelte";
-  import { toast } from "$lib/stores/toast.svelte";
-  import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
+  import Modal from "#lib/components/Modal.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import DropdownMenu from "#lib/components/DropdownMenu.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import TextArea from "#lib/components/TextArea.svelte";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import { exportFile, parseCsv, parseJson } from "#lib/utils/io.js";
 
   type FormMode = "add" | "edit";
 

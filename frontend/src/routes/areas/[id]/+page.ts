@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
 import { encode, decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
-import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
+import type { AreaInfo } from "#lib/contexts/area_editor.svelte.js";
 
 export const prerender = false;
 

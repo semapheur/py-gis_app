@@ -1,4 +1,4 @@
-import { browser } from "$app/environment";
+import { browser } from "$app/env";
 
 function getUserPreference() {
   if (window.localStorage.getItem("theme")) {

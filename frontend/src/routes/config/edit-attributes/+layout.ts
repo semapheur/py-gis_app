@@ -1,7 +1,7 @@
 import { error } from "@sveltejs/kit";
 import { decode } from "@msgpack/msgpack";
 import type { PageLoad } from "./$types";
-import { type AttributeTableInfo } from "$lib/utils/types";
+import { type AttributeTableInfo } from "#lib/utils/types.js";
 
 export const load: PageLoad = async ({ fetch }) => {
   const response = await fetch("/api/attribute-tables");

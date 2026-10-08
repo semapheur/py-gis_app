@@ -1,13 +1,13 @@
 <script lang="ts">
   import { untrack } from "svelte";
   import { encode, decode } from "@msgpack/msgpack";
-  import DaterangePicker from "$lib/components/DaterangePicker.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import { toast } from "$lib/stores/toast.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { type DateRange } from "$lib/utils/date";
-  import type { ImageMetadata } from "$lib/utils/types";
+  import DaterangePicker from "#lib/components/DaterangePicker.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import { type DateRange } from "#lib/utils/date.js";
+  import type { ImageMetadata } from "#lib/utils/types.js";
 
   interface Props {
     initialDateRange: DateRange;

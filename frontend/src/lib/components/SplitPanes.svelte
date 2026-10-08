@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { clamp } from "$lib/utils/math";
+  import { clamp } from "#lib/utils/math.js";
   import { untrack, type Snippet } from "svelte";
 
   interface Props {

@@ -1,5 +1,5 @@
 <script lang="ts">
-  import LinkText from "$lib/components/LinkText.svelte";
+  import LinkText from "#lib/components/LinkText.svelte";
 </script>
 
 <nav>

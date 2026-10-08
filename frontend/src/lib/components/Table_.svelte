@@ -1,8 +1,8 @@
 <script lang="ts">
   import FilterOutlineIcon from "@iconify-svelte/mdi/filter-outline";
-  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import { type ColumnDefinition } from "$lib/utils/types";
+  import ButtonIcon from "#lib/components/ButtonIcon.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import { type ColumnDefinition } from "#lib/utils/types.js";
 
   type RowSelect = "none" | "single" | "multi";
 

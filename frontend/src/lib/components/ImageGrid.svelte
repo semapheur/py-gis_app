@@ -1,6 +1,6 @@
 <script lang="ts">
-  import { type ImageMetadata } from "$lib/utils/types";
-  import ImageCard from "$lib/components/ImageCard.svelte";
+  import { type ImageMetadata } from "#lib/utils/types.js";
+  import ImageCard from "#lib/components/ImageCard.svelte";
 
   interface Props {
     images?: ImageMetadata[];

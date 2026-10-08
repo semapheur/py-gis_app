@@ -2,9 +2,9 @@ import { error } from "@sveltejs/kit";
 import { encode, decode } from "@msgpack/msgpack";
 import * as v from "valibot";
 import type { PageLoad } from "./$types";
-import type { ImageMetadata } from "$lib/utils/types";
-import { parseToUnix } from "$lib/utils/date";
-import { ORDERING_OPTIONS, ORDER_COLUMN_OPTIONS } from "$lib/utils/constants";
+import type { ImageMetadata } from "#lib/utils/types.js";
+import { parseToUnix } from "#lib/utils/date.js";
+import { ORDERING_OPTIONS, ORDER_COLUMN_OPTIONS } from "#lib/utils/constants.js";
 
 export const prerender = false;
 

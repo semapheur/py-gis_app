@@ -1,18 +1,18 @@
 <script lang="ts">
   import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
   import MdiSearch from "@iconify-svelte/mdi/search";
-  import Input from "$lib/components/Input.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import LinkButton from "$lib/components/LinkButton.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import LinkButton from "#lib/components/LinkButton.svelte";
   import {
     parseCoordinates,
     toLatLon,
     type CoordinateType,
-  } from "$lib/utils/geo/coord";
-  import { LatLon } from "$lib/utils/geo/latlon";
-  import { MGRS } from "$lib/utils/geo/mgrs";
-  import { UTM } from "$lib/utils/geo/utm";
-  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
+  } from "#lib/utils/geo/coord.js";
+  import { LatLon } from "#lib/utils/geo/latlon.js";
+  import { MGRS } from "#lib/utils/geo/mgrs.js";
+  import { UTM } from "#lib/utils/geo/utm.js";
+  import { getMapLibreState } from "#lib/contexts/ml_map.svelte.js";
 
   let coordinates = $state<string>("");
   let history = $state<Record<string, CoordinateType>>({});

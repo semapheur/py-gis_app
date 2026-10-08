@@ -1,7 +1,7 @@
 <script lang="ts">
   import MdiLayersOutline from "@iconify-svelte/mdi/layers-outline";
-  import { getAreaEditorState } from "$lib/contexts/area_editor.svelte";
-  import { getAreaMapState } from "$lib/contexts/ol_area_map.svelte";
+  import { getAreaEditorState } from "#lib/contexts/area_editor.svelte.js";
+  import { getAreaMapState } from "#lib/contexts/ol_area_map.svelte.js";
 
   const map = getAreaMapState();
   const editor = getAreaEditorState();

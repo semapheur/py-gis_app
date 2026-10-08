@@ -1,9 +1,9 @@
 <script lang="ts">
-  import RangeSlider from "$lib/components/RangeSlider.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { type Enhancement } from "$lib/contexts/ol_image_viewer/styling";
-  import Button from "$lib/components/Button.svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
+  import RangeSlider from "#lib/components/RangeSlider.svelte";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import { type Enhancement } from "#lib/contexts/ol_image_viewer/styling.js";
+  import Button from "#lib/components/Button.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
 
   interface SliderConfig {
     key: keyof Enhancement;

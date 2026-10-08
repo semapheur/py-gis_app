@@ -49,7 +49,7 @@ import {
   type InteractionMode,
   type InteractionSet,
   type MeasurementType,
-} from "$lib/contexts/ol_image_viewer/state.svelte";
+} from "#lib/contexts/ol_image_viewer/state.svelte.js";
 import {
   styleText,
   styleMeasurement,
@@ -63,12 +63,12 @@ import {
   formatLength,
   styleSearchMarker,
   styleAreaLabel,
-} from "$lib/contexts/ol_image_viewer/styling";
+} from "#lib/contexts/ol_image_viewer/styling.js";
 import {
   //BandStretchManager,
   buildStyleExpression,
-} from "$lib/contexts/ol_image_viewer/bandstretch_manager.svelte";
-import { vertexStyle } from "$lib/utils/ol_styles";
+} from "#lib/contexts/ol_image_viewer/bandstretch_manager.svelte.js";
+import { vertexStyle } from "#lib/utils/ol_styles.js";
 import type {
   AnnotateForm,
   AnnotateState,
@@ -76,16 +76,16 @@ import type {
   ActivityData,
   AnnotationBaseInfo,
   ValidEquipmentData,
-} from "$lib/contexts/annotate.svelte";
-import { MGRS } from "$lib/utils/geo/mgrs";
-import type { ImageId } from "$lib/utils/brand";
-import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
-import type { ImageViewerOptions } from "$lib/contexts/common.svelte";
+} from "#lib/contexts/annotate.svelte.js";
+import { MGRS } from "#lib/utils/geo/mgrs.js";
+import type { ImageId } from "#lib/utils/brand.js";
+import type { AreaInfo } from "#lib/contexts/area_editor.svelte.js";
+import type { ImageViewerOptions } from "#lib/contexts/common.svelte.js";
 import {
   serializeEquipmentData,
   type EquipmentData,
-} from "$lib/schemas/equipment_annotation";
-import { serializePersonnelData } from "$lib/schemas/personnel_annotation";
+} from "#lib/schemas/equipment_annotation.js";
+import { serializePersonnelData } from "#lib/schemas/personnel_annotation.js";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -240,8 +240,10 @@ export class ImageViewerController {
       this.#equipmentLayer,
       this.#ghostLayer,
       this.#activityLayer,
+      this.#personnelLayer,
       this.#measurementLayer,
       this.#searchMarkerLayer,
+      this.#areaLayer,
     ];
 
     layers.forEach((layer) => {
@@ -434,9 +436,12 @@ export class ImageViewerController {
 
     this.updateInteraction(interactionSet, interactionMode);
 
-    if (options.annotations?.length) {
-      this.#loadAnnotations(options.annotations, "equipment");
-      this.#loadAnnotations(options.annotations, "personnel");
+    if (options.annotations.equipment?.length) {
+      this.#loadAnnotations(options.annotations.equipment, "equipment");
+    }
+
+    if (options.annotations.personnel?.length) {
+      this.#loadAnnotations(options.annotations.personnel, "personnel");
     }
 
     if (options.areas?.length) {
@@ -457,7 +462,12 @@ export class ImageViewerController {
   }
 
   #setupAnnotationInteractions() {
-    if (this.#map === null || this.#equipmentLayer === null) return;
+    if (
+      this.#map === null ||
+      this.#equipmentLayer === null ||
+      this.#personnelLayer === null
+    )
+      return;
 
     const layers = [this.#equipmentLayer, this.#personnelLayer];
 
@@ -921,7 +931,7 @@ export class ImageViewerController {
       });
       return feature;
     });
-    this.#annotationSources.equipment.addFeatures(features);
+    this.#annotationSources[type].addFeatures(features);
   }
 
   #loadAreas(records: AreaInfo[]) {
@@ -1383,7 +1393,7 @@ export class ImageViewerController {
         apply(this.#personnelLayer);
         break;
       case "measurement":
-        apply(this.#areaLayer);
+        apply(this.#measurementLayer);
         break;
       case "labels":
         const layers = Object.values(this.#labelLayers).filter(

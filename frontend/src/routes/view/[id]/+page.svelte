@@ -2,18 +2,18 @@
   import { untrack } from "svelte";
   import type { PageData } from "./$types";
 
-  import { setAnnotateState } from "$lib/contexts/annotate.svelte";
-  import { setImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import { setImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
+  import { setAnnotateState } from "#lib/contexts/annotate.svelte.js";
+  import { setImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import { setImageViewerState } from "#lib/contexts/ol_image_viewer/state.svelte.js";
   import {
     setEquipmentOptions,
     setImageViewerOptions,
     type EquipmentOptions,
     type ImageViewerOptions,
-  } from "$lib/contexts/common.svelte";
+  } from "#lib/contexts/common.svelte.js";
 
-  import ImageViewer from "$lib/components/ImageViewer.svelte";
-  import { equipmentAttributeTables } from "$lib/schemas/equipment_annotation";
+  import ImageViewer from "#lib/components/ImageViewer.svelte";
+  import { equipmentAttributeTables } from "#lib/schemas/equipment_annotation.js";
 
   let { data } = $props<{ data: PageData }>();
 

@@ -1,6 +1,6 @@
 <script lang="ts" generics="T = string">
-  import Input from "$lib/components/Input.svelte";
-  import type { SelectOption } from "$lib/utils/types";
+  import Input from "#lib/components/Input.svelte";
+  import type { SelectOption } from "#lib/utils/types.js";
 
   interface Props {
     options: SelectOption<T>[];

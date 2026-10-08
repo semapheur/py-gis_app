@@ -1,10 +1,10 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { encode } from "@msgpack/msgpack";
-  import { toast } from "$lib/stores/toast.svelte";
-  import { formatDatetime } from "$lib/utils/date";
-  import Button from "$lib/components/Button.svelte";
-  import LinkButton from "$lib/components/LinkButton.svelte";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import { formatDatetime } from "#lib/utils/date.js";
+  import Button from "#lib/components/Button.svelte";
+  import LinkButton from "#lib/components/LinkButton.svelte";
 
   interface CatalogData {
     id: string;

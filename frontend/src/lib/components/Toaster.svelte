@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { toast } from "$lib/stores/toast.svelte";
+  import { toast } from "#lib/stores/toast.svelte.js";
   import MdiCancelCircleOutline from "@iconify-svelte/mdi/cancel-circle-outline";
   import ButtonIcon from "./ButtonIcon.svelte";
 </script>

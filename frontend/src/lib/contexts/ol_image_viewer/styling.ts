@@ -4,7 +4,7 @@ import { Point, LineString, Polygon } from "ol/geom";
 import { Projection, transform } from "ol/proj";
 import { getArea, getLength } from "ol/sphere";
 import { Circle, Fill, Stroke, Style, Text, RegularShape } from "ol/style";
-import { vertexStyle } from "$lib/utils/ol_styles";
+import { vertexStyle } from "#lib/utils/ol_styles.js";
 
 export interface Enhancement {
   brightness: number;

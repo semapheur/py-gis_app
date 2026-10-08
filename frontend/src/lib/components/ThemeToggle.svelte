@@ -1,7 +1,7 @@
 <script lang="ts">
   import MdiWeatherSunny from "@iconify-svelte/mdi/weather-sunny";
   import MdiWeatherNight from "@iconify-svelte/mdi/weather-night";
-  import { theme } from "$lib/utils/theme.svelte";
+  import { theme } from "#lib/utils/theme.svelte.js";
 </script>
 
 <button

@@ -1,8 +1,8 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import Input from "$lib/components/Input.svelte";
-  import { type SelectOption } from "$lib/utils/types";
-  import { createDebouncedSearch } from "$lib/contexts/debounce.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import { type SelectOption } from "#lib/utils/types.js";
+  import { createDebouncedSearch } from "#lib/contexts/debounce.svelte.js";
 
   interface Props {
     selected?: SelectOption[];

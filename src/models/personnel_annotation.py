@@ -1,5 +1,9 @@
-from bootstrap import get_settings
-from sqlite.connect import SqliteDatabase
+import json
+from sqlite3 import Row
+
+from src.bootstrap import get_settings
+from src.sqlite.connect import SqliteDatabase
+from src.sqlite.query_builder import SelectQuery, UnionQuery
 from src.sqlite.table import (
   Field,
   GeometryField,
@@ -39,7 +43,97 @@ class PersonnelPolygonAnnotation(Table):
   modifiedAtTimestamp = datetime_field(True)
 
 
-def create_annotation_tables():
+PERSONNEL_MODELS: dict[str, type[Table]] = {
+  "POINT": PersonnelPointAnnotation,
+  "POLYGON": PersonnelPolygonAnnotation,
+}
+PERSONNEL_UPDATE_FIELDS = {
+  "POINT": ("geometry", "confidence", "affiliation"),
+  "POLYGON": ("geometry", "min_count", "max_count", "affiliation"),
+}
+
+
+def create_personnel_annotation_tables():
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     _ = db.create_table(PersonnelPointAnnotation)
     _ = db.create_table(PersonnelPolygonAnnotation)
+
+
+def get_personnel_annotations_by_image(image_id: bytes):
+  def map_row(row: Row) -> dict:
+    r = dict(row)
+    return {
+      "id": r["id"],
+      "geometry": json.loads(r["geometry"]),
+      "label": r["label"],
+      "data": {
+        "affiliation": {"id": r["affiliation_id"], "label": r["affiliation_label"]},
+        "confidence": (
+          {"id": r["confidence_id"], "label": r["confidence_label"]}
+          if r["confidence_id"]
+          else None
+        ),
+        "minCount": r["min_count"],
+        "maxCount": r["max_count"],
+      },
+      "metaData": {
+        k: r[k]
+        for k in (
+          "createdByUserId",
+          "modifiedByUserId",
+          "createdAtTimestamp",
+          "modifiedAtTimestamp",
+        )
+      },
+    }
+
+  def build_subquery(geometry: str):
+    is_point = geometry == "POINT"
+    fields = [
+      "uuid_blob_to_str(pa.id) AS id",
+      "AsGeoJSON(pa.geometry) AS geometry",
+      (
+        "a.equipment_affiliation.name || '\n' || a.equipment_confidence.name AS label"
+        if is_point
+        else "a.equipment_affiliation.name || '\n' || CAST(pa.min_count AS INT)"
+        " || '-' || CAST(pa.max_count AS INT) AS label"
+      ),
+      "uuid_blob_to_str(pa.affiliation) AS affiliation_id",
+      "a.equipment_affiliation.name AS affiliation_label",
+      "uuid_blob_to_str(pa.confidence) AS confidence_id"
+      if is_point
+      else "NULL AS confidence_id",
+      "a.equipment_confidence.name AS confidence_label"
+      if is_point
+      else "NULL AS confidence_label",
+      "NULL AS min_count" if is_point else "pa.min_count AS min_count",
+      "NULL AS max_count" if is_point else "pa.max_count AS max_count",
+      "pa.createdByUserId AS createdByUserId",
+      "pa.modifiedByUserId AS modifiedByUserId",
+      "pa.createdAtTimestamp AS createdAtTimestamp",
+      "pa.modifiedAtTimestamp AS modifiedAtTimestamp",
+    ]
+    q = (
+      SelectQuery()
+      .select(*fields)
+      .from_(f"personnel_{geometry.lower()} pa")
+      .inner_join(
+        "a.equipment_affiliation", "a.equipment_affiliation.id = pa.affiliation"
+      )
+    )
+    if is_point:
+      q = q.inner_join(
+        "a.equipment_confidence", "a.equipment_confidence.id = pa.confidence"
+      )
+    return q.where("pa.image = ?", image_id)
+
+  sql, params = UnionQuery(*[build_subquery(g) for g in ("POINT", "POLYGON")]).build()
+
+  with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
+    db.conn.row_factory = Row
+    cur = db.conn.cursor()
+    cur.execute(f"ATTACH DATABASE '{app_settings.ATTRIBUTE_DB}' AS a")
+    try:
+      return [map_row(r) for r in cur.execute(sql, params)]
+    finally:
+      cur.execute("DETACH DATABASE a")

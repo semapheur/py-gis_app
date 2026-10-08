@@ -75,7 +75,7 @@ def equipment_annotation_models(geometry_type: EquipmentGeometry) -> AnnotationM
   return AnnotationModels(EquipmentAnnotation, junctions)
 
 
-def create_annotation_tables():
+def create_equipment_annotation_tables():
   geometries = ("POINT", "POLYGON")
   with SqliteDatabase(app_settings.ANNOTATION_DB, spatial=True) as db:
     for g in geometries:
@@ -200,7 +200,7 @@ def build_junction_array_sql(
   ).build()[0]
 
 
-def get_annotations_by_image(image_id: bytes):
+def get_equipment_annotations_by_image(image_id: bytes):
 
   def map_row(row: Row) -> dict:
     r = dict(row)
@@ -251,6 +251,7 @@ def get_annotations_by_image(image_id: bytes):
 
     select_fields += [
       "ea.heading_deg AS heading",
+      "ea.elevation_deg AS elevation",
       "ea.speed_mps AS speed",
       "ea.createdByUserId AS createdByUserId",
       "ea.modifiedByUserId AS modifiedByUserId",
@@ -375,7 +376,11 @@ def get_annotation_ghosts_by_geometry(
       array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
       select_fields.append(f"({array_sql}) AS {field}")
 
-    select_fields += ["ea.heading_deg AS heading", "ea.speed_mps AS speed"]
+    select_fields += [
+      "ea.heading_deg AS heading",
+      "ea.elevation_deg AS elevation",
+      "ea.speed_mps AS speed",
+    ]
 
     query = (
       SelectQuery()
@@ -477,6 +482,7 @@ def convert_annotation(payload: AnnotationConvertBatch):
       visibility,
       configuration,
       heading_deg,
+      elevation_deg,
       speed_mps,
       createdByUserId,
       modifiedByUserId,
@@ -494,6 +500,7 @@ def convert_annotation(payload: AnnotationConvertBatch):
       visibility,
       configuration,
       heading_deg,
+      elevation_deg,
       speed_mps,
       createdByUserId,
       :modifiedByUserId,

@@ -1,5 +1,5 @@
-import { UTM } from "$lib/utils/geo/utm";
-import { type LatLon } from "$lib/utils/geo/latlon";
+import { UTM } from "#lib/utils/geo/utm.js";
+import { type LatLon } from "#lib/utils/geo/latlon.js";
 import { polygonToWkt } from "./wkt";
 
 const BAND_Y_BAND_TRIALS: Record<string, number[]> = {

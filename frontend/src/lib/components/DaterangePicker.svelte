@@ -1,6 +1,6 @@
 <script lang="ts">
-  import Input from "$lib/components/Input.svelte";
-  import { formatDate, type DateRange } from "$lib/utils/date";
+  import Input from "#lib/components/Input.svelte";
+  import { formatDate, type DateRange } from "#lib/utils/date.js";
   import MdiCalendarMonthOutline from "@iconify-svelte/mdi/calendar-month-outline";
   import Select from "./Select.svelte";
 

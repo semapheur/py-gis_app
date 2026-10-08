@@ -1,12 +1,12 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import SplitPanes from "$lib/components/SplitPanes.svelte";
-  import Map from "$lib/components/Map.svelte";
-  import ImageSearchForm from "$lib/components/ImageSearchForm.svelte";
-  import ImageGrid from "$lib/components/ImageGrid.svelte";
-  import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import type { ImageMetadata, ImagePreviewInfo } from "$lib/utils/types";
-  import { WktParser } from "$lib/utils/geo/wkt";
+  import SplitPanes from "#lib/components/SplitPanes.svelte";
+  import Map from "#lib/components/Map.svelte";
+  import ImageSearchForm from "#lib/components/ImageSearchForm.svelte";
+  import ImageGrid from "#lib/components/ImageGrid.svelte";
+  import { setMapLibreState } from "#lib/contexts/ml_map.svelte.js";
+  import type { ImageMetadata, ImagePreviewInfo } from "#lib/utils/types.js";
+  import { WktParser } from "#lib/utils/geo/wkt.js";
 
   let { data }: { data: PageData } = $props();
 

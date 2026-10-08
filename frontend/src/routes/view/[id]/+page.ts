@@ -5,13 +5,13 @@ import type {
   ImageInfo,
   RadiometricParams,
   SelectOption,
-} from "$lib/utils/types";
-import type { AnnotationInfo } from "$lib/contexts/annotate.svelte";
-import type { AreaInfo } from "$lib/contexts/area_editor.svelte";
+} from "#lib/utils/types.js";
+import type { AnnotationInfo } from "#lib/contexts/annotate.svelte.js";
+import type { AreaInfo } from "#lib/contexts/area_editor.svelte.js";
 import {
   equipmentAttributeTables,
   type EquipmentAttributeName,
-} from "$lib/schemas/equipment_annotation";
+} from "#lib/schemas/equipment_annotation.js";
 
 export const prerender = false;
 

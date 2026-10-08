@@ -1,7 +1,7 @@
 <script lang="ts">
-  import Tabs from "$lib/components/Tabs.svelte";
-  import EquipmentSummary from "$lib/components/EquipmentSummary.svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
+  import Tabs from "#lib/components/Tabs.svelte";
+  import EquipmentSummary from "#lib/components/EquipmentSummary.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
 
   const summaryTabs = [
     { name: "Equipment", value: "equipment" },

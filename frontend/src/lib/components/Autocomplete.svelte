@@ -1,7 +1,7 @@
 <script lang="ts">
   import { onMount, onDestroy } from "svelte";
-  import Input from "$lib/components/Input.svelte";
-  import { type SelectOption } from "$lib/utils/types";
+  import Input from "#lib/components/Input.svelte";
+  import { type SelectOption } from "#lib/utils/types.js";
 
   interface Props {
     value?: SelectOption | null;

@@ -2,8 +2,8 @@
   import MdiMapOutline from "@iconify-svelte/mdi/map-outline";
   import MdiImageSearchOutline from "@iconify-svelte/mdi/image-search-outline";
   import MdiSettingsOutline from "@iconify-svelte/mdi/settings-outline";
-  import ThemeToggle from "$lib/components/ThemeToggle.svelte";
-  import LinkIcon from "$lib/components/LinkIcon.svelte";
+  import ThemeToggle from "#lib/components/ThemeToggle.svelte";
+  import LinkIcon from "#lib/components/LinkIcon.svelte";
 </script>
 
 <nav class="menu">

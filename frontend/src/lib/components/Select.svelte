@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { HTMLSelectAttributes } from "svelte/elements";
-  import type { SelectOption } from "$lib/utils/types";
+  import type { SelectOption } from "#lib/utils/types.js";
 
   interface SelectOptionDisabled<T> extends SelectOption<T> {
     disabled?: boolean;

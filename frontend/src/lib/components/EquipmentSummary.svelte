@@ -1,10 +1,10 @@
 <script lang="ts">
   import GeoJSON from "ol/format/GeoJSON";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
-  import KebabMenu from "$lib/components/KebabMenu.svelte";
-  import CollapsibleList from "$lib/components/CollapsibleList.svelte";
-  import type { EquipmentData } from "$lib/contexts/annotate.svelte";
-  import { exportFile } from "$lib/utils/io";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
+  import KebabMenu from "#lib/components/KebabMenu.svelte";
+  import CollapsibleList from "#lib/components/CollapsibleList.svelte";
+  import type { EquipmentData } from "#lib/contexts/annotate.svelte.js";
+  import { exportFile } from "#lib/utils/io.js";
 
   const viewer = getImageViewerController();
 

@@ -1,6 +1,6 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
-  import { useMenu } from "$lib/hooks/useMenu.svelte";
+  import { useMenu } from "#lib/hooks/useMenu.svelte.js";
 
   interface Props {
     children: Snippet;

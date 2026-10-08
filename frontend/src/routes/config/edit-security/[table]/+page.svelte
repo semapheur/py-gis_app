@@ -1,9 +1,9 @@
 <script lang="ts">
   import type { PageData } from "./$types";
   import { page } from "$app/state";
-  import { browser } from "$app/environment";
-  import DataGrid from "$lib/components/DataGrid.svelte";
-  import type { SecurityData } from "$lib/utils/types";
+  import { browser } from '$app/env';
+  import DataGrid from "#lib/components/DataGrid.svelte";
+  import type { SecurityData } from "#lib/utils/types.js";
 
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
@@ -41,10 +41,10 @@
 
 {#if browser}
   <DataGrid
-    {columns}
+    columns={columns}
     data={data.data}
-    {insertApi}
-    {updateApi}
-    {deleteApi}
+    insertApi={insertApi}
+    updateApi={updateApi}
+    deleteApi={deleteApi}
   />
 {/if}

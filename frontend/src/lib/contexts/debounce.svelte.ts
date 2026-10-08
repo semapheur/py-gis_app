@@ -1,4 +1,4 @@
-import type { SelectOption } from "$lib/utils/types";
+import type { SelectOption } from "#lib/utils/types.js";
 
 export function createDebouncedSearch<T extends SelectOption>(
   fetchOptions: (query: string) => T[] | Promise<T[]>,

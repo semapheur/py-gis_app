@@ -2,19 +2,19 @@
   import { page } from "$app/state";
   import { goto } from "$app/navigation";
   import * as v from "valibot";
-  import Input from "$lib/components/Input.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import DaterangePicker from "$lib/components/DaterangePicker.svelte";
-  import AzimuthRangePicker from "$lib/components/AzimuthRangePicker.svelte";
-  import { formatDate, parseIsoDate, type DateRange } from "$lib/utils/date";
-  import { type AngleRange } from "$lib/utils/types";
+  import Input from "#lib/components/Input.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import DaterangePicker from "#lib/components/DaterangePicker.svelte";
+  import AzimuthRangePicker from "#lib/components/AzimuthRangePicker.svelte";
+  import { formatDate, parseIsoDate, type DateRange } from "#lib/utils/date.js";
+  import { type AngleRange } from "#lib/utils/types.js";
   import {
     ORDERING_OPTIONS,
     ORDER_COLUMN_OPTIONS,
     orderingSchema,
     imageOrderColumnSchema,
-  } from "$lib/utils/constants";
+  } from "#lib/utils/constants.js";
 
   const params = page.url.searchParams;
   let ordering = $state<(typeof ORDERING_OPTIONS)[number]["value"]>(

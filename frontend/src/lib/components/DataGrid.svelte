@@ -3,16 +3,16 @@
   generics="T extends Record<string, unknown> = Record<string, unknown>"
 >
   import { Grid, HeaderMenu, Tooltip, Willow } from "@svar-ui/svelte-grid";
-  import Button from "$lib/components/Button.svelte";
-  import DropdownMenu from "$lib/components/DropdownMenu.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import Modal from "$lib/components/Modal.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import TextArea from "$lib/components/TextArea.svelte";
-  import { toast } from "$lib/stores/toast.svelte";
-  import { fetchMsgpack } from "$lib/utils/fetch";
-  import { exportFile, parseCsv, parseJson } from "$lib/utils/io";
-  import type { ComponentExports, DataGridColumn } from "$lib/utils/types";
+  import Button from "#lib/components/Button.svelte";
+  import DropdownMenu from "#lib/components/DropdownMenu.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Modal from "#lib/components/Modal.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import TextArea from "#lib/components/TextArea.svelte";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import { fetchMsgpack } from "#lib/utils/fetch.js";
+  import { exportFile, parseCsv, parseJson } from "#lib/utils/io.js";
+  import type { ComponentExports, DataGridColumn } from "#lib/utils/types.js";
 
   type FormMode = "add" | "edit";
 

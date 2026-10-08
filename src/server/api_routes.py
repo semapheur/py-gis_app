@@ -14,6 +14,11 @@ from src.index.catalog import (
 )
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
+from src.models.annotation_commit import (
+  delete_annotations,
+  get_annotations_by_image,
+  update_annotations,
+)
 from src.models.annotation_schema import (
   SchemaInsert,
   SchemaUpdate,
@@ -48,10 +53,7 @@ from src.models.equipment_annotation import (
   AnnotationUpdate,
   GhostSearch,
   convert_annotation,
-  delete_annotations,
   get_annotation_ghosts,
-  get_annotations_by_image,
-  update_annotations,
 )
 from src.models.equipment_list import (
   InsertEquipment,

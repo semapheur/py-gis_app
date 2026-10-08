@@ -1,8 +1,8 @@
 <script lang="ts">
   import MdiCircleEditOutline from "@iconify-svelte/mdi/circle-edit-outline";
-  import Input from "$lib/components/Input.svelte";
-  import { polarAngle, polarToCartesian } from "$lib/utils/math";
-  import { type AngleRange } from "$lib/utils/types";
+  import Input from "#lib/components/Input.svelte";
+  import { polarAngle, polarToCartesian } from "#lib/utils/math.js";
+  import { type AngleRange } from "#lib/utils/types.js";
 
   interface Props {
     selectedRange: AngleRange | null;

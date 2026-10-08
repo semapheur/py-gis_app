@@ -1,5 +1,5 @@
-import type { AttributeValue } from "$lib/utils/types";
-import { isSet } from "$lib/utils/validation";
+import type { AttributeValue } from "#lib/utils/types.js";
+import { isSet } from "#lib/utils/validation.js";
 
 export interface PersonnelPointData {
   confidence: AttributeValue | null;
@@ -13,6 +13,7 @@ export interface PersonnelPolygonData {
 }
 
 export type PersonnelData = PersonnelPointData | PersonnelPolygonData;
+export type PersonnelPatch = Partial<PersonnelPointData & PersonnelPolygonData>;
 
 export function createDefaultPersonnelData(
   geometry: GeoJSON.GeoJsonGeometryTypes,
@@ -64,7 +65,7 @@ export function serializePersonnelData(data: PersonnelData) {
   return {
     affiliation: data.affiliation?.id ?? null,
     confidence: "confidence" in data ? (data.confidence?.id ?? null) : null,
-    minCount: "min_count" in data ? data.min_count : null,
-    maxCount: "max_count" in data ? data.max_count : null,
+    min_count: "min_count" in data ? data.min_count : null,
+    max_count: "max_count" in data ? data.max_count : null,
   };
 }

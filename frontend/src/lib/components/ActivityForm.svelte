@@ -1,12 +1,12 @@
 <script lang="ts">
-  import Input from "$lib/components/Input.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import TextArea from "$lib/components/TextArea.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import TextArea from "#lib/components/TextArea.svelte";
 
   import {
     activityTypes,
     type ActivityData,
-  } from "$lib/contexts/annotate.svelte";
+  } from "#lib/contexts/annotate.svelte.js";
 
   type ActivityPatch = Partial<ActivityData>;
 

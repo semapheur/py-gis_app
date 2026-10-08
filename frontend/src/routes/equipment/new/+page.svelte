@@ -1,10 +1,10 @@
 <script lang="ts">
-  import Button from "$lib/components/Button.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import Select from "$lib/components/Select.svelte";
-  import UnitInput from "$lib/components/UnitInput.svelte";
-  import type { ClassificationId, ReleasabilityId } from "$lib/utils/brand";
-  import type { SelectOption, UnitOption } from "$lib/utils/types";
+  import Button from "#lib/components/Button.svelte";
+  import Input from "#lib/components/Input.svelte";
+  import Select from "#lib/components/Select.svelte";
+  import UnitInput from "#lib/components/UnitInput.svelte";
+  import type { ClassificationId, ReleasabilityId } from "#lib/utils/brand.js";
+  import type { SelectOption, UnitOption } from "#lib/utils/types.js";
 
   interface DesignationRow {
     designation: string;

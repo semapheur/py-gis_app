@@ -3,13 +3,13 @@
   import MdiDeleteOutline from "@iconify-svelte/mdi/delete-outline";
   import MdiEditOutline from "@iconify-svelte/mdi/edit-outline";
   import MdiMapMarkerOutline from "@iconify-svelte/mdi/map-marker-outline";
-  import { getMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import Input from "$lib/components/Input.svelte";
-  import ButtonIcon from "$lib/components/ButtonIcon.svelte";
-  import LinkButton from "$lib/components/LinkButton.svelte";
-  import LinkIcon from "$lib/components/LinkIcon.svelte";
+  import { getMapLibreState } from "#lib/contexts/ml_map.svelte.js";
+  import Input from "#lib/components/Input.svelte";
+  import ButtonIcon from "#lib/components/ButtonIcon.svelte";
+  import LinkButton from "#lib/components/LinkButton.svelte";
+  import LinkIcon from "#lib/components/LinkIcon.svelte";
 
-  import { type AreaInfo } from "$lib/contexts/area_editor.svelte";
+  import { type AreaInfo } from "#lib/contexts/area_editor.svelte.js";
 
   let areas = $state<AreaInfo[]>([]);
   let searchQuery = $state<string>("");

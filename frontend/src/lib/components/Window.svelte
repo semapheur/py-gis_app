@@ -1,6 +1,6 @@
 <script lang="ts">
   import { type Snippet } from "svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
 
   interface Props {
     open: boolean;

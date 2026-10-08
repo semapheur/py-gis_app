@@ -1,6 +1,6 @@
-import type { ValidEquipmentData } from "$lib/contexts/annotate.svelte";
-import type { AttributeValue, UnitOption } from "$lib/utils/types";
-import { isSet } from "$lib/utils/validation";
+import type { ValidEquipmentData } from "#lib/contexts/annotate.svelte.js";
+import type { AttributeValue, UnitOption } from "#lib/utils/types.js";
+import { isSet } from "#lib/utils/validation.js";
 
 export const speedUnits = [
   { label: "km/h", value: "kmph", factor: 1 / 3.6 },

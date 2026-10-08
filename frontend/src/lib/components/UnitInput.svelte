@@ -1,5 +1,5 @@
 <script lang="ts">
-  import type { UnitOption } from "$lib/utils/types";
+  import type { UnitOption } from "#lib/utils/types.js";
 
   interface Props {
     value: number | null;

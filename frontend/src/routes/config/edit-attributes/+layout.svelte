@@ -1,7 +1,7 @@
 <script lang="ts">
   import type { Snippet } from "svelte";
   import type { PageData } from "./$types";
-  import LinkText from "$lib/components/LinkText.svelte";
+  import LinkText from "#lib/components/LinkText.svelte";
 
   interface Props {
     data: PageData;

@@ -1,12 +1,12 @@
 <script lang="ts">
   import { goto } from "$app/navigation";
-  import SplitPanes from "$lib/components/SplitPanes.svelte";
-  import Map from "$lib/components/Map.svelte";
-  import Tabs from "$lib/components/Tabs.svelte";
-  import CoordinateSearch from "$lib/components/CoordinateSearch.svelte";
+  import SplitPanes from "#lib/components/SplitPanes.svelte";
+  import Map from "#lib/components/Map.svelte";
+  import Tabs from "#lib/components/Tabs.svelte";
+  import CoordinateSearch from "#lib/components/CoordinateSearch.svelte";
 
-  import { setMapLibreState } from "$lib/contexts/ml_map.svelte";
-  import AreaBrowser from "$lib/components/AreaBrowser.svelte";
+  import { setMapLibreState } from "#lib/contexts/ml_map.svelte.js";
+  import AreaBrowser from "#lib/components/AreaBrowser.svelte";
 
   const tabs = [
     { name: "Areas", value: "areas" },

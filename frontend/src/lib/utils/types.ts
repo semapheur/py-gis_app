@@ -6,7 +6,7 @@ import type {
   SchemaId,
   ClassificationId,
   ReleasabilityId,
-} from "$lib/utils/brand";
+} from "#lib/utils/brand.js";
 import type { IColumnConfig } from "@svar-ui/svelte-grid";
 
 export type ComponentExports<TComponent extends Component<any, any>> =

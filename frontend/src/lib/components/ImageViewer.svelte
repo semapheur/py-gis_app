@@ -1,31 +1,31 @@
 <script lang="ts">
   import { encode, decode } from "@msgpack/msgpack";
-  import { getImageViewerState } from "$lib/contexts/ol_image_viewer/state.svelte";
-  import { getImageViewerOptions } from "$lib/contexts/common.svelte";
-  import { getImageViewerController } from "$lib/contexts/ol_image_viewer/controller.svelte";
+  import { getImageViewerState } from "#lib/contexts/ol_image_viewer/state.svelte.js";
+  import { getImageViewerOptions } from "#lib/contexts/common.svelte.js";
+  import { getImageViewerController } from "#lib/contexts/ol_image_viewer/controller.svelte.js";
 
-  import ImageRenderer from "$lib/components/ImageRenderer.svelte";
-  import AnnotateDialog from "$lib/components/AnnotateDialog.svelte";
-  import AnnotationEdit from "$lib/components/AnnotationEdit.svelte";
-  import AnnotationSummary from "$lib/components/AnnotationSummary.svelte";
-  import MeasureDialog from "$lib/components/MeasureDialog.svelte";
-  import ImageEnhacement from "$lib/components/ImageEnhacement.svelte";
-  import Button from "$lib/components/Button.svelte";
-  import ImageExtentSearch from "$lib/components/ImageExtentSearch.svelte";
-  import GhostSearch from "$lib/components/GhostSearch.svelte";
-  import CloseButton from "$lib/components/CloseButton.svelte";
-  import Input from "$lib/components/Input.svelte";
+  import ImageRenderer from "#lib/components/ImageRenderer.svelte";
+  import AnnotateDialog from "#lib/components/AnnotateDialog.svelte";
+  import AnnotationEdit from "#lib/components/AnnotationEdit.svelte";
+  import AnnotationSummary from "#lib/components/AnnotationSummary.svelte";
+  import MeasureDialog from "#lib/components/MeasureDialog.svelte";
+  import ImageEnhacement from "#lib/components/ImageEnhacement.svelte";
+  import Button from "#lib/components/Button.svelte";
+  import ImageExtentSearch from "#lib/components/ImageExtentSearch.svelte";
+  import GhostSearch from "#lib/components/GhostSearch.svelte";
+  import CloseButton from "#lib/components/CloseButton.svelte";
+  import Input from "#lib/components/Input.svelte";
 
-  import { startOfDay, type DateRange } from "$lib/utils/date";
-  import { toast } from "$lib/stores/toast.svelte";
-  import type { ImageMetadata } from "$lib/utils/types";
+  import { startOfDay, type DateRange } from "#lib/utils/date.js";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import type { ImageMetadata } from "#lib/utils/types.js";
   import ResizeableSidebar from "./ResizeableSidebar.svelte";
   import {
     parseCoordinates,
     toLatLon,
     type CoordinateType,
-  } from "$lib/utils/geo/coord";
-  import type { LatLon } from "$lib/utils/geo/latlon";
+  } from "#lib/utils/geo/coord.js";
+  import type { LatLon } from "#lib/utils/geo/latlon.js";
   import ImageLayerToggle from "./ImageLayerToggle.svelte";
 
   const imageViewer = getImageViewerController();

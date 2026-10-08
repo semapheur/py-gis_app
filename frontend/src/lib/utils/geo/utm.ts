@@ -1,5 +1,5 @@
 import proj4 from "proj4";
-import { LatLon } from "$lib/utils/geo/latlon";
+import { LatLon } from "#lib/utils/geo/latlon.js";
 
 const hemisphereCodes = {
   N: "north",

@@ -1,7 +1,7 @@
 import { Parser } from "@openaip/coordinate-parser";
-import { UTM } from "$lib/utils/geo/utm";
-import { MGRS } from "$lib/utils/geo/mgrs";
-import { LatLon } from "$lib/utils/geo/latlon";
+import { UTM } from "#lib/utils/geo/utm.js";
+import { MGRS } from "#lib/utils/geo/mgrs.js";
+import { LatLon } from "#lib/utils/geo/latlon.js";
 
 export type CoordinateType = LatLon | UTM | MGRS;
 
