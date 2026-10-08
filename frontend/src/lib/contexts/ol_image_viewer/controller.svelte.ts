@@ -126,6 +126,7 @@ const serializers = {
 } as const;
 
 export class ImageViewerController {
+  #lifecycle = 0;
   #imageId: ImageId | null = null;
   #map: Map | null = null;
   #imageExtent: Extent | null = null;
@@ -136,10 +137,24 @@ export class ImageViewerController {
   #ghostLayer: WebGLVectorLayer | null = null;
   #activityLayer: VectorLayer | null = null;
   #personnelLayer: WebGLVectorLayer | null = null;
-  #labelLayers: Record<AnnotateForm | "ghost" | "area", VectorLayer | null>;
+  #labelLayers: Record<AnnotateForm | "ghost" | "area", VectorLayer | null> = {
+    equipment: null,
+    personnel: null,
+    ghost: null,
+    area: null,
+  };
   #measurementLayer: VectorLayer | null = null;
-  #interactions: Record<InteractionSet, ViewerInteractions | null>;
-  #annotationSources: Record<AnnotateForm | "ghost", VectorSource>;
+  #interactions: Record<InteractionSet, ViewerInteractions | null> = {
+    annotation: null,
+    ghost: null,
+    measurement: null,
+  };
+  #annotationSources: Record<AnnotateForm | "ghost", VectorSource> = {
+    activity: new VectorSource(),
+    equipment: new VectorSource(),
+    ghost: new VectorSource(),
+    personnel: new VectorSource(),
+  };
   #areaSource = new VectorSource();
   #areaLayer: WebGLVectorLayer | null = null;
   #measurementSource = new VectorSource();
@@ -182,37 +197,17 @@ export class ImageViewerController {
     return this.#contextMenu;
   }
 
+  #syncEquipmentFeatures = () => {
+    this.#equipmentFeatures = this.#annotationSources.equipment
+      .getFeatures()
+      .slice();
+  };
+
   constructor() {
-    this.#interactions = {
-      annotation: null,
-      ghost: null,
-      measurement: null,
-    };
+    const source = this.#annotationSources.equipment;
 
-    this.#labelLayers = {
-      equipment: null,
-      //activity: null,
-      ghost: null,
-    };
-
-    this.#annotationSources = {
-      activity: new VectorSource(),
-      equipment: new VectorSource(),
-      ghost: new VectorSource(),
-      personnel: new VectorSource(),
-    };
-
-    this.#annotationSources.equipment.on("addfeature", () => {
-      this.#equipmentFeatures = this.#annotationSources.equipment
-        .getFeatures()
-        .slice();
-    });
-
-    this.#annotationSources.equipment.on("removefeature", () => {
-      this.#equipmentFeatures = this.#annotationSources.equipment
-        .getFeatures()
-        .slice();
-    });
+    source.on("addfeature", this.#syncEquipmentFeatures);
+    source.on("removefeature", this.#syncEquipmentFeatures);
   }
 
   #destroy() {
@@ -244,6 +239,7 @@ export class ImageViewerController {
       this.#measurementLayer,
       this.#searchMarkerLayer,
       this.#areaLayer,
+      ...Object.values(this.#labelLayers),
     ];
 
     layers.forEach((layer) => {
@@ -265,29 +261,53 @@ export class ImageViewerController {
     this.#personnelLayer = null;
     this.#measurementLayer = null;
     this.#searchMarkerLayer = null;
+
+    Object.keys(this.#labelLayers).forEach((key) => {
+      this.#labelLayers[key] = null;
+    });
+
     this.#equipmentFeatures = [];
     this.#selectedAnnotations = {
       equipment: [],
       personnel: [],
       activity: [],
     };
+    this.#contextMenu = null;
     this.#imageId = null;
     this.#imageExtent = null;
   }
 
-  public attach(
+  public async attach(
     target: HTMLElement,
     options: ImageViewerOptions,
     interactionSet: InteractionSet,
     interactionMode: InteractionMode,
   ) {
-    if (this.#map) return;
+    this.#destroy();
+    const lifecycle = ++this.#lifecycle;
 
-    this.#setupMap(target, options, interactionSet, interactionMode);
+    await this.#setupMap(
+      target,
+      options,
+      interactionSet,
+      interactionMode,
+      lifecycle,
+    );
+
+    if (lifecycle !== this.#lifecycle || !this.#map) {
+      return () => {};
+    }
 
     return () => {
-      this.#destroy();
+      if (lifecycle === this.#lifecycle) {
+        this.#destroy();
+      }
     };
+  }
+
+  public detach() {
+    this.#lifecycle++;
+    this.#destroy();
   }
 
   async #setupMap(
@@ -295,10 +315,13 @@ export class ImageViewerController {
     options: ImageViewerOptions,
     interactionSet: InteractionSet,
     interactionMode: InteractionMode,
+    lifecycle: number,
   ) {
-    if (!target) return;
+    this.#imageId = options.imageInfo.id;
 
-    this.#imageId = options.imageInfo.id!;
+    if (!this.#imageId) {
+      throw new Error("Image ID is required");
+    }
 
     const url = `http://localhost:8080/cog/${options.imageInfo.filename}.cog.tif`;
 
@@ -312,6 +335,11 @@ export class ImageViewerController {
     });
 
     const viewOptions = await rasterSource.getView();
+
+    if (lifecycle !== this.#lifecycle) {
+      rasterSource.dispose();
+      return;
+    }
 
     if (!target || this.#map) return;
 
@@ -377,6 +405,11 @@ export class ImageViewerController {
 
     this.#labelLayers.ghost = new VectorLayer({
       source: this.#annotationSources.ghost,
+      style: (feature) => styleAnnotationLabel(feature),
+    });
+
+    this.#labelLayers.personnel = new VectorLayer({
+      source: this.#annotationSources.personnel,
       style: (feature) => styleAnnotationLabel(feature),
     });
 

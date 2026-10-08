@@ -15,6 +15,7 @@
     { key: "labels", label: "Labels" },
     { key: "equipment", label: "Equipment" },
     { key: "activity", label: "Activities" },
+    { key: "personnel", label: "Personnel" },
     { key: "area", label: "Areas" },
     { key: "measurement", label: "Measurements" },
   ] as const;
@@ -23,6 +24,7 @@
     labels: true,
     equipment: true,
     activity: true,
+    personnel: true,
     area: true,
     measurement: true,
   });

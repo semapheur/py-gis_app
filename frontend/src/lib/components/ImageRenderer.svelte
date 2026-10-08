@@ -3,11 +3,15 @@
   import { getImageViewerState } from "#lib/contexts/ol_image_viewer/state.svelte.js";
   import { getImageViewerOptions } from "#lib/contexts/common.svelte.js";
   import ImageViewerContextMenu from "#lib/components/ImageViewerContextMenu.svelte";
+  import { untrack } from "svelte";
 
   const viewerOptions = getImageViewerOptions();
-
   const viewerController = getImageViewerController();
   const viewerState = getImageViewerState();
+
+  const imageKey = $derived(
+    `${viewerOptions.imageInfo.id}:${viewerOptions.imageInfo.filename}`,
+  );
 
   $effect(() => {
     viewerController.updateInteraction(
@@ -20,12 +24,16 @@
 <div
   class="map"
   {@attach (el) => {
-    viewerController.attach(
-      el,
-      viewerOptions,
-      viewerState.activeSet,
-      viewerState.activeMode,
+    imageKey;
+    untrack(() =>
+      viewerController.attach(
+        el,
+        viewerOptions,
+        viewerState.activeSet,
+        viewerState.activeMode,
+      ),
     );
+    return () => viewerController.detach();
   }}
 >
   {#if viewerController.contextMenu}

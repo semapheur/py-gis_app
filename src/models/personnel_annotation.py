@@ -36,6 +36,7 @@ class PersonnelPolygonAnnotation(Table):
   geometry = GeometryField(str, geometry_type="POLYGON")
   min_count = Field(float)
   max_count = Field(float)
+  confidence = uuid_field(False, False)
   affiliation = uuid_field(False, False)
   createdByUserId = Field(str)
   modifiedByUserId = Field(str)
@@ -49,7 +50,7 @@ PERSONNEL_MODELS: dict[str, type[Table]] = {
 }
 PERSONNEL_UPDATE_FIELDS = {
   "POINT": ("geometry", "confidence", "affiliation"),
-  "POLYGON": ("geometry", "min_count", "max_count", "affiliation"),
+  "POLYGON": ("geometry", "min_count", "max_count", "confidence", "affiliation"),
 }
 
 
@@ -68,11 +69,7 @@ def get_personnel_annotations_by_image(image_id: bytes):
       "label": r["label"],
       "data": {
         "affiliation": {"id": r["affiliation_id"], "label": r["affiliation_label"]},
-        "confidence": (
-          {"id": r["confidence_id"], "label": r["confidence_label"]}
-          if r["confidence_id"]
-          else None
-        ),
+        "confidence": {"id": r["confidence_id"], "label": r["confidence_label"]},
         "minCount": r["min_count"],
         "maxCount": r["max_count"],
       },
@@ -89,23 +86,22 @@ def get_personnel_annotations_by_image(image_id: bytes):
 
   def build_subquery(geometry: str):
     is_point = geometry == "POINT"
+
+    label = (
+      "'Pax' || '\n' || a.equipment_confidence.name AS label"
+      if is_point
+      else "'Pax (' || CAST(pa.min_count AS INT)"
+      " || '-' || CAST(pa.max_count AS INT) || ')' || '\n' || a.equipment_confidence.name AS label"
+    )
+
     fields = [
       "uuid_blob_to_str(pa.id) AS id",
       "AsGeoJSON(pa.geometry) AS geometry",
-      (
-        "a.equipment_affiliation.name || '\n' || a.equipment_confidence.name AS label"
-        if is_point
-        else "a.equipment_affiliation.name || '\n' || CAST(pa.min_count AS INT)"
-        " || '-' || CAST(pa.max_count AS INT) AS label"
-      ),
+      label,
       "uuid_blob_to_str(pa.affiliation) AS affiliation_id",
       "a.equipment_affiliation.name AS affiliation_label",
-      "uuid_blob_to_str(pa.confidence) AS confidence_id"
-      if is_point
-      else "NULL AS confidence_id",
-      "a.equipment_confidence.name AS confidence_label"
-      if is_point
-      else "NULL AS confidence_label",
+      "uuid_blob_to_str(pa.confidence) AS confidence_id",
+      "a.equipment_confidence.name AS confidence_label",
       "NULL AS min_count" if is_point else "pa.min_count AS min_count",
       "NULL AS max_count" if is_point else "pa.max_count AS max_count",
       "pa.createdByUserId AS createdByUserId",
@@ -113,19 +109,16 @@ def get_personnel_annotations_by_image(image_id: bytes):
       "pa.createdAtTimestamp AS createdAtTimestamp",
       "pa.modifiedAtTimestamp AS modifiedAtTimestamp",
     ]
-    q = (
+    return (
       SelectQuery()
       .select(*fields)
       .from_(f"personnel_{geometry.lower()} pa")
       .inner_join(
         "a.equipment_affiliation", "a.equipment_affiliation.id = pa.affiliation"
       )
+      .inner_join("a.equipment_confidence", "a.equipment_confidence.id = pa.confidence")
+      .where("pa.image = ?", image_id)
     )
-    if is_point:
-      q = q.inner_join(
-        "a.equipment_confidence", "a.equipment_confidence.id = pa.confidence"
-      )
-    return q.where("pa.image = ?", image_id)
 
   sql, params = UnionQuery(*[build_subquery(g) for g in ("POINT", "POLYGON")]).build()
 

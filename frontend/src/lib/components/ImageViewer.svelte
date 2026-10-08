@@ -51,9 +51,9 @@
       new Date(viewerOptions.imageInfo.datetime_collected),
     );
     const dateStart = new Date(dateCollected);
-    dateStart.setMonth(dateCollected.getMonth() + months);
+    dateStart.setMonth(dateCollected.getMonth() - months);
     const dateEnd = new Date(dateCollected);
-    dateEnd.setMonth(dateCollected.getMonth() - months);
+    dateEnd.setMonth(dateCollected.getMonth() + months);
 
     const dateRange: DateRange = {
       start: dateStart,
@@ -62,11 +62,11 @@
     return dateRange;
   }
 
-  async function searhImagesOnExtent() {
+  async function searchImagesOnExtent() {
     const payload = {
       wkt: imageViewer.getViewExtentWkt(),
       date_start: initialDateRange.start.getTime(),
-      date_end: initialDateRange.start.getTime(),
+      date_end: initialDateRange.end.getTime(),
     };
 
     const response = await fetch("/api/search-images", {
@@ -113,7 +113,7 @@
       ghostsOpen = false;
     }
     searchOpen = true;
-    searhImagesOnExtent().then((result) => {
+    searchImagesOnExtent().then((result) => {
       images = result;
     });
   }

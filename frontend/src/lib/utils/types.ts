@@ -9,6 +9,10 @@ import type {
 } from "#lib/utils/brand.js";
 import type { IColumnConfig } from "@svar-ui/svelte-grid";
 
+export type NonNull<T> = {
+  [K in keyof T]-?: NonNullable<T[K]>;
+};
+
 export type ComponentExports<TComponent extends Component<any, any>> =
   TComponent extends Component<any, infer TExports> ? TExports : never;
 

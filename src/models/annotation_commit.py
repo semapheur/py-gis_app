@@ -84,7 +84,6 @@ def update_annotations(payloads: list[AnnotationUpdate]):
       list_writes.append((models, parent_id, field_ids))
 
     elif annotation_type == "personnel":
-      print(payload)
       if geometry not in personnel_rows:
         raise ValueError(f"Unsupported personnel geometry: {geometry}")
 

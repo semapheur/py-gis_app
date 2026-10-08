@@ -24,6 +24,25 @@
   let minCh = $derived(placeholder ? Math.max(placeholder.length + 2, 6) : 0);
 
   const uid = $props.id();
+
+  function clampOnCommit(e: Event & { currentTarget: HTMLInputElement }) {
+    const el = e.currentTarget;
+
+    if (rest.type === "number" && el.value !== "") {
+      const v = Number(el.value);
+      if (!Number.isNaN(v)) {
+        const min = rest.min != null ? Number(rest.min) : -Infinity;
+        const max = rest.max != null ? Number(rest.max) : Infinity;
+        const clamped = Math.min(max, Math.max(min, v));
+        if (clamped !== v) {
+          el.value = String(clamped);
+          value = clamped as T;
+        }
+      }
+    }
+
+    onchange?.(e);
+  }
 </script>
 
 <div class="input">
@@ -34,22 +53,7 @@
     {placeholder}
     {required}
     style={`field-sizing: ${fieldSizing}; min-width: ${minCh}ch; ${suffix ? `padding-right: ${suffixWidth};` : ""}`}
-    oninput={(e) => {
-      if (rest.type === "number") {
-        const raw = e.currentTarget.value;
-        let v = Number(raw);
-        const min = Number(rest.min ?? -Infinity);
-        const max = Number(rest.max ?? Infinity);
-        if (!isNaN(v) && raw !== "" && !raw.endsWith(".")) {
-          const clamped = Math.min(max, Math.max(min, v));
-          e.currentTarget.value = String(clamped);
-          value = clamped as T;
-        } else {
-          value = raw as T;
-        }
-      }
-      oninput?.(e);
-    }}
+    onchange={clampOnCommit}
     {...rest}
   />
   {#if placeholder}

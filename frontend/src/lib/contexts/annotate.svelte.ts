@@ -8,6 +8,10 @@ import {
   createDefaultPersonnelData,
   isPersonnelValid,
   type PersonnelData,
+  type PersonnelPointData,
+  type PersonnelPolygonData,
+  type ValidPersonnelPointData,
+  type ValidPersonnelPolygonData,
 } from "#lib/schemas/personnel_annotation.js";
 import { getContext, setContext } from "svelte";
 
@@ -82,6 +86,32 @@ export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 const defaultLayer = "equipment";
 
+export function formatLabel(
+  layer: AnnotateForm,
+  geometry: string,
+  data: unknown,
+): string {
+  switch (layer) {
+    case "equipment": {
+      const d = data as ValidEquipmentData;
+      return `${d.equipment.label}\n${d.confidence.label}`;
+    }
+    case "personnel": {
+      if (geometry === "Point") {
+        const d = data as ValidPersonnelPointData;
+        return `Pax\n${d.confidence.label}`;
+      }
+      if (geometry === "Polygon") {
+        const d = data as ValidPersonnelPolygonData;
+        return `Pax (${d.min_count}-${d.max_count})\n${d.confidence.label}`;
+      }
+      return "";
+    }
+    case "activity":
+      return (data as ActivityData).type ?? "";
+  }
+}
+
 export class AnnotateState {
   layer = $state<AnnotateForm>(defaultLayer);
   geometry = $state<AnnotateGeometry<AnnotateForm>>(
@@ -105,34 +135,17 @@ export class AnnotateState {
     }
   });
 
-  label = $derived.by(() => {
-    if (this.layer === "equipment") {
-      const d = this.data as ValidEquipmentData;
-      return `${d.equipment.label}\n${d.confidence.label}`;
-    }
-
-    if (this.layer === "activity") {
-      const d = this.data as ActivityData;
-      return `${d.type}`;
-    }
-    return "";
-  });
+  label = $derived(formatLabel(this.layer, this.geometry, this.data));
 
   isValid = $derived.by(() => {
-    if (this.layer === "equipment") {
-      return isEquipmentValid(this.data as EquipmentData);
+    switch (this.layer) {
+      case "equipment":
+        return isEquipmentValid(this.data as EquipmentData);
+      case "personnel":
+        return isPersonnelValid(this.data as PersonnelData, this.geometry);
+      case "activity":
+        return !!(this.data as ActivityData)?.type;
     }
-
-    if (this.layer === "personnel") {
-      return isPersonnelValid(this.data as PersonnelData, this.geometry);
-    }
-
-    if (this.layer === "activity") {
-      const d = this.data as ActivityData;
-      return !!d?.type;
-    }
-
-    return false;
   });
 
   geometryOptions = $derived(annotateGeometryByForm[this.layer]);
