@@ -2,7 +2,7 @@ import warnings
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
-from typing import Callable, Literal, Optional, TypeAlias, TypedDict, Union, cast
+from typing import Callable, Literal, Optional, TypedDict, Union, cast
 from uuid import UUID
 
 from src.bootstrap import get_settings
@@ -46,7 +46,7 @@ from src.sqlite.table import (
 
 app_settings = get_settings()
 
-OrderColumn: TypeAlias = Literal[
+type OrderColumn = Literal[
   "datetime_collected",
   "coverage",
   "ground_sample_distance",

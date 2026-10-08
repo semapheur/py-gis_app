@@ -1,11 +1,11 @@
 import xml.etree.ElementTree as ET
 from datetime import datetime as dt
 from pathlib import Path
-from typing import Literal, TypeAlias
+from typing import Literal
 
 from src.xml_utils import xml_to_dict
 
-LocationType: TypeAlias = Literal[
+type LocationType = Literal[
   "TopLeft", "TopRight", "Center", "BottomLeft", "BottomRight"
 ]
 

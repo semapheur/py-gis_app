@@ -1,9 +1,9 @@
 import re
-from typing import Any, Literal, Optional, TypeAlias
+from typing import Any, Literal, Optional
 
-WhereOp: TypeAlias = Literal["AND", "OR"]
-JoinOp: TypeAlias = Literal["INNER", "LEFT", "CROSS"]
-SortOrder: TypeAlias = Literal["asc", "desc"]
+type WhereOp = Literal["AND", "OR"]
+type JoinOp = Literal["INNER", "LEFT", "CROSS"]
+type SortOrder = Literal["asc", "desc"]
 
 
 class DeleteQuery:

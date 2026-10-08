@@ -1,5 +1,5 @@
 from pathlib import Path
-from typing import Literal, TypeAlias, TypedDict
+from typing import Literal, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
@@ -8,7 +8,7 @@ from src.sqlite.table import Table, hash_field, json_field
 
 app_settings = get_settings()
 
-RadiometricFactors: TypeAlias = Literal["noise", "sigma0", "beta0", "gamma0"]
+type RadiometricFactors = Literal["noise", "sigma0", "beta0", "gamma0"]
 
 
 class NoiseParameters(TypedDict):

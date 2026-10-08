@@ -1,10 +1,13 @@
 import json
 import os
+import shutil
 import subprocess
+import sys
 import tempfile
 from dataclasses import dataclass
+from functools import lru_cache
 from pathlib import Path
-from typing import Any, Iterable, Literal, Optional, TypedDict, Union, cast
+from typing import Any, Iterable, Literal, Optional, Sequence, TypedDict, Union, cast
 
 ResampleAlgorithms = Literal[
   "nearest",
@@ -187,6 +190,35 @@ class Band(TypedDict, total=False):
   metadata: dict[Literal[""], BandMetadata]
 
 
+@lru_cache
+def gdal_tool(name: str):
+  gdal_path = os.environ.get("GDAL_PATH")
+  if gdal_path:
+    found = shutil.which(name, path=gdal_path)
+    if found:
+      return found
+
+  found = shutil.which(name)
+  if found:
+    return found
+
+  raise FileNotFoundError(
+    f"Unable to find {name!r}. Install GDAL, add it to PATH, or set GDAL_PATH to the directory containing the GDAL binary"
+  )
+
+
+def run_gdal(cmd: list, input: Optional[str] = None) -> subprocess.CompletedProcess:
+  return subprocess.run(
+    [str(c) for c in cmd],
+    input=input,
+    capture_output=True,
+    text=True,
+    encoding="utf-8",
+    errors="replace",
+    check=False,
+  )
+
+
 def gdalinfo(
   path: Path,
   min_max: bool = False,
@@ -195,8 +227,8 @@ def gdalinfo(
   if not path.exists():
     raise FileNotFoundError(f"Invalid path: {path!r}")
 
-  gdalinfo_path = os.environ["GDAL_PATH"] + "/gdalinfo.exe"
-  cmd = [gdalinfo_path, "-json"]
+  # gdalinfo_path = os.environ["GDAL_PATH"] + "/gdalinfo.exe"
+  cmd = [gdal_tool("gdalinfo"), "-json"]
 
   if min_max:
     cmd += ["-mm"]
@@ -205,9 +237,7 @@ def gdalinfo(
     cmd += ["-stats"] if stats == "exact" else ["-approx_stats"]
 
   cmd += [path]
-  process = subprocess.run(
-    cmd, capture_output=True, text=True, errors="ignore", check=False
-  )
+  process = run_gdal(cmd)
 
   if process.returncode != 0:
     raise RuntimeError(f"gdalinfo failed:\n{process.stderr}")
@@ -232,11 +262,7 @@ def is_cloud_optimized(path: Path) -> bool:
     raise FileNotFoundError(f"Invalid path: {path!r}")
 
   gdal_python = os.environ["GDAL_PATH"] + "/python/validate_cloud_optimized_geotiff.py"
-  python_exe = "python"
-
-  process = subprocess.run(
-    [python_exe, gdal_python, str(path)], capture_output=True, text=True, check=False
-  )
+  process = run_gdal([sys.executable, gdal_python, str(path)])
 
   return process.returncode == 0
 
@@ -247,9 +273,8 @@ def gdal_translate(
   options: Optional[GdalTranslateOptions] = None,
   create_aux: bool = False,
 ):
-  gdal_translate_path = os.environ["GDAL_PATH"] + "/gdal_translate.exe"
-
-  cmd = [gdal_translate_path]
+  # gdal_translate_path = os.environ["GDAL_PATH"] + "/gdal_translate.exe"
+  cmd = [gdal_tool("gdal_translate")]
 
   if options is not None:
     if options.output_format is not None:
@@ -314,9 +339,9 @@ def gdal_translate(
   if not create_aux:
     cmd += ["--config", "GDAL_PAM_ENABLED", "NO"]
 
-  cmd += [str(input_path), str(output_path)]
+  cmd += [input_path, output_path]
 
-  result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+  result = run_gdal(cmd)
 
   if result.returncode != 0:
     raise RuntimeError(
@@ -331,9 +356,8 @@ def gdalwarp(
   options: Optional[GdalWarpOptions] = None,
   create_aux: bool = False,
 ):
-  gdalwarp_path = os.environ["GDAL_PATH"] + "/gdalwarp.exe"
-
-  cmd = [gdalwarp_path]
+  # gdalwarp_path = os.environ["GDAL_PATH"] + "/gdalwarp.exe"
+  cmd = [gdal_tool("gdalwarp")]
 
   if options is not None:
     if options.output_format is not None:
@@ -351,7 +375,8 @@ def gdalwarp(
         if v is None:
           continue
 
-        cmd += ["-to", f"{k.upper()}={str(v).upper()}"]
+        val = str(v).upper() if isinstance(v, bool) else str(v)
+        cmd += ["-to", f"{k.upper()}={val}"]
 
     if options.output_type is not None:
       cmd += ["-ot", options.output_type]
@@ -367,14 +392,15 @@ def gdalwarp(
         if v is None:
           continue
 
-        cmd += ["-co", f"{k.upper()}={str(v).upper()}"]
+        val = str(v).upper() if isinstance(v, bool) else str(v)
+        cmd += ["-co", f"{k.upper()}={val}"]
 
   if not create_aux:
     cmd += ["--config", "GDAL_PAM_ENABLED", "NO"]
 
   cmd += [str(input_path), str(output_path)]
 
-  result = subprocess.run(cmd, capture_output=True, text=True, check=False)
+  result = run_gdal(cmd)
 
   if result.returncode != 0:
     raise RuntimeError(
@@ -384,14 +410,14 @@ def gdalwarp(
 
 
 def gdaltransform(
-  srcfile: str,
-  dstfile: Optional[str] = None,
+  srcfile: Path,
+  dstfile: Optional[Path] = None,
   options: Optional[GdalTransformOptions] = None,
+  coords: Optional[Sequence[tuple[float, ...]]] = None,
 ):
 
-  gdaltransform_path = os.environ["GDAL_PATH"] + "/gdaltransform.exe"
-
-  cmd = [gdaltransform_path]
+  # gdaltransform_path = os.environ["GDAL_PATH"] + "/gdaltransform.exe"
+  cmd = [gdal_tool("gdaltransform")]
 
   if options is not None:
     if options.s_srs is not None:
@@ -414,7 +440,8 @@ def gdaltransform(
         if v is None:
           continue
 
-        cmd += ["-to", f"{k.upper()}={str(v).upper()}"]
+        val = str(v).upper() if isinstance(v, bool) else str(v)
+        cmd += ["-to", f"{k.upper()}={val}"]
 
     if options.order is not None:
       cmd += ["-order", options.order]
@@ -448,17 +475,38 @@ def gdaltransform(
   if dstfile is not None:
     cmd += [dstfile]
 
-  process = subprocess.run(cmd, capture_output=True, text=True, check=False)
+  stdin_text = None
+  if coords is not None:
+    stdin_text = "\n".join(" ".join(repr(float(c)) for c in pt) for pt in coords)
+
+  process = run_gdal(cmd, input=stdin_text)
 
   if process.returncode != 0:
     raise RuntimeError(
-      f"gdaltransform failed for {cmd}\nSTDOUT: {process.stdout}\nSTDERR: {process.stderr}"
+      f"gdaltransform failed for {cmd}\n"
+      f"STDOUT: {process.stdout}\nSTDERR: {process.stderr}"
     )
 
   result = [
-    tuple(map(float, line.split())) for line in process.stdout.strip().split("\n")
+    tuple(map(float, line.split()))
+    for line in process.stdout.splitlines()
+    if line.strip()
   ]
   return result
+
+
+def pixel_to_geo(
+  image: Path,
+  pixels: Sequence[tuple[float, float]],
+  height: float = 0.0,
+  dem: Optional[Path] = None,
+) -> list[tuple[float, float, float]]:
+  to = {"RPC_HEIGHT": height}
+  if dem:
+    to = {"RPC_DEM": dem}
+
+  options = GdalTransformOptions(rpc=True, to=to, t_srs="EPSG:4326")
+  return gdaltransform(image, options=options, coords=pixels)
 
 
 def corner_coordinates_from_geotransform(gdal_info: dict, wkt: bool = True):
@@ -497,9 +545,8 @@ def corner_coordinates_from_geotransform(gdal_info: dict, wkt: bool = True):
 def geotiff_to_thumbnail(
   input_path: Path, output_path: Path, thumbnail_size: tuple[int, int]
 ):
-  temp_file = tempfile.NamedTemporaryFile(suffix=".tif", delete=False)
-  temp_tif = Path(temp_file.name)
-  temp_file.close()
+  with tempfile.NamedTemporaryFile(suffix=".tif", delete=False) as temp_file:
+    temp_tif = Path(temp_file.name)
 
   try:
     gdal_translate(

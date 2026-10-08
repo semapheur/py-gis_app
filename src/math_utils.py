@@ -1,7 +1,7 @@
 import math
-from typing import Sequence, TypeAlias
+from typing import Sequence
 
-Vec3: TypeAlias = tuple[float, float, float]
+type Vec3 = tuple[float, float, float]
 
 
 def dot(a: Sequence[float], b: Sequence[float]) -> float:
