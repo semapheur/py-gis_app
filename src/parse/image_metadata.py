@@ -20,7 +20,7 @@ class BandStatistics(TypedDict):
 def get_band_statistics(gdal_info: dict) -> list[BandStatistics]:
   bands = cast(Optional[list[Band]], gdal_info.get("bands"))
   if not isinstance(bands, list):
-    raise ValueError("'bands' field missing or invalid in gdalinfo")
+    raise TypeError("'bands' field missing or invalid in gdalinfo")
 
   result: list[BandStatistics] = []
   for band in bands:

@@ -1,6 +1,119 @@
-# National imagery transmission format (NTIF)
+# National imagery transmission format (NITF)
 
 [MIL-STD-2500C](https://nsgreg.nga.mil/doc/view?i=4324)
+
+## File header definition
+
+Type: R = Required, C = Conditional, <R> = BCS spaces allowed for the entire field.
+
+| Field | Name/Description | Size (bytes) | Value Range | Type | Comment |
+|---|---|---|---|---|---|
+| FHDR | File Profile Name | 4 | BCS-A “NITF” | R | Per Joint BIIF Profile (JBP) |
+| FVER | File Version | 5 | BCS-A “02.10” | R | NITF Version 2.1 |
+| CLEVEL | Complexity Level | 2 | BCS-A 03, 05, 06, 07 or 09 | R | Per JBP Annex G Table G-1 |
+| STYPE | Standard Type | 4 | BCS-N “BF01” | R | Fixed value |
+| OSTAID | Originating Station ID | 10 | BCS-A | R | Per the Product Specific Implementation Document; meaningful value; shall not be filled with BCS spaces (0x20) |
+| FDT | File Date and Time | 14 | BCS-N CCYYMMDDhhmmss | R | File creation UTC date and time |
+| FTITLE | File Title | 80 | ECS-A | <R> | Use product specific guidance if available |
+| Security Tags | Use “FS” prefix for Tag | 167 | As defined in Table 2-2 | R | |
+| FSCOP | File Copy Number | 5 | BCS-N | R | Not tracked per JBP; 00000 = no tracking of numbered file copies |
+| FSCPYS | File Number of Copies | 5 | BCS-N | R | Not tracked per JBP; 00000 = no tracking of numbered file copies |
+| ENCRYP | Encryption | 1 | BCS-N 0 | R | No Encryption |
+| FBKGC | File Background Color | 3 | Unsigned binary integer; Default: 000 (0x00, 0x00, 0x00) | R | Default background color is black |
+| ONAME | Originator’s Name | 24 | ECS-A; 24 ECS characters | <R> | Per the Product Specific Implementation Document |
+| OPHONE | Originator’s Phone | 18 | ECS-A; 24 ECS characters | <R> | Per the Product Specific Implementation Document |
+| FL | File Length | 12 | BCS-N | R | Number of bytes; Generate |
+| HL | NITF File Header Length | 6 | BCS-N | R | Number of bytes in the header; Generate |
+| NUMI | Number of Image Segments | 3 | BCS-N 001 to 999 | R | See Sections 2.4.2 and 2.4.3 |
+| LISHn | Length of Image Sub-Header | 6 | BCS-N 000439 to 9999998 | C | Per JBP; Generate. Repeats as specified by NUMI |
+| LIn | Length of nth Image Segment | 10 | BCS-N 0000000001 to 9999999998 | C | See Sections 2.4.2 and 2.4.3; Generate |
+| NUMS | Number of graphic Segments | 3 | BCS-N 000 to 999 | R | Graphics segments |
+| NUMX | Reserved | 3 | BCS-N 000 | R | Reserved |
+| NUMT | Number of Text Segments | 3 | BCS-N 000 to 999 | R | Text segments |
+| NUMDES | Number of data Extension Segments | 3 | BCS-N 001 to 999 | R | # product images + # input SICDs + remaining DES segments |
+| LDSHn | Length of nth Data Extension Segment Sub-Header | 4 | BCS-N 0200 to 9998 | C | Length in bytes |
+| LDn | Length of Data Extension Segment | 9 | BCS-N 000000001 to 999999998 | C | Length in bytes |
+| NUMRES | Number of Reserved | 3 | BCS-N 000 | R | Not used |
+| UDHDL | User-Defined Header Data Length | 5 | BCS-N 00000; 00003 + length of TREs | R | No TREs specified but use of TREs not prohibited |
+| UDHOFL | User-Defined Header Overflow | 3 | BCS-N 000-999; Default 000 | C | If UDHDL = 00000 then omit field |
+| UDHD | User-Defined Header Data | Equal to UDHDL minus 3 | User Defined | C | If UDHDL = 00000 then omit field |
+| XHDL | Extended Header Data Length | 5 | BCS-N 00000; 00003 + length of TREs | R | No TREs specified but use of TREs not prohibited |
+| XHDLOFL | Extended Header Data Overflow | 3 | BCS-N 000-999; Default 000 | C | If XHDL = 00000 then omit field|
+| XHD | Extended Header Data | Equal to XHDL minus 3 | User Defined | C | If XHDL = 00000 then omit field |
+
+## Image sub-header definition
+
+| Field | Name/Description | Size (bytes) | Value Range | Type | Comment |
+|---|---|---|---|---|---|
+| IM | File Part Type | 2 | BCS-A: IM | R | |
+| IID1 | Image Identifier 1 | 10 | BCS-A: SIDDmmmnnn or DED001 | R | mmm = product image number; nnn = segment number, starting at 001 |
+| IDATIM | Image Date and Time | 14 | BCS-N: CCYYMMDDhhmmss | R | Equivalent to first SIDD.AdvancedExploitation.Collection.Information.CollectionDateTime |
+| TGTID | Target Identifier | 17 | BCS-A | <R> | Blank |
+| IID2 | Image Identifier 2 | 80 | — | <R>  | Additional image identification information |
+| Security  | Use “IS” prefix for Tag | 167 | As defined in Table 2-2 | R | |
+| ENCRYP | Encryption | 1 | BCS-N: 0 | R | 0 = not encrypted |
+| ISORCE | Image Source | 42 | ECS-A; Collector Name | R | Equivalent to SIDD AdvancedExploitation.Collection.Information.SensorName |
+| NROWS | Number of Significant Rows in Image | 8 | BCS-N: 00000001–9999999 | R | See Section 2.4.2 |
+| NCOLS | Number of Significant Columns in Image | 8 | BCS-N: 00000001–9999999 | R | See Section 2.4.2 |
+| PVTYPE | Pixel Value Type | 3 | BCS-A: INT, SI | R | SI for DED; INT for all others |
+| IREP | Image Representation | 8 | BCS-A: MONO, RGB/LUT, RGB, NODISPLY | R | NODISPLY for DED |
+| ICAT | Image Category | 8 | BCS-A: SAR, LEG, DED | R | SAR = Synthetic Aperture Radar; LEG = Legend; DED = Digital Elevation Data |
+| ABPP | Actual Bits-Per-Pixel Per Band | 2 | BCS-N: 08 or 16 | R | See Table 2-6 |
+| PJUST | Pixel Justification | 1 | BCS-A: R | R | |
+| ICORDS | Image Coordinate Representation | 1 | BCS-A: G or blank | <R> | G for geographic; blank for legend segments |
+| IGEOLO | Image Geographic Location | 60 | BCS-A | C | If ICORDS = G: four latitude/longitude corner pairs |
+| NICOM | Number of Image Comments | 1 | BCS-N: 0–9 | R | Followed by ICOMn fields when nonzero |
+| ICOMn | Image Comment n | 80 | ECS-A | C | User defined |
+| IC | Image Compression | 2 | BCS-A: NC, C8, M8 | R | NC = no compression; C8 = JPEG 2000; M8 = JPEG 2000 mask-image compression |
+| COMRAT | Compression Rate Code | 4 | BCS-A: Nxyz, Vxyz, wxyz | C | Included if IC = C8 or M8; xyz indicates expected/target bit rate |
+| NBANDS | Number of Bands | 1 | BCS-N: 1, 3 | R | See Section 2.4.1 |
+| IREPBANDn | nth Band Representation | 2 | BCS-A: LU, M, R, G, B, or BCS spaces | <R> | See Section 2.4.1 |
+| ISUBCATn | nth Band Subcategory | 6 | BCS-A: spaces | <R>  | |
+| IFCn | nth Band Image Filter Condition | 1 | BCS-A: N | R | |
+| IMFLTn | nth Band Standard Image Filter Code | 3 | BCS-A: spaces | <R> | |
+| NLUTSn | Number of LUTs for nth Image Band | 1 | BCS-N: 0–3 | R | See Table 2-6 |
+| NELUTn | Number of LUT Entries for nth Image Band | 5 | BCS-N: 00001–65536 | C | Omitted if NLUTSn = 0 |
+| LUTDnm | nth Image Band, mth LUT | NELUTn | Unsigned binary integer; LUT values  | C | Repeats NLUTSn times; omitted when NLUTSn = 0 |
+| ISYNC | Image Sync code | 1 | BCS-N: 0 | R | |
+| IMODE | Image Mode | 1 | BCS-A: B or P | R | If IREP = RGB, P; B otherwise. B = Band Interleaved by Block; P = Band Interleaved by Pixel |
+| NBPR | Number of Blocks Per Row | 4 | BCS-N: 0001–9999 | R | |
+| NBPC | Number of Blocks Per Column | 4 | BCS-N: 0001–9999 | R | |
+| NPPBH | Number of Pixels Per Block Horizontal | 4 | BCS-N: 0001–8192 or 0000 | R | If >8192, populate 0000; otherwise zero-padded number of columns |
+| NPPBV | Number of Pixels Per Block Vertical | 4 | BCS-N: 0001–8192 or 0000 | R | If >8192, populate 0000; otherwise zero-padded number of rows |
+| NBPP | Number of Bits Per Pixel Per Band | 2 | BCS-N: 08 or 16 | R | See Table 2-6 |
+| IDLVL | Image Display Level | 3 | BCS-N: 001–999 | R | See segmentation rules |
+| IALVL | Attachment Level | 3 | BCS-N: 000–998 | R | See segmentation rules |
+| ILOC | Image Location | 10 | BCS-N: RRRRRCCCCC | R | Location of first pixel; positive/negative row and column offsets |
+| IMAG | Image Magnification | 4 | BCS-A | R | Default 1.0 |
+| UDIDL | User Defined Image Data Length | 5 | BCS-N: 00000 or 00003 + TRE length | R | No TREs specified, but TRE use not prohibited |
+| UDOFL | User-Defined Overflow | 3 | BCS-N: 000–999 | C | Omit if UDIDL = 00000 |
+| UDID | User-Defined Image Data |  Equal to UDIDL minus 3 | User Defined | C | Omit if UDIDL = 00000 |
+| IXSHDL | Image Extended Sub-Header Data Length | 5 | BCS-N: 00000 or 00003 + TRE length | R | No TREs specified, but TRE use not prohibited |
+| IXSOFL | Image Extended Sub-Header Overflow | 3 | BCS-N: 000–999 | C | Omit if IXSHDL = 00000 |
+| IXSHD | Image Extended Sub-Header Data | Equal to IXSHDL minus 3 | User Defined | C | Omit if IXSHDL = 00000 |
+
+## Security fields
+
+The `xx` prefix is replaced by `FS` for the File Header, `IS` for the Image Sub-Header, and `DES` for the DES.
+
+| Base Field | Name/Description | Size (bytes) | Value Range | Type |
+|---|---|---|---|---|
+| xxCLAS| File Security Classification. Valid values: T (Top Secret), S (Secret), C (Confidential), R (Restricted), U (Unclassified). | 1 | ECS-A; “U” or per Program Specific Implementation Document | R |
+| xxCLSY | File Security Classification System. National/multinational security system; country codes per FIPS PUB 10-4. “XN” identifies classified data generated using NATO security system marking guidance. All ECS spaces implies no classification system applies. | 2 | ECS-A; default ECS spaces (0x20) | <R> |
+| xxCODE | File Codewords. Valid indicator of security compartments; digraphs from NITF Field Value Registry, separated by ECS spaces. All ECS spaces implies no codewords. | 11 | BCS-A; default BCS spaces (0x20) | <R> |
+| xxCTLH | File Control and Handling. Additional security controls/handling instructions (caveats) using digraphs from the NITF Field Value. | 2 | ECS-A; default ECS spaces (0x20) | <R> |
+| xxREL | File Releasing Instructions. Country and/or multilateral entity codes authorized for release, separated by ECS spaces. | 20 | ECS-A; default ECS spaces (0x20) | <R> |
+| xxDCTP | File Declassification Type. DD, DE, GD, GE, O, X. | 2 | ECS-A; DD, DE, GD, GE, O, X | <R> |
+| xxDCDT | File Declassification Date. Date on which file is declassified when DCTP is DD. | 8 | ECS-A; CCYYMMDD | <R> |
+| xxDCXM | File Declassification Exemption. Reason for exemption when DCTP is X. | 4 | ECS-A; X1–X8, X251–X259 | <R> |
+| xxDG | File Downgrade. Classification level to which file is downgraded when DCTP is GD or GE. |            1 | ECS-A; S, C, R | <R> |
+| xxDGDT | File Downgrade Date. Date on which file is downgraded when DCTP is GD. | 8 | ECS-A; CCYYMMDD | <R> |
+| xxCLTX | File Classification Text. Additional information about classification, declassification/downgrading events, multiple sources, or special handling rules. | 43 | ECS-A; free text | <R> |
+| xxCATP | File Classification Authority Type. O = original classification authority; D = derivative from a single source; M = derivative from multiple sources. | 1 | ECS-A; O, D, M | <R> |
+| xxCAUT | File Classification Authority. Identifies classification authority according to xxCATP; user-defined free text. | 40 | ECS-A; free text | <R> |
+| xxCRSN | File Classification Reason. Reason for classification corresponding to E.O. 12958 §1.5(a)-(g). | 1 | ECS-A; A–G | <R> |
+| xxSRDT | File Security Source Date. Date of source used to derive classification; for multiple sources, most recent source. | 8 | ECS-A; CCYYMMDD | <R> |
+| xxCTLN | File Security Control Number. Security control number associated with the file. | 15 | ECS-A; per applicable security regulations | <R> |
 
 # Synthetic aperture radar
 

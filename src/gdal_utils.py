@@ -193,7 +193,7 @@ def gdalinfo(
   stats: Optional[Literal["exact", "approx"]] = None,
 ) -> dict:
   if not path.exists():
-    raise FileNotFoundError(f"Invalid path: {str(path)}")
+    raise FileNotFoundError(f"Invalid path: {path!r}")
 
   gdalinfo_path = os.environ["GDAL_PATH"] + "/gdalinfo.exe"
   cmd = [gdalinfo_path, "-json"]
@@ -205,7 +205,9 @@ def gdalinfo(
     cmd += ["-stats"] if stats == "exact" else ["-approx_stats"]
 
   cmd += [path]
-  process = subprocess.run(cmd, capture_output=True, text=True, errors="ignore")
+  process = subprocess.run(
+    cmd, capture_output=True, text=True, errors="ignore", check=False
+  )
 
   if process.returncode != 0:
     raise RuntimeError(f"gdalinfo failed:\n{process.stderr}")
@@ -227,13 +229,13 @@ def parse_gdalinfo_json_field(gdal_info: dict, field: str) -> Union[dict, None]:
 
 def is_cloud_optimized(path: Path) -> bool:
   if not path.exists():
-    raise FileNotFoundError(f"Invalid path: {str(path)}")
+    raise FileNotFoundError(f"Invalid path: {path!r}")
 
   gdal_python = os.environ["GDAL_PATH"] + "/python/validate_cloud_optimized_geotiff.py"
   python_exe = "python"
 
   process = subprocess.run(
-    [python_exe, gdal_python, str(path)], capture_output=True, text=True
+    [python_exe, gdal_python, str(path)], capture_output=True, text=True, check=False
   )
 
   return process.returncode == 0
@@ -314,7 +316,7 @@ def gdal_translate(
 
   cmd += [str(input_path), str(output_path)]
 
-  result = subprocess.run(cmd, capture_output=True, text=True)
+  result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
   if result.returncode != 0:
     raise RuntimeError(
@@ -372,7 +374,7 @@ def gdalwarp(
 
   cmd += [str(input_path), str(output_path)]
 
-  result = subprocess.run(cmd, capture_output=True, text=True)
+  result = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
   if result.returncode != 0:
     raise RuntimeError(
@@ -446,7 +448,7 @@ def gdaltransform(
   if dstfile is not None:
     cmd += [dstfile]
 
-  process = subprocess.run(cmd, capture_output=True, text=True)
+  process = subprocess.run(cmd, capture_output=True, text=True, check=False)
 
   if process.returncode != 0:
     raise RuntimeError(
