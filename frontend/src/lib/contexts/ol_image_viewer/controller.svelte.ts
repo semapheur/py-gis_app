@@ -69,13 +69,14 @@ import {
   buildStyleExpression,
 } from "#lib/contexts/ol_image_viewer/bandstretch_manager.svelte.js";
 import { vertexStyle } from "#lib/utils/ol_styles.js";
-import type {
-  AnnotateForm,
-  AnnotateState,
-  AnnotationInfo,
-  ActivityData,
-  AnnotationBaseInfo,
-  ValidEquipmentData,
+import {
+  type AnnotateForm,
+  type AnnotateState,
+  type AnnotationInfo,
+  type ActivityData,
+  type AnnotationBaseInfo,
+  type ValidEquipmentData,
+  formatAnnotationLabel,
 } from "#lib/contexts/annotate.svelte.js";
 import { MGRS } from "#lib/utils/geo/mgrs.js";
 import type { ImageId } from "#lib/utils/brand.js";
@@ -85,7 +86,10 @@ import {
   serializeEquipmentData,
   type EquipmentData,
 } from "#lib/schemas/equipment_annotation.js";
-import { serializePersonnelData } from "#lib/schemas/personnel_annotation.js";
+import {
+  serializePersonnelData,
+  type PersonnelData,
+} from "#lib/schemas/personnel_annotation.js";
 
 export type ContextMenuFeatureType = "equipment" | "measurement" | "ghost";
 
@@ -1190,15 +1194,13 @@ export class ImageViewerController {
 
   public updateFeatureData(
     feature: Feature,
-    data: EquipmentData | ActivityData,
+    data: ActivityData | EquipmentData | PersonnelData,
   ) {
-    const type = feature.get("type") as string | null;
+    const type = feature.get("type") as AnnotateForm | null;
     if (!type) return;
 
-    const label =
-      type === "equipment"
-        ? `${data.equipment?.label}\n${data.confidence.label}`
-        : "";
+    const geometry = feature.getGeometry()?.getType() ?? "";
+    const label = formatAnnotationLabel(type, geometry, data);
 
     feature.setProperties({
       data,

@@ -84,7 +84,7 @@ export type ActivityType = Lowercase<(typeof activityTypes)[number]>;
 
 const defaultLayer = "equipment";
 
-export function formatLabel(
+export function formatAnnotationLabel(
   layer: AnnotateForm,
   geometry: string,
   data: unknown,
@@ -133,7 +133,7 @@ export class AnnotateState {
     }
   });
 
-  label = $derived(formatLabel(this.layer, this.geometry, this.data));
+  label = $derived(formatAnnotationLabel(this.layer, this.geometry, this.data));
 
   isValid = $derived.by(() => {
     switch (this.layer) {
