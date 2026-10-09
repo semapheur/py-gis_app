@@ -1,4 +1,5 @@
 import warnings
+from dataclasses import dataclass
 from datetime import datetime, timezone
 from enum import Enum
 from pathlib import Path
@@ -17,6 +18,7 @@ from src.gdal_utils import (
 from src.hashing import hash_geotiff
 from src.index.catalog import CatalogTable, get_catalog_edit_data, update_index_time
 from src.index.radiometric import RadiometricParamsTable, make_radiometric_row
+from src.index.rpc import RpcTable, get_gdal_rpc, validate_rpc
 from src.models.areas import get_area_wkt
 from src.parse.bj3_metadata import get_bj3_info
 from src.parse.capella_metadata import get_capella_info
@@ -26,7 +28,7 @@ from src.parse.image_metadata import (
   get_band_statistics,
   parse_image_metadata,
 )
-from src.parse.isd_metadata import get_isd_info
+from src.parse.isd_metadata import get_isd_info, get_isd_rpc
 from src.parse.sicd_metadata import parse_sicd_info
 from src.parse.sicd_model import SicdObject
 from src.sqlite.connect import SqliteDatabase
@@ -87,6 +89,14 @@ class ImageIndexTable(Table):
   ground_sample_distance_col = Field(float)
   interpretation_rating = Field(float)
   band_statistics = json_field(list[BandStatistics], nullable=False)
+  # has_rpc = Field(bool)
+
+
+@dataclass
+class ParsedImage:
+  index: ImageIndexTable
+  rpc: RpcTable | None = None
+  radiometric: RadiometricParamsTable | None = None
 
 
 def create_index_table():
@@ -127,13 +137,37 @@ def parse_image_info(
   catalog_id: UUID,
   file_path: Path,
   relative_directory: Path,
-) -> tuple[ImageIndexTable, Union[RadiometricParamsTable, None]]:
+) -> ParsedImage:
+
+  def resolve_rpc(
+    gdal_info: dict, image_hash: bytes, file_path: Path, sensor_key: str | None = None
+  ) -> RpcTable | None:
+    candidates = []
+    if sensor_key in rpc_extractors:
+      candidates.append(lambda: rpc_extractors[sensor_key](gdal_info, image_hash))
+    candidates.append(lambda: get_gdal_rpc(gdal_info, image_hash))
+
+    for candidate in candidates:
+      try:
+        rpc = candidate()
+      except KeyError, ValueError, TypeError, AttributeError:
+        raise Warning(f"RPC extraction failed for {file_path}", e)
+        continue
+
+      if rpc is None:
+        continue
+      if validate_rpc(rpc):
+        return rpc
+
+    return None
 
   sensor_extractors = {
     "isd": lambda gdal_info, _: get_isd_info(_, gdal_info["isd"]),
     "bj3": lambda gdal_info, _: get_bj3_info(gdal_info["bj3"]),
     "iceye": lambda gdal_info, _: get_iceye_info(gdal_info["iceye"]),
   }
+
+  rpc_extractors = {"isd": lambda gdal_info, _: get_isd_rpc(gdal_info["isd"], hash)}
 
   band_statistics = get_band_statistics(gdal_info)
   sensor_type, image_type = detect_image_type(band_statistics, gdal_info)
@@ -151,9 +185,14 @@ def parse_image_info(
 
   for sensor_key, extractor in sensor_extractors.items():
     sensor_data = gdal_info.get(sensor_key)
-    if sensor_data is not None:
-      data |= extractor(gdal_info, file_path)
-      return make_index_row(data), None
+    if sensor_data is None:
+      continue
+
+    data |= extractor(gdal_info, file_path)
+    return ParsedImage(
+      index=make_index_row(data),
+      rpc=resolve_rpc(gdal_info, hash, file_path, sensor_key),
+    )
 
   if file_path.name.lower().startswith("capella"):
     sicd_obj = parse_gdalinfo_json_field(gdal_info, "SICD_METADATA")
@@ -164,19 +203,24 @@ def parse_image_info(
     )
 
     index_row = make_index_row(data)
+    rpc_row = resolve_rpc(gdal_info, hash, file_path)
 
     if image_type != ImageryType.SLC:
-      return index_row, None
+      return ParsedImage(index_row, rpc=rpc_row)
 
     radiometric_row = make_radiometric_row(sicd_obj["metadata"], hash)
-    return index_row, radiometric_row
+    return ParsedImage(
+      index_row,
+      rpc=rpc_row,
+      radiometric=radiometric_row,
+    )
 
-  raise ValueError(f"Unable to parse image metadata for {str(file_path)}")
+  raise ValueError(f"Unable to parse image metadata for {file_path}")
 
 
 def generate_cog(image_path: Path, cog_path: Path):
   if cog_path.exists():
-    warnings.warn(f"COG already generated for {str(image_path)}")
+    warnings.warn(f"COG already generated for {image_path}")
     return
 
   options = GdalWarpOptions(
@@ -307,7 +351,7 @@ def process_cog(
   cog_dir = app_settings.STATIC_DIR / "cog"
   cog_dir.mkdir(parents=True, exist_ok=True)
   cog_path = cog_dir / f"{image_file.stem}.cog.tif"
-  make_cog = True if not cog_path.exists() else False
+  make_cog = not cog_path.exists()
 
   if action == IndexAction.REINDEX_FILENAME and old_stem is not None:
     old_cog = cog_dir / f"{old_stem}.cog.tif"
@@ -326,25 +370,27 @@ def index_image(
   action, old_stem = check_image(file, image_hash)
 
   if action == IndexAction.INDEXED:
-    return None, None
+    return None
 
   if action == IndexAction.DUPLICATE:
     # TODO: handle duplicates
-    return None, None
+    return None
 
   metadata = parse_image_metadata(file)
   relative_directory = file.parent.relative_to(image_dir)
-  index_row, radiometric_row = parse_image_info(
+  parsed_image = parse_image_info(
     metadata, image_hash, catalog_id, file, relative_directory
   )
 
   if action == IndexAction.REINDEX_PARENT:
-    return index_row, radiometric_row
+    return parsed_image
 
-  process_thumbnail(file, metadata, index_row, action, old_stem, thumbnail_minsize)
+  process_thumbnail(
+    file, metadata, parsed_image.index, action, old_stem, thumbnail_minsize
+  )
   process_cog(file, action, old_stem)
 
-  return index_row, radiometric_row
+  return parsed_image
 
 
 def index_images(
@@ -381,21 +427,25 @@ def index_images(
     total = len(files)
 
     image_index: list[ImageIndexTable] = []
+    rpc_index: list[RpcTable] = []
     radiometric_index: list[RadiometricParamsTable] = []
 
     for i, file in enumerate(files, start=1):
       if progress_callback:
         progress_callback(i, total, str(file.relative_to(image_dir)))
 
-      index_row, radiometric_row = index_image(
-        catalog_id, image_dir, file, thumbnail_minsize
-      )
+      parsed_image = index_image(catalog_id, image_dir, file, thumbnail_minsize)
+      if parsed_image is None:
+        continue
 
-      if index_row is not None:
-        image_index.append(index_row)
+      if parsed_image.index is not None:
+        image_index.append(parsed_image.index)
 
-      if radiometric_row is not None:
-        radiometric_index.append(radiometric_row)
+      if parsed_image.rpc is not None:
+        rpc_index.append(parsed_image.rpc)
+
+      if parsed_image.radiometric is not None:
+        radiometric_index.append(parsed_image.radiometric)
 
     update_query = UpdateQuery().set_excluded(
       "catalog", "relative_path", "filename", "filetype"
@@ -405,6 +455,9 @@ def index_images(
 
     current_timestamp = datetime.now(timezone.utc)
     update_index_time(db, catalog_id, current_timestamp)
+
+    if rpc_index:
+      db.insert_models(rpc_index, "id")
 
     if radiometric_index:
       db.insert_models(radiometric_index, "id")

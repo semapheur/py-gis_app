@@ -58,11 +58,7 @@ def make_radiometric_row(
     "gamma0": radiometric_metadata.get("GammaZeroSFPoly", {}).get("Coefs", []),
   }
 
-  row = RadiometricParamsTable()
-  for key, value in radiometric_params.items():
-    setattr(row, key, value)
-
-  return row
+  return RadiometricParamsTable().from_dict(radiometric_params)
 
 
 def get_radiometric_parameters(hash_id: bytes, factors: tuple[RadiometricFactors, ...]):
