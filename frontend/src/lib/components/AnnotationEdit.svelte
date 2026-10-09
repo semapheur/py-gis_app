@@ -3,6 +3,7 @@
   import ActivityForm from "#lib/components/ActivityForm.svelte";
   import Button from "#lib/components/Button.svelte";
   import EquipmentForm from "#lib/components/EquipmentForm.svelte";
+  import PersonnelForm from "#lib/components/PersonnelForm.svelte";
   import Input from "#lib/components/Input.svelte";
   import KebabMenu from "#lib/components/KebabMenu.svelte";
   import Modal from "#lib/components/Modal.svelte";
@@ -21,12 +22,16 @@
   import {
     equipmentColumnFields,
     equipmentDisplayRow,
-    equipmentSchema,
     type EquipmentData,
-    type EquipmentFieldKey,
+    type EquipmentPatch,
   } from "#lib/schemas/equipment_annotation.js";
-
-  type BulkEquipmentPatch = Partial<EquipmentData>;
+  import {
+    personnelColumnFields,
+    personnelDisplayRow,
+    type PersonnelData,
+    type PersonnelPatch,
+    type PersonnelTableData,
+  } from "#lib/schemas/personnel_annotation.js";
 
   const viewerController = getImageViewerController();
 
@@ -45,26 +50,43 @@
       filterable: true,
     })),
   ];
+  const personnelColumns: ColumnDefinition[] = [
+    {
+      id: "id",
+      label: "#",
+      sortable: true,
+      filterable: true,
+    },
+    { id: "geometry", label: "Geometry", sortable: true, filterable: true },
+    ...personnelColumnFields.map(([key, def]) => ({
+      id: key,
+      label: def.label,
+      sortable: true,
+      filterable: true,
+    })),
+  ];
 
-  const activityColumns = [];
+  const activityColumns: ColumnDefinition[] = [];
 
   const tableColumns = {
-    equipment: equipmentColumns,
     activity: activityColumns,
+    equipment: equipmentColumns,
+    personnel: personnelColumns,
   };
 
   const tableSelectable = {
-    equipment: "multi",
     activity: "single",
+    equipment: "multi",
+    personnel: "multi",
   } as const;
 
   let activeTableTab = $state<AnnotateForm>("equipment");
   let selectedRows = $state<number[]>([]);
 
   let validForm = $state<boolean>(true);
-  let editData = $state<EquipmentData | null>(null);
+  let editData = $state<EquipmentData | PersonnelData | null>(null);
   let bulkEdit = $state<boolean>(false);
-  let bulkPatch = $state<BulkEquipmentPatch>({});
+  let bulkPatch = $state<EquipmentPatch | PersonnelPatch>({});
   let validBulkForm = $state<boolean>(true);
   let polygonSize = $state<number>(2);
   let openConvert = $state<boolean>(false);
@@ -72,10 +94,11 @@
   const selectedAnnotations = $derived(viewerController.selectedAnnotations);
 
   const tableData = $derived({
+    activity: [],
     equipment: selectedAnnotations.equipment
-      .map((f, i) => {
-        const data = f.get("data") as ValidEquipmentData;
-        if (!data) return null;
+      .flatMap((f, i) => {
+        const data = f.get("data") as ValidEquipmentData | undefined;
+        if (!data) return [];
 
         return {
           id: i + 1,
@@ -85,7 +108,16 @@
         };
       })
       .filter(Boolean),
-    activity: [],
+    personnel: selectedAnnotations.personnel.flatMap((f, i) => {
+      const data = f.get("data") as PersonnelTableData | undefined;
+      if (!data) return [];
+
+      return {
+        id: i + 1,
+        geometry: f.getGeometry()?.getType(),
+        ...personnelDisplayRow(data),
+      };
+    }),
   });
 
   const selectedFeatures = $derived(
@@ -107,25 +139,32 @@
   );
 
   const selectedType = $derived(selectedFeature?.get("type") ?? null);
+  const selectedGeometryType = $derived(
+    selectedFeature?.getGeometry()?.getType() ?? null,
+  );
+  const selectedGeometryTypes = $derived(
+    new Set(selectedFeatures.map((f) => f.getGeometry()?.getType())),
+  );
+  const mixedGeometry = $derived(
+    activeTableTab === "personnel" &&
+      selectedFeatures.length > 1 &&
+      selectedGeometryTypes.size > 1,
+  );
+  const bulkGeometry = $derived(
+    selectedGeometryTypes.size === 1 ? [...selectedGeometryTypes][0] : null,
+  );
 
   $effect(() => {
     if (selectedFeatures.length > 1) {
-      bulkEdit = true;
+      bulkEdit = !mixedGeometry;
       editData = null;
-      bulkPatch = getCommonValues(selectedFeatures);
+      bulkPatch = mixedGeometry ? {} : getCommonValues(selectedFeatures);
       return;
     }
 
     bulkEdit = false;
     bulkPatch = {};
-
-    if (selectedFeature) {
-      editData = selectedFeature.get("data");
-
-      return;
-    }
-
-    editData = null;
+    editData = selectedFeature?.get("data") ?? null;
   });
 
   function saveEdits() {
@@ -143,34 +182,33 @@
     viewerController.removeAnnotations([selectedFeature]);
   }
 
-  function getCommonValues(
-    features: typeof selectedFeatures,
-  ): BulkEquipmentPatch {
+  function sameValue(a: unknown, b: unknown) {
+    if (a && b && typeof a === "object" && typeof b === "object") {
+      return (a as { id?: unknown }).id === (b as { id?: unknown }).id;
+    }
+    return a === b;
+  }
+
+  function getCommonValues(features: typeof selectedFeatures) {
     if (!features.length) return {};
 
-    const commonValues: BulkEquipmentPatch = {};
-
-    const firstData = features[0].get("data") as ValidEquipmentData | null;
+    const firstData = features[0].get("data") as Record<string, unknown> | null;
     if (!firstData) return {};
 
+    const commonValues: Record<string, unknown> = {};
+
     for (const key in firstData) {
-      const typedKey = key as keyof ValidEquipmentData;
-      const firstValue = firstData[typedKey];
-
       const isCommon = features.every((feature) => {
-        const data = feature.get("data") as ValidEquipmentData | null;
-
-        if (!data) return false;
-
-        return data[typedKey]?.id === firstValue?.id;
+        const data = feature.get("data") as Record<string, unknown> | null;
+        return !!data && sameValue(data[key], firstData[key]);
       });
 
       if (isCommon) {
-        commonValues[typedKey] = firstValue;
+        commonValues[key] = firstData[key];
       }
     }
 
-    return commonValues;
+    return commonValues as EquipmentPatch | PersonnelPatch;
   }
 
   function applyBulkEdit() {
@@ -264,7 +302,14 @@
     {#if editData}
       {#if selectedType === "equipment"}
         <EquipmentForm
-          value={editData}
+          value={editData as EquipmentData}
+          onchange={(v) => (editData = v)}
+          onvalid={(v) => (validForm = v)}
+        />
+      {:else if selectedType === "personnel"}
+        <PersonnelForm
+          value={editData as PersonnelData}
+          geometry={selectedGeometryType}
           onchange={(v) => (editData = v)}
           onvalid={(v) => (validForm = v)}
         />
@@ -285,12 +330,21 @@
         >
       </footer>
     {:else if bulkEdit}
-      <EquipmentForm
-        value={bulkPatch}
-        bulk
-        onchange={(v) => (bulkPatch = v)}
-        onvalid={(v) => (validBulkForm = v)}
-      />
+      {#if activeTableTab === "equipment"}
+        <EquipmentForm
+          value={bulkPatch}
+          bulk
+          onchange={(v) => (bulkPatch = v)}
+          onvalid={(v) => (validBulkForm = v)}
+        />
+      {:else if activeTableTab === "personnel"}
+        <PersonnelForm
+          value={bulkPatch as PersonnelPatch}
+          geometry={bulkGeometry as "Point" | "Polygon"}
+          bulk
+          onchange={(v) => (bulkPatch = v)}
+        />
+      {/if}
 
       <footer class="edit-form-footer">
         <Button

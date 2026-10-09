@@ -70,8 +70,8 @@ def get_personnel_annotations_by_image(image_id: bytes):
       "data": {
         "affiliation": {"id": r["affiliation_id"], "label": r["affiliation_label"]},
         "confidence": {"id": r["confidence_id"], "label": r["confidence_label"]},
-        "minCount": r["min_count"],
-        "maxCount": r["max_count"],
+        "min_count": r["min_count"],
+        "max_count": r["max_count"],
       },
       "metaData": {
         k: r[k]

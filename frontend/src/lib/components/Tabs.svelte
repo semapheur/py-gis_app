@@ -22,7 +22,7 @@
   {#each tabs as tab}
     <button
       class={{ selected: selected === tab.value }}
-      onclick={() => onselect(tab.value)}
+      onclick={() => handleSelect(tab.value)}
     >
       {tab.name}
     </button>

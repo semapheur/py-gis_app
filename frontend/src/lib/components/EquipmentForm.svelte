@@ -13,9 +13,8 @@
     type EquipmentData,
     type EquipmentFieldDef,
     type EquipmentFieldKey,
+    type EquipmentPatch,
   } from "#lib/schemas/equipment_annotation.js";
-
-  type EquipmentPatch = Partial<EquipmentData>;
 
   interface Props {
     value: EquipmentData | EquipmentPatch;

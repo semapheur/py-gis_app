@@ -15,6 +15,65 @@ export type ValidPersonnelPointData = NonNull<PersonnelPointData>;
 export type ValidPersonnelPolygonData = NonNull<PersonnelPolygonData>;
 export type PersonnelData = PersonnelPointData | PersonnelPolygonData;
 export type PersonnelPatch = Partial<PersonnelPointData & PersonnelPolygonData>;
+export type PersonnelTableData = ValidPersonnelPointData & PersonnelPolygonData;
+
+interface PersonnelSingleDef {
+  kind: "single";
+  label: string;
+  table: string;
+  required?: boolean;
+  column?: boolean;
+}
+interface PersonnelNumberDef {
+  kind: "number";
+  label: string;
+  column?: boolean;
+}
+type PersonnelFieldDef = PersonnelSingleDef | PersonnelNumberDef;
+
+export const personnelSchema = {
+  confidence: {
+    kind: "single",
+    label: "Confidence",
+    table: "equipment_confidence", // adjust to your table names
+    required: true,
+    column: true,
+  },
+  affiliation: {
+    kind: "single",
+    label: "Affiliation",
+    table: "equipment_affiliation",
+    required: true,
+    column: true,
+  },
+  min_count: { kind: "number", label: "Min count", column: true },
+  max_count: { kind: "number", label: "Max count", column: true },
+} as const satisfies Record<string, PersonnelFieldDef>;
+
+export type PersonnelFieldKey = keyof typeof personnelSchema;
+
+export const personnelColumnFields = (
+  Object.entries(personnelSchema) as [PersonnelFieldKey, PersonnelFieldDef][]
+).filter(([, def]) => def.column);
+
+export function personnelDisplayRow(
+  data: PersonnelTableData,
+): Record<string, unknown> {
+  const row: Record<string, unknown> = {};
+
+  for (const [key, def] of personnelColumnFields) {
+    const value = data[key];
+
+    if (def.kind === "single") {
+      row[key] = (value as AttributeValue | null)?.label ?? "";
+    } else if (def.kind === "number") {
+      // numeric
+      row[key] = value ?? null;
+    }
+  }
+
+  return row;
+}
 
 export function createDefaultPersonnelData(
   geometry: GeoJSON.GeoJsonGeometryTypes,

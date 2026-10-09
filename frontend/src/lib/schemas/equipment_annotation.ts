@@ -127,6 +127,7 @@ type ValueForKind<K extends EquipmentFieldDef["kind"]> = K extends "multi"
 export type EquipmentData = {
   [K in EquipmentFieldKey]: ValueForKind<(typeof equipmentSchema)[K]["kind"]>;
 };
+export type EquipmentPatch = Partial<EquipmentData>;
 
 export const equipmentRequiredFields = (
   Object.entries(equipmentSchema) as [EquipmentFieldKey, EquipmentFieldDef][]
@@ -161,9 +162,9 @@ export function equipmentDisplayRow(
     const value = data[key];
 
     if (def.kind === "multi" || def.kind === "multi-search") {
-      row[key] = (value as AnnotateValue[] | null)?.map((v) => v.label) ?? [];
+      row[key] = (value as AttributeValue[] | null)?.map((v) => v.label) ?? [];
     } else if (def.kind === "single" || def.kind === "search") {
-      row[key] = (value as AnnotateValue | null)?.label ?? "";
+      row[key] = (value as AttributeValue | null)?.label ?? "";
     } else {
       // numeric
       row[key] = value ?? null;

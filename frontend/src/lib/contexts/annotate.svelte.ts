@@ -8,8 +8,6 @@ import {
   createDefaultPersonnelData,
   isPersonnelValid,
   type PersonnelData,
-  type PersonnelPointData,
-  type PersonnelPolygonData,
   type ValidPersonnelPointData,
   type ValidPersonnelPolygonData,
 } from "#lib/schemas/personnel_annotation.js";
