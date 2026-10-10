@@ -111,7 +111,7 @@ def get_rpc_model(image_hash: bytes) -> rpc_inverter.RPCModel:
 
 def get_geo_coordinates(
   image_hash: bytes, pixel: tuple[float, float], height: float = 0.0
-) -> Union[tuple[float, float, float], None]:
+) -> tuple[float, float, float]:
 
   rpc_model = get_rpc_model(image_hash)
   return rpc_model.pixel_to_geo(pixel[0], pixel[1], height)

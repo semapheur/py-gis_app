@@ -4,15 +4,20 @@ from Cython.Build import cythonize
 from setuptools import Extension, setup
 
 if sys.platform == "win32":
-  cc, ld = ["/O2", "/openmp"], []
+  compile_args, link_args = ["/O2", "/openmp"], []
 else:
-  cc, ld = ["-O3", "-fopenmp", "-ffast-math"], ["-fopenmp"]
+  compile_args, link_args = ["-O3", "-fopenmp", "-ffast-math"], ["-fopenmp"]
   if sys.platform == "darwin":
     cc, ld = ["O3", "-ffast-math"], []
 
 setup(
   ext_modules=cythonize(
-    Extension("rpc", ["rpc_inverter.pyx"], extra_compile_args=cc, extra_link_args=ld),
+    Extension(
+      "rpc_solver",
+      ["rpc_solver.pyx"],
+      extra_compile_args=compile_args,
+      extra_link_args=link_args,
+    ),
     compiler_directives={"language_level": 3},
   )
 )
