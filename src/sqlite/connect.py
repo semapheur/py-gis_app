@@ -6,17 +6,13 @@ import re
 import sqlite3
 from contextlib import contextmanager
 from pathlib import Path
-from typing import (
-  Any,
-  Mapping,
-  Optional,
-  Sequence,
-  Union,
-)
+from typing import Any, Mapping, Optional, Sequence, TypeVar, Union
 
 from src.sqlite.query_builder import DeleteQuery, InsertQuery, SelectQuery, UpdateQuery
 from src.sqlite.table import Field, GeometryField, SqliteValue, Table
 from src.sqlite.utils import uuid_blob_to_str
+
+T = TypeVar("T", bound=Table)
 
 
 class SqliteDatabase:
@@ -272,50 +268,82 @@ class SqliteDatabase:
     rows = cursor.execute(sql, params).fetchall()
     return [dict(row) for row in rows]
 
-  def select_model_records(
-    self, table: type[Table], query: SelectQuery, to_json: bool = False
-  ) -> list[dict[str, SqliteValue]]:
-    columns = query.columns
-    sql, params = query.build()
-    cursor = self.conn.cursor()
-    rows = cursor.execute(sql, params).fetchall()
+  def _column_info(self, table: type[Table], query: SelectQuery):
     geo_regex = re.compile("^As(GeoJSON|Text)")
 
-    column_info: list[tuple[str, Union[Field, GeometryField, None], bool, str]] = []
-    for name, alias in columns:
+    info: list[tuple[str, Union[Field, GeometryField, None], bool, str]] = []
+    for name, alias in query.columns:
       col = alias or name
       field = table._fields.get(col)
       is_geo = isinstance(field, GeometryField)
       geo_format = ""
-      if not is_geo:
-        column_info.append((col, field, is_geo, geo_format))
-        continue
+      if is_geo:
+        regex_match = geo_regex.search(name)
+        if regex_match is not None:
+          geo_format = regex_match.group()
 
-      regex_match = geo_regex.search(name)
-      if regex_match is not None:
-        geo_format = regex_match.group()
+      info.append((col, field, is_geo, geo_format))
 
-      column_info.append((col, field, is_geo, geo_format))
+    return info
+
+  @staticmethod
+  def _decode_value(raw: Any, field: Optional[Field], is_geo: bool, geo_format: str):
+    if field is None:
+      return raw
+
+    if is_geo:
+      if raw is None:
+        return None
+
+      return json.loads(raw) if geo_format == "AsGeoJSON" else raw
+
+    return field.deserialize_from_sql(raw)
+
+  def select_model_records(
+    self, table: type[Table], query: SelectQuery, to_json: bool = False
+  ) -> list[dict[str, SqliteValue]]:
+    self._check_connection()
+
+    sql, params = query.build()
+    rows = self.conn.cursor().execute(sql, params).fetchall()
+    column_info = self._column_info(table, query)
 
     result: list[dict[str, SqliteValue]] = []
     for row in rows:
-      result_row = {}
+      out_row = {}
       for i, (col, field, is_geo, geo_format) in enumerate(column_info):
-        raw = row[i]
-        if field is None:
-          result_row[col] = raw
-          continue
+        value = self._decode_value(row[i], field, is_geo, geo_format)
+        out_row[col] = (
+          field.serialize_to_json(value) if (to_json and field is not None) else value
+        )
 
-        if is_geo:
-          value = json.loads(raw) if geo_format == "AsGeoJSON" else raw
-        else:
-          value = field.deserialize_from_sql(raw)
-
-        result_row[col] = field.serialize_to_json(value) if to_json else value
-
-      result.append(result_row)
+      result.append(out_row)
 
     return result
+
+  def select_models(self, table: type[T], query: SelectQuery) -> list[T]:
+    self._check_connection()
+
+    sql, params = query.build()
+    rows = self.conn.cursor().execute(sql, params).fetchall()
+    column_info = self._column_info(table, query)
+
+    models: list[T] = []
+    for row in rows:
+      obj = table.__new__(table)
+
+      for name in table._fields:
+        setattr(obj, name, None)
+
+      for i, (col, field, is_geo, geo_format) in enumerate(column_info):
+        if field is None:
+          continue
+
+        setattr(obj, col, self._decode_value(row[i], field, is_geo, geo_format))
+
+      models.append(obj)
+
+    return models
 
   def delete_by_ids(self, table: type[Table], ids: list[Any]) -> int:
     self._check_connection()

@@ -6,6 +6,7 @@ from dataclasses import dataclass
 from datetime import datetime
 from enum import Enum
 from pathlib import Path
+from sqlite3 import Row
 from typing import (
   Any,
   Callable,
@@ -342,7 +343,7 @@ class Table(metaclass=TableMeta):
     raise ValueError(f"No index named '{index_name}' on table '{table_name}'")
 
   @classmethod
-  def from_row(cls, row, columns=None) -> Table:
+  def from_row(cls, row: Row, columns=None) -> Table:
     if columns is None:
       columns = list(cls._fields.keys())
 

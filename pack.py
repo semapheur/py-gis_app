@@ -1,6 +1,9 @@
 import inspect
 import shutil
 import subprocess
+import sys
+import tempfile
+import zipfile
 from pathlib import Path
 from typing import Sequence
 
@@ -102,6 +105,39 @@ def copy_env_with_overrides(src: Path, dest: Path, overrides: dict[str, str]):
   dest.write_text("\n".join(new_lines) + "\n", encoding="utf-8")
 
 
+def build_native_extension(project_dir: Path, dest_dir: Path):
+  dest_dir.mkdir(parents=True, exist_ok=True)
+
+  with tempfile.TemporaryDirectory() as tmp:
+    subprocess.run(
+      [
+        "uv",
+        "build",
+        "--wheel",
+        "--python",
+        sys.executable,
+        "--out-dir",
+        tmp,
+        str(project_dir),
+      ],
+      check=True,
+    )
+
+    wheels = list(Path(tmp).glob("*.whl"))
+    if len(wheels) != 1:
+      raise RuntimeError(f"Expected exactly one wheel, found {len(wheels)}")
+
+    found = False
+    with zipfile.ZipFile(wheels[0]) as zf:
+      for name in zf.namelist():
+        if name.endswith((".pyd", ".so")):
+          (dest_dir / Path(name).name).write_bytes(zf.read(name))
+          found = True
+
+    if not found:
+      raise RuntimeError("No compiled extension found in the built wheel")
+
+
 def package_app(zip_dist: bool = False, mask_suffixes: bool = False):
   create_dist_structure()
   build_frontend()
@@ -112,11 +148,12 @@ def package_app(zip_dist: bool = False, mask_suffixes: bool = False):
     dirs_exist_ok=True,
     ignore=shutil.ignore_patterns("__pycache__"),
   )
+  build_native_extension(Path("src"), Path("dist/src"))
   shutil.copy2("app.py", "dist/app.py")
   copy_env_with_overrides(Path(".env"), Path("dist/.env"), {"APP_MODE": "production"})
 
   if mask_suffixes:
-    append_file_suffix(Path("dist"), (".js", ".py"), ".txt")
+    append_file_suffix(Path("dist"), (".js", ".py", ".pyd", ".so"), ".txt")
 
     function_source = inspect.getsource(remove_extra_suffix)
     with open("dist/restore_filenames.py.txt", "w") as f:
