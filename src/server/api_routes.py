@@ -177,7 +177,7 @@ class ApiRoutes(ApiHandler):
   @api("POST", "/api/update-security/{table}")
   def _post_update_security(self, payload: SecurityUpdate, table: str):
     if not table or table not in SECURITY_TABLES:
-      self.send_error(404, "Invalid POST endpoint")
+      raise ApiError(404, "Invalid POST endpoint")
 
     return update_security(table, payload)
 

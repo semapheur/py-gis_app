@@ -1,11 +1,15 @@
-import atexit
+import contextlib
+import copy
 import datetime as dt
 import json
 import logging
+import logging.handlers
 import sqlite3
 import sys
+import threading
 import uuid
-from queue import Queue
+from contextvars import ContextVar
+from queue import SimpleQueue
 from typing import override
 
 from src.bootstrap import get_settings
@@ -40,6 +44,18 @@ LOG_RECORD_BUILTIN_ATTRS = {
   "taskName",
 }
 
+DEFAULT_FMT_KEYS = {
+  "lineno": "lineno",
+  "func": "funcName",
+  "module": "module",
+  "thread": "threadName",
+  "process": "processName",
+}
+
+
+def _timestamp(record: logging.LogRecord):
+  return datetime_to_unix(dt.datetime.fromtimestamp(record.created, tz=dt.UTC))
+
 
 class LoggerTable(Table):
   _table_name = "logs"
@@ -57,21 +73,18 @@ class JsonFormatter(logging.Formatter):
     fmt_keys: dict[str, str] | None = None,
   ):
     super().__init__()
-    self.fmt_keys = fmt_keys if fmt_keys is not None else {}
+    self.fmt_keys = DEFAULT_FMT_KEYS if fmt_keys is None else fmt_keys
 
   @override
   def format(self, record: logging.LogRecord) -> str:
-    message = self._prepare_log_dict(record)
-    return json.dumps(message, default=str)
+    return json.dumps(self.to_dict(record), default=str)
 
-  def _prepare_log_dict(self, record: logging.LogRecord):
+  def to_dict(self, record: logging.LogRecord):
     always_fields = {
       "message": record.getMessage(),
-      "timestamp": datetime_to_unix(
-        dt.datetime.fromtimestamp(record.created, tz=dt.timezone.utc)
-      ),
+      "timestamp": _timestamp(record),
     }
-    if record.exc_info is not None:
+    if record.exc_info and record.exc_info[0] is not None:
       always_fields["exc_info"] = self.formatException(record.exc_info)
 
     if record.stack_info is not None:
@@ -92,42 +105,95 @@ class JsonFormatter(logging.Formatter):
     return message
 
 
+class StructuredQueueHandler(logging.handlers.QueueHandler):
+  @override
+  def prepare(self, record: logging.LogRecord) -> logging.LogRecord:
+    record = copy.copy(record)
+    record.msg = record.getMessage()  # resolve %-args now; args may not be safe later
+    record.args = None
+    return record
+
+
 class SqliteHandler(logging.Handler):
-  def __init__(self):
+  def __init__(self, formatter: JsonFormatter | None = None):
     super().__init__()
-    self.conn = sqlite3.connect(app_settings.LOG_DB, check_same_thread=False)
+    self.setFormatter(formatter or JsonFormatter())
+    self._conn: sqlite3.Connection | None = None
+    self._conn_lock = threading.Lock()
 
-  def _create_table(self):
-    table_sql = LoggerTable.create_table_sql()
-    self.conn.execute(f"CREATE TABLE IF NOT EXISTS {table_sql}")
+  def _connection(self) -> sqlite3.Connection:
+    if self._conn is None:
+      conn = sqlite3.connect(app_settings.LOG_DB, timeout=100, check_same_thread=False)
+      conn.execute("PRAGMA journal_mode=WAL")
+      conn.execute("PRAGMA synchronous=NORMAL")
+      conn.execute("PRAGMA busy_timeout=10000")
+      conn.execute(LoggerTable.create_table_sql())
+      conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_datetime ON logs(datetime)")
+      conn.execute("CREATE INDEX IF NOT EXISTS idx_logs_level ON logs(level, datetime)")
+      conn.commit()
+      self._conn = conn
 
+    return self._conn
+
+  @override
   def emit(self, record: logging.LogRecord):
     try:
-      message = json.loads(self.format(record))
+      formatter = self.formatter
+      assert isinstance(formatter, JsonFormatter)
+      data = formatter.to_dict(record)
+      for key in ("timestamp", "level", "logger"):
+        data.pop(key, None)
 
-      self.conn.execute(
-        "INSERT INTO logs (id, timestamp, level, logger, record) VALUES (?, ?, ?, ?, ?)",
-        (
-          uuid.uuid4(),
-          message.pop("timestamp"),
-          message.pop("level"),
-          message.pop("logger"),
-          json.dumps(message),
-        ),
-      )
-      self.conn.commit()
+      with self._conn_lock:
+        conn = self._connection()
+        conn.execute(
+          "INSERT INTO logs (id, datetime, level, logger, record) VALUES (?, ?, ?, ?, ?)",
+          (
+            uuid.uuid4().bytes,
+            _timestamp(record),
+            record.levelname,
+            record.name,
+            json.dumps(data, default=str),
+          ),
+        )
+        conn.commit()
     except Exception:
       self.handleError(record)
 
+  def prune(self, older_than_days: int) -> int:
+    cutoff = dt.datetime.now(dt.UTC) - dt.timedelta(days=older_than_days)
+    with self._conn_lock:
+      conn = self._connection()
+      cur = conn.execute("DELETE FROM logs WHERE datetime < ?", (cutoff,))
+      conn.commit()
+      return cur.rowcount
+
+  @override
   def close(self):
-    self.conn.close()
+    with self._conn_lock:
+      if self._conn is not None:
+        self._conn.close()
+        self._conn = None
+
     super().close()
 
 
-def setup_logging():
-  log_queue = Queue()
+request_id_var: ContextVar[str | None] = ContextVar("request_id", default=None)
 
+
+class RequestContextFilter(logging.Filter):
+  def filter(self, record: logging.LogRecord):
+    rid = request_id_var.get()
+    if rid is not None:
+      record.request_id = rid
+
+    return True
+
+
+@contextlib.contextmanager
+def logging_context(*, level: int = logging.INFO, retention_days: int | None = 30):
   stderr_handler = logging.StreamHandler(sys.stderr)
+  stderr_handler.setLevel(level)
   stderr_handler.setFormatter(
     logging.Formatter(
       "[%(levelname)s|%(module)s|L%(lineno)d] %(asctime)s: %(message)s",
@@ -135,31 +201,30 @@ def setup_logging():
     )
   )
 
-  sqlite_handler = SqliteHandler()
-  sqlite_handler.setFormatter(
-    JsonFormatter(
-      fmt_keys={
-        "level": "levelname",
-        "logger": "name",
-        "lineno": "lineno",
-        "func": "funcName",
-        "module": "module",
-        "thread": "threadName",
-        "process": "processName",
-      }
-    )
-  )
+  sqlite_handler = SqliteHandler(JsonFormatter())
+  sqlite_handler.setLevel(level)
 
-  listener = logging.handlers.QueueListener(
-    log_queue, stderr_handler, sqlite_handler, respect_handler_level=True
-  )
+  if retention_days is not None:
+    try:
+      sqlite_handler.prune(retention_days)
+    except sqlite3.Error:
+      logging.getLogger(__name__).exception("Failed to prune log database")
 
-  queue_handler = logging.handlers.QueueHandler(log_queue)
+  log_queue = SimpleQueue()
+  queue_handler = StructuredQueueHandler(log_queue)
+  queue_handler.addFilter(RequestContextFilter())
+
   root = logging.getLogger()
-  root.setLevel(logging.DEBUG)
+  previous_level = root.level
   root.addHandler(queue_handler)
+  root.setLevel(level)
 
-  listener.start()
-  atexit.register(listener.stop)
-
-  return listener
+  try:
+    with logging.handlers.QueueListener(
+      log_queue, stderr_handler, sqlite_handler, respect_handler_level=True
+    ):
+      yield
+  finally:
+    root.removeHandler(queue_handler)
+    root.setLevel(previous_level)
+    sqlite_handler.close()
