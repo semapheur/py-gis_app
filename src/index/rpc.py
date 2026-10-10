@@ -1,11 +1,11 @@
-from functools import lru_cache
-from typing import Union
+# from functools import lru_cache
+# from typing import Union
 
-import rpc_inverter
-
+# import rpc_solver
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import SelectQuery
+
+# from src.sqlite.query_builder import SelectQuery
 from src.sqlite.table import Field, Table, hash_field, json_field
 
 app_settings = get_settings()
@@ -92,8 +92,9 @@ def get_gdal_rpc(gdal_info: dict, image_hash: bytes) -> RpcTable | None:
   )
 
 
+"""
 @lru_cache(maxsize=128)
-def get_rpc_model(image_hash: bytes) -> rpc_inverter.RPCModel:
+def get_rpc_model(image_hash: bytes) -> rpc_solver.RPCModel:
   query = (
     SelectQuery()
     .select(*RpcTable.column_sql())
@@ -106,7 +107,7 @@ def get_rpc_model(image_hash: bytes) -> rpc_inverter.RPCModel:
   if not rpc_rows:
     raise LookupError(f"No RPC metadata for image {image_hash.hex()}")
 
-  return rpc_inverter.RPCModel(rpc_rows[0])
+  return rpc_solver.RPCModel(rpc_rows[0])
 
 
 def get_geo_coordinates(
@@ -115,3 +116,4 @@ def get_geo_coordinates(
 
   rpc_model = get_rpc_model(image_hash)
   return rpc_model.pixel_to_geo(pixel[0], pixel[1], height)
+"""
