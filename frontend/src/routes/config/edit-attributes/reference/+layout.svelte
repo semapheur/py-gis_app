@@ -19,14 +19,21 @@
   let { children }: Props = $props();
 </script>
 
+<svelte:head>
+  <title>Edit reference attributes</title>
+</svelte:head>
+
 <div class="page-container">
   <nav class="table-list">
-    {#each tables as table}
-      <LinkText
-        href={`/config/edit-reference-attributes/${table.name}`}
-        label={table.label}
-      />
-    {/each}
+    <LinkText href="/config/edit-attributes/" label="Back" />
+    <div data-sveltekit-replacestate>
+      {#each tables as table}
+        <LinkText
+          href={`/config/edit-attributes/reference/${table.name}`}
+          label={table.label}
+        />
+      {/each}
+    </div>
   </nav>
   {@render children()}
 </div>

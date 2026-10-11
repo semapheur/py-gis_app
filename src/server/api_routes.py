@@ -14,6 +14,14 @@ from src.index.catalog import (
 )
 from src.index.images import ImageQuery, get_image_info, index_images, search_images
 from src.index.radiometric import get_radiometric_parameters
+from src.models.annotation_attributes import (
+  ANNOTATION_ATTRIBUTE_TABLES,
+  AttributeInsert,
+  AttributeUpdate,
+  get_attribute_options,
+  insert_attribute,
+  update_attribute,
+)
 from src.models.annotation_commit import (
   delete_annotations,
   get_annotations_by_image,
@@ -38,16 +46,7 @@ from src.models.areas import (
   get_areas_by_image,
   update_area,
 )
-from src.models.attributes import (
-  ATTRIBUTE_TABLES,
-  AttributeInsert,
-  AttributeUpdate,
-  get_attribute_data,
-  get_attribute_options,
-  get_attribute_tables,
-  insert_attribute,
-  update_attribute,
-)
+from src.models.attributes import ATTRIBUTE_TABLE_GETTER, get_attribute_data
 from src.models.equipment_annotation import (
   AnnotationConvert,
   AnnotationUpdate,
@@ -77,7 +76,16 @@ from src.server.api_handler import ApiError, ApiHandler, api
 class ApiRoutes(ApiHandler):
   @api("GET", "/api/attribute-tables")
   def _get_attribute_tables(self):
-    return {"tables": get_attribute_tables()}
+    type_query = self.query_params("type")
+    if not type_query:
+      raise ApiError(400, "Missing attribute table type")
+
+    attribute_type = type_query[0]
+    getter = ATTRIBUTE_TABLE_GETTER.get(attribute_type)
+    if getter is None:
+      raise ApiError(400, f"Invalid attribute type: {attribute_type}")
+
+    return {"tables": getter()}
 
   @api("GET", "/api/schema-options")
   def _get_schema_options(self):
@@ -117,21 +125,27 @@ class ApiRoutes(ApiHandler):
   def _get_schema_data(self):
     return {"data": get_schema_data()}
 
-  @api("GET", "/api/attribute-data/{table}")
-  def _get_attribute_data(self, table: str):
-    if table not in ATTRIBUTE_TABLES:
-      raise ApiError(404, "Invalid GET endpoint")
-    return {"data": get_attribute_data(table)}
+  @api("GET", "/api/attribute-data")
+  def _get_attribute_data(self):
+    table_query = self.query_params("table")
+    if not table_query:
+      raise ApiError(400, "Missing attribute table")
+
+    attribute_table = table_query[0]
+    try:
+      return {"data": get_attribute_data(attribute_table)}
+    except ValueError as e:
+      raise ApiError(400, str(e)) from e
 
   @api("GET", "/api/get-attributes/{table}")
   def _get_attributes(self, table: str):
-    if table not in ATTRIBUTE_TABLES:
+    if table not in ANNOTATION_ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid GET endpoint")
     return {"options": get_attribute_options(table)}
 
   @api("GET", "/api/security-data/{table}")
   def _get_security_data(self, table: str):
-    if not table or table not in ATTRIBUTE_TABLES:
+    if not table or table not in ANNOTATION_ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid GET endpoint")
 
     security_data = get_security_data(table)
@@ -152,7 +166,7 @@ class ApiRoutes(ApiHandler):
 
   @api("POST", "/api/insert-attribute/{table}")
   def _post_insert_attribute(self, payload: AttributeInsert, table: str):
-    if table not in ATTRIBUTE_TABLES:
+    if table not in ANNOTATION_ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid POST endpoint")
     return {"inserted_row": insert_attribute(table, payload)}
 
@@ -162,7 +176,7 @@ class ApiRoutes(ApiHandler):
 
   @api("POST", "/api/update-attribute/{table}")
   def _post_update_attribute(self, payload: AttributeUpdate, table: str):
-    if table not in ATTRIBUTE_TABLES:
+    if table not in ANNOTATION_ATTRIBUTE_TABLES:
       raise ApiError(404, "Invalid POST endpoint")
     return update_attribute(table, payload)
 

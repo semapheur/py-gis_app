@@ -195,7 +195,7 @@ class SqliteDatabase:
 
   def insert_models(
     self,
-    models: Sequence[type[Table]],
+    models: Sequence[type[T]],
     conflict_index: Optional[str] = None,
     update_query: Optional[UpdateQuery] = None,
     returning: Optional[str] = None,

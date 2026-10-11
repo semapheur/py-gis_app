@@ -6,6 +6,7 @@ import type {
   SchemaId,
   ClassificationId,
   ReleasabilityId,
+  TableName,
 } from "#lib/utils/brand.js";
 import type { IColumnConfig } from "@svar-ui/svelte-grid";
 
@@ -102,8 +103,8 @@ export interface AttributeData {
   description: string;
 }
 
-export interface AttributeTableInfo {
-  name: string;
+export interface TableNameLabel {
+  name: TableName;
   label: string;
 }
 

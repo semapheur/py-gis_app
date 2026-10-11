@@ -1,8 +1,9 @@
 import json
 import re
 import uuid
+from dataclasses import dataclass
 from sqlite3 import Row
-from typing import Literal, NamedTuple, TypedDict, Union, cast
+from typing import Literal, TypedDict, Union, cast
 
 from src.bootstrap import get_settings
 from src.hashing import encode_sha256_to_b64
@@ -38,7 +39,8 @@ MULTI_ATTRIBUTE_FIELDS = ("modification", "camoflage", "alternatives")
 NUMERIC_FIELDS = ("heading", "elevation", "speed")
 
 
-class AnnotationModels(NamedTuple):
+@dataclass
+class AnnotationModels:
   annotation: type[Table]
   junctions: dict[str, type[Table]]
 

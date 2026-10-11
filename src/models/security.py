@@ -10,7 +10,7 @@ from src.sqlite.table import (
   uuid_field,
 )
 
-SECURITY_TABLES = ("classification", "releasability")
+SECURITY_TABLES = ("classification", "releasability", "keyword")
 
 app_settings = get_settings()
 
@@ -33,6 +33,10 @@ def create_security_tables():
     for table in SECURITY_TABLES:
       model = make_security_model(table)
       db.create_table(model)
+
+
+def get_security_attribute_tables():
+  return [{"name": t, "label": t.capitalize()} for t in SECURITY_TABLES]
 
 
 def validate_security_table(table: str):

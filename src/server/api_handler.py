@@ -8,7 +8,7 @@ import uuid
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
 from typing import Any, Callable
-from urllib.parse import unquote, urlsplit
+from urllib.parse import parse_qs, unquote, urlsplit
 
 from src.bootstrap import get_settings
 from src.logger import request_id_var
@@ -82,6 +82,16 @@ class ApiRouterMeta(type):
 
 
 class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
+  @property
+  def query(self) -> dict[str, list[str]]:
+    return parse_qs(urlsplit(self.path).query)
+
+  def query_params(
+    self, name: str, default: list[str] | None = None
+  ) -> list[str] | None:
+    values = self.query.get(name)
+    return values if values else default
+
   def translate_path(self, path: str) -> str:
     url_path = unquote(urlsplit(path).path)
     if url_path.startswith("/api/"):

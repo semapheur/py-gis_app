@@ -18,7 +18,7 @@
 </script>
 
 {#if open}
-  <aside class="summary-sidebar">
+  <dev class="annotation-summary">
     <header class="header">
       <CloseButton onclick={() => (open = false)} />
       <Tabs
@@ -30,18 +30,12 @@
     {#if activeTab === "equipment"}
       <EquipmentSummary />
     {/if}
-  </aside>
+  </dev>
 {/if}
 
 <style>
-  .summary-sidebar {
+  .annotation-summary {
     height: 100%;
-    width: clamp(200px, 25%, 600px);
-    position: absolute;
-    top: 0;
-    right: 0;
-    padding: 0 var(--size-lg);
-    background: oklch(var(--color-primary));
   }
 
   .header {

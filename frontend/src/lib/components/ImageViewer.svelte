@@ -146,7 +146,7 @@
   }
 
   $effect(() => {
-    rightSidebarOpen = imageViewer.hasSelectedAnnotations;
+    rightSidebarOpen = imageViewer.hasSelectedAnnotations || summaryOpen;
   });
 </script>
 
@@ -195,7 +195,6 @@
     <AnnotateDialog bind:open={annotateOpen} />
   {/if}
   <ImageRenderer />
-  <AnnotationSummary bind:open={summaryOpen} />
   {#if measurementOpen}
     <MeasureDialog bind:open={measurementOpen} />
   {/if}
@@ -220,6 +219,9 @@
     >
       {#if imageViewer.hasSelectedAnnotations}
         <AnnotationEdit />
+      {/if}
+      {#if summaryOpen}
+        <AnnotationSummary bind:open={summaryOpen} />
       {/if}
     </ResizeableSidebar>
   {/if}

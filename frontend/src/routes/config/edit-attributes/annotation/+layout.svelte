@@ -11,14 +11,21 @@
   let { data, children }: Props = $props();
 </script>
 
+<svelte:head>
+  <title>Edit annotation attributes</title>
+</svelte:head>
+
 <div class="page-container">
   <nav class="table-list">
-    {#each data.tables as info}
-      <LinkText
-        href={`/config/edit-attributes/${info.name}`}
-        label={info.label}
-      />
-    {/each}
+    <LinkText href="/config/edit-attributes/" label="Back" />
+    <div data-sveltekit-replacestate>
+      {#each data.tables as info}
+        <LinkText
+          href={`/config/edit-attributes/annotation/${info.name}`}
+          label={info.label}
+        />
+      {/each}
+    </div>
   </nav>
   {@render children()}
 </div>

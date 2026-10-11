@@ -1,8 +1,8 @@
 <script lang="ts">
   import type { PageData } from "./$types";
-  import { browser } from '$app/env';
+  import { browser } from "$app/env";
   import DataGrid from "#lib/components/DataGrid.svelte";
-  import { fetchMsgpack } from "#lib/utils/fetch.js";
+  import { fetchMsgpack } from "#lib/utils/fetch/msgpack.js";
   import type { DataGridColumn } from "#lib/utils/types.js";
 
   async function validateCatalogPath(input: string) {
@@ -46,7 +46,7 @@
 
 {#if browser}
   <DataGrid
-    columns={columns}
+    {columns}
     data={data.catalogs}
     insertApi="/api/insert-catalog"
     updateApi="/api/update-catalog"

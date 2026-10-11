@@ -1,5 +1,4 @@
 import { encode, decode } from "@msgpack/msgpack";
-import type { SelectOption } from "#lib/utils/types.js";
 
 export interface MsgpackError {
   message?: string;

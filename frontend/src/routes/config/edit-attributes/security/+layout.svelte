@@ -11,16 +11,21 @@
   let { data, children }: Props = $props();
 </script>
 
+<svelte:head>
+  <title>Edit security attributes</title>
+</svelte:head>
+
 <div class="page-container">
   <nav class="table-list">
-    <LinkText
-      href="/config/edit-security/classification"
-      label="Classification"
-    />
-    <LinkText
-      href="/config/edit-security/releasability"
-      label="Releasability"
-    />
+    <LinkText href="/config/edit-attributes/" label="Back" />
+    <div data-sveltekit-replacestate>
+      {#each data.tables as info (info.name)}
+        <LinkText
+          href={`/config/edit-attributes/security/${info.name}`}
+          label={info.label}
+        />
+      {/each}
+    </div>
   </nav>
   {@render children()}
 </div>
