@@ -7,10 +7,11 @@ import time
 import uuid
 from http.server import SimpleHTTPRequestHandler
 from io import BufferedReader
-from typing import Any, Callable
-from urllib.parse import parse_qs, unquote, urlsplit
+from typing import Any, Callable, Container
+from urllib.parse import parse_qs, parse_qsl, unquote, urlparse, urlsplit
 
 from src.bootstrap import get_settings
+from src.hashing import decode_sha256_from_b64
 from src.logger import request_id_var
 from src.msgpack import decode_msgpack, encode_msgpack
 
@@ -83,14 +84,37 @@ class ApiRouterMeta(type):
 
 class ApiHandler(SimpleHTTPRequestHandler, metaclass=ApiRouterMeta):
   @property
-  def query(self) -> dict[str, list[str]]:
+  def queries(self) -> dict[str, list[str]]:
     return parse_qs(urlsplit(self.path).query)
 
-  def query_params(
-    self, name: str, default: list[str] | None = None
-  ) -> list[str] | None:
-    values = self.query.get(name)
-    return values if values else default
+  def query_params(self, name: str) -> list[str]:
+    return self.queries.get(name, [])
+
+  def query_param(self, name: str, default: str | None = None) -> str | None:
+    values = self.queries.get(name)
+    return values[0] if values else default
+
+  def require_param(self, name: str, label: str | None = None) -> str:
+    value = self.query_param(name)
+    if not value:
+      raise ApiError(400, f"Missing {label or name}")
+
+    return value
+
+  def require_choice(
+    self, name: str, choices: Container[str], label: str | None = None
+  ) -> str:
+    value = self.require_param(name, label)
+    if value not in choices:
+      raise ApiError(400, f"Invalid {label or name}: {value}")
+    return value
+
+  def require_image_hash(self) -> bytes:
+    image_id = self.require_param("id", "image id")
+    try:
+      return decode_sha256_from_b64(image_id)
+    except ValueError as e:
+      raise ApiError(400, "Invalid image id") from e
 
   def translate_path(self, path: str) -> str:
     url_path = unquote(urlsplit(path).path)

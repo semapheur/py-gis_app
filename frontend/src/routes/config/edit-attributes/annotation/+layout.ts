@@ -1,5 +1,8 @@
 import type { LayoutLoad } from "./$types";
-import { loadAttributeTables } from "#lib/utils/fetch/attributes.js";
+import type { TableNameLabel } from "#lib/utils/types.js";
+import { loadMsgpack } from "#lib/utils/msgpack.js";
 
 export const load: LayoutLoad = async ({ fetch }) =>
-  loadAttributeTables(fetch, "annotation");
+  loadMsgpack<{ tables: TableNameLabel[] }>(fetch, "/api/attribute-tables", {
+    query: { type: "annotation" },
+  });

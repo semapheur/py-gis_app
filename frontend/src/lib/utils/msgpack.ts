@@ -1,4 +1,5 @@
 import { encode, decode } from "@msgpack/msgpack";
+import { error } from "@sveltejs/kit";
 
 export interface MsgpackError {
   message?: string;
@@ -15,15 +16,22 @@ export async function fetchMsgpack<TResponse, TBody = unknown>(
     body?: TBody;
     headers?: Record<string, string>;
     signal?: AbortSignal;
+    fetch?: typeof globalThis.fetch;
   } = {},
 ): Promise<FetchMsgpackResult<TResponse>> {
-  const { method = "GET", body, headers = {}, signal } = options;
+  const {
+    method = "GET",
+    body,
+    headers = {},
+    signal,
+    fetchFn = fetch,
+  } = options;
 
   const encodedBody = body !== undefined ? encode(body) : undefined;
 
   let response: Response;
   try {
-    response = await fetch(url, {
+    response = await fetchFn(url, {
       method,
       headers: {
         Accept: "application/msgpack",
@@ -80,8 +88,37 @@ function decodeMsgpackError(
 ): MsgpackError {
   if (!buffer || buffer.byteLength === 0) return { status };
 
-  const decoded = decode(new Uint8Array(buffer)) as MsgpackError;
-  if (decoded && typeof decoded === "object") return { ...decoded, status };
+  try {
+    const decoded = decode(new Uint8Array(buffer)) as {
+      detail?: string;
+      message?: string;
+    };
+    if (decoded && typeof decoded === "object")
+      return { status, message: decoded.detail ?? decoded.message };
+  } catch {}
 
   return { status };
+}
+
+export async function loadMsgpack<TResponse, TBody = unknown>(
+  fetch: typeof globalThis.fetch,
+  path: string,
+  options: {
+    query?: Record<string, string>;
+    method?: "GET" | "POST" | "PUT" | "PATCH" | "DELETE";
+    body?: TBody;
+  } = {},
+): Promise<TResponse> {
+  const { query, ...rest } = options;
+  const url = query ? `${path}?${new URLSearchParams(query)}` : path;
+
+  const result = await fetchMsgpack<TResponse, TBody>(url, { ...rest, fetch });
+  if (!result.ok) {
+    const { status, message } = result.error;
+    error(
+      status >= 400 && status < 600 ? status : 503,
+      message ?? "Request failed",
+    );
+  }
+  return result.data;
 }

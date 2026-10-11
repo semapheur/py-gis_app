@@ -2,7 +2,7 @@
   import type { PageData } from "./$types";
   import { browser } from "$app/env";
   import DataGrid from "#lib/components/DataGrid.svelte";
-  import { fetchMsgpack } from "#lib/utils/fetch/msgpack.js";
+  import { fetchMsgpack } from "#lib/utils/msgpack.js";
   import type { DataGridColumn } from "#lib/utils/types.js";
 
   async function validateCatalogPath(input: string) {

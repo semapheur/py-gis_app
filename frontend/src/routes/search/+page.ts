@@ -1,10 +1,9 @@
 import { error } from "@sveltejs/kit";
-import { encode, decode } from "@msgpack/msgpack";
 import * as v from "valibot";
 import type { PageLoad } from "./$types";
 import type { ImageMetadata } from "#lib/utils/types.js";
-import { parseToUnix } from "#lib/utils/date.js";
-import { ORDERING_OPTIONS, ORDER_COLUMN_OPTIONS } from "#lib/utils/constants.js";
+import { searchSchema } from "#lib/schemas/image_search.js";
+import { loadMsgpack } from "#lib/utils/msgpack.js";
 
 export const prerender = false;
 
@@ -13,142 +12,27 @@ interface ImageSearchResult {
   images: ImageMetadata[];
 }
 
-const dateField = v.nullish(
-  v.pipe(
-    v.string(),
-    v.regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD"),
-    v.transform(parseToUnix),
-  ),
-);
-
-const azimuthField = v.nullish(
-  v.pipe(
-    v.string(),
-    v.transform(Number),
-    v.finite(),
-    v.minValue(0),
-    v.maxValue(359),
-  ),
-);
-
-const lookangleField = v.nullish(
-  v.pipe(
-    v.string(),
-    v.transform(Number),
-    v.finite(),
-    v.minValue(0),
-    v.maxValue(90),
-  ),
-);
-
-const searchSchema = v.pipe(
-  v.object({
-    wkt: v.nullish(v.string()),
-    area_id: v.nullish(
-      v.pipe(v.string(), v.uuid("area_id must be a valid UUID")),
-    ),
-    ordering: v.nullish(v.picklist(ORDERING_OPTIONS.map((o) => o.value))),
-    order_by: v.nullish(v.picklist(ORDER_COLUMN_OPTIONS.map((o) => o.value))),
-    filename: v.nullish(v.string()),
-    min_coverage: v.nullish(
-      v.pipe(
-        v.string(),
-        v.transform(Number),
-        v.finite(),
-        v.minValue(0),
-        v.maxValue(100),
-      ),
-    ),
-    min_iirs: v.nullish(
-      v.pipe(
-        v.string(),
-        v.transform(Number),
-        v.finite(),
-        v.minValue(0),
-        v.maxValue(9),
-      ),
-    ),
-    max_gsd: v.nullish(
-      v.pipe(v.string(), v.transform(Number), v.finite(), v.minValue(0)),
-    ),
-    date_start: dateField,
-    date_end: dateField,
-    azimuth_start: azimuthField,
-    azimuth_end: azimuthField,
-    lookangle_min: lookangleField,
-    lookangle_max: lookangleField,
-  }),
-
-  v.check(
-    (p) => (p.date_start === null) === (p.date_end === null),
-    "date_start and date_end must both be provided or both emitted",
-  ),
-
-  v.check(
-    (d) =>
-      !d.date_start ||
-      !d.date_end ||
-      new Date(d.date_start) <= new Date(d.date_end),
-    "date_start must be before or equal to date_end",
-  ),
-
-  v.check(
-    (p) => (p.azimuth_start === null) === (p.azimuth_end === null),
-    "azimuth_start and azimuth_end must both be provided or both emitted",
-  ),
-
-  v.check(
-    (p) =>
-      p.lookangle_min === null ||
-      p.lookangle_min === undefined ||
-      p.lookangle_max === null ||
-      p.lookangle_max === undefined ||
-      p.lookangle_min <= p.lookangle_max,
-    "lookangle_min must be less or equal to lookangle_max",
-  ),
-);
-
 export const load: PageLoad = async ({ fetch, url }) => {
-  const raw = {
-    wkt: url.searchParams.get("wkt"),
-    area_id: url.searchParams.get("area"),
-    ordering: url.searchParams.get("ordering"),
-    order_by: url.searchParams.get("order_by"),
-    filename: url.searchParams.get("filename"),
-    min_coverage: url.searchParams.get("min_coverage"),
-    min_iirs: url.searchParams.get("min_iirs"),
-    max_gsd: url.searchParams.get("max_gsd"),
-    date_start: url.searchParams.get("date_start"),
-    date_end: url.searchParams.get("date_end"),
-    azimuth_start: url.searchParams.get("azimuth_start"),
-    azimuth_end: url.searchParams.get("azimuth_end"),
-    lookangle_min: url.searchParams.get("lookangle_min"),
-    lookangle_max: url.searchParams.get("lookangle_max"),
-  };
+  const { area, ...params } = Object.fromEntries(
+    [...url.searchParams].filter(([, value]) => value !== ""),
+  );
 
-  const result = v.safeParse(searchSchema, raw);
+  const result = v.safeParse(searchSchema, { ...params, area_id: area });
 
   if (!result.success) {
-    const messages = v.flatten(result.issues);
-    const fieldErrors = Object.entries(messages.nested ?? {})
-      .map(([field, errors]) => `${field}: ${errors?.join(", ")}`)
-      .join("; ");
-    const rootErrors = messages.root?.join("; ") ?? "";
-    throw error(
-      400,
-      `Invalid search parameters: ${[rootErrors, fieldErrors].filter(Boolean).join("; ")}`,
-    );
+    const { root = [], nested = {} } = v.flatten(result.issues);
+    const messages = [
+      ...root,
+      ...Object.entries(nested).map(
+        ([field, errors]) => `${field}: ${errors?.join(", ")}`,
+      ),
+    ];
+
+    throw error(400, `Invalid search parameters: ${messages.join("; ")}`);
   }
 
-  const response = await fetch("/api/search-images", {
+  return loadMsgpack<ImageSearchResult>(fetch, "/api/search-images", {
     method: "POST",
-    headers: { "Content-Type": "application/msgpack" },
-    body: encode(result.output),
+    body: result.output,
   });
-
-  if (!response.ok) {
-    throw error(response.status, "Failed to fetch images");
-  }
-
-  return decode(await response.arrayBuffer()) as ImageSearchResult;
 };

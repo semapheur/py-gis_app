@@ -65,16 +65,12 @@ def update_area(payload: AreaUpdate):
     db.insert_models((model,), "id", update_query)
 
 
-class AreaId(TypedDict):
-  id: str
-
-
-def get_area(payload: AreaId):
+def get_area(id: str):
   query = (
     SelectQuery()
     .select("id", "name", "description", "AsGeoJSON(geometry) AS geometry")
     .from_(AreasTable.table_name())
-    .where("id = ?", uuid.UUID(payload["id"]).bytes)
+    .where("id = ?", uuid.UUID(id).bytes)
   )
 
   with SqliteDatabase(app_settings.LOCATION_DB, spatial=True) as db:

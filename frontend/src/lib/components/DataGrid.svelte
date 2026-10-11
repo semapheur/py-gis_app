@@ -10,7 +10,7 @@
   import Select from "#lib/components/Select.svelte";
   import TextArea from "#lib/components/TextArea.svelte";
   import { toast } from "#lib/stores/toast.svelte.js";
-  import { fetchMsgpack } from "#lib/utils/fetch/msgpack.js";
+  import { fetchMsgpack } from "#lib/utils/msgpack.js";
   import { exportFile, parseCsv, parseJson } from "#lib/utils/io.js";
   import type { ComponentExports, DataGridColumn } from "#lib/utils/types.js";
 

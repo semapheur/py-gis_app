@@ -38,7 +38,6 @@ from src.models.annotation_schema import (
 )
 from src.models.areas import (
   AreaDelete,
-  AreaId,
   AreaUpdate,
   delete_areas,
   get_area,
@@ -66,26 +65,27 @@ from src.models.security import (
   SECURITY_TABLES,
   SecurityInsert,
   SecurityUpdate,
-  get_security_data,
   insert_sequrity,
   update_security,
 )
 from src.server.api_handler import ApiError, ApiHandler, api
 
 
+def static_get(path: str, key: str | None, fn: Callable[[], Any]) -> Callable:
+  def handler(self):
+    result = fn()
+    return {key: result} if key else result
+
+  return api("GET", path)(handler)
+
+
 class ApiRoutes(ApiHandler):
   @api("GET", "/api/attribute-tables")
   def _get_attribute_tables(self):
-    type_query = self.query_params("type")
-    if not type_query:
-      raise ApiError(400, "Missing attribute table type")
-
-    attribute_type = type_query[0]
-    getter = ATTRIBUTE_TABLE_GETTER.get(attribute_type)
-    if getter is None:
-      raise ApiError(400, f"Invalid attribute type: {attribute_type}")
-
-    return {"tables": getter()}
+    attribute_type = self.require_choice(
+      "type", ATTRIBUTE_TABLE_GETTER, "attribute type"
+    )
+    return {"tables": ATTRIBUTE_TABLE_GETTER[attribute_type]()}
 
   @api("GET", "/api/schema-options")
   def _get_schema_options(self):
@@ -103,10 +103,9 @@ class ApiRoutes(ApiHandler):
   def _get_areas(self):
     return get_areas()
 
-  @api("GET", "/api/get-areas-by-image/{image_id}")
-  def _post_get_areas(self, image_id: str):
-    image_hash = decode_sha256_from_b64(image_id)
-    return get_areas_by_image(image_hash)
+  @api("GET", "/api/get-areas-by-image")
+  def _post_get_areas(self):
+    return get_areas_by_image(self.require_image_hash())
 
   @api("GET", "/api/get-catalogs-index")
   def _get_catalogs_index(self):
@@ -116,10 +115,9 @@ class ApiRoutes(ApiHandler):
   def _get_catalogs_edit(self):
     return {"catalogs": get_catalog_edit_data()}
 
-  @api("GET", "/api/get-annotations-by-image/{image_id}")
-  def _get_annotations(self, image_id: str):
-    image_hash = decode_sha256_from_b64(image_id)
-    return get_annotations_by_image(image_hash)
+  @api("GET", "/api/get-annotations-by-image")
+  def _get_annotations(self):
+    return get_annotations_by_image(self.require_image_hash())
 
   @api("GET", "/api/attribute-data/schema")
   def _get_schema_data(self):
@@ -127,38 +125,27 @@ class ApiRoutes(ApiHandler):
 
   @api("GET", "/api/attribute-data")
   def _get_attribute_data(self):
-    table_query = self.query_params("table")
-    if not table_query:
-      raise ApiError(400, "Missing attribute table")
+    table = self.require_param("table", "attribute table")
 
-    attribute_table = table_query[0]
     try:
-      return {"data": get_attribute_data(attribute_table)}
+      return {"data": get_attribute_data(table)}
     except ValueError as e:
       raise ApiError(400, str(e)) from e
 
-  @api("GET", "/api/get-attributes/{table}")
-  def _get_attributes(self, table: str):
-    if table not in ANNOTATION_ATTRIBUTE_TABLES:
-      raise ApiError(404, "Invalid GET endpoint")
+  @api("GET", "/api/get-attributes")
+  def _get_attributes(self):
+    table = self.require_choice(
+      "table", ANNOTATION_ATTRIBUTE_TABLES, "annotation attribute table"
+    )
     return {"options": get_attribute_options(table)}
-
-  @api("GET", "/api/security-data/{table}")
-  def _get_security_data(self, table: str):
-    if not table or table not in ANNOTATION_ATTRIBUTE_TABLES:
-      raise ApiError(404, "Invalid GET endpoint")
-
-    security_data = get_security_data(table)
-    return {"data": security_data}
 
   @api("POST", "/api/search-images")
   def _post_query_images(self, payload: ImageQuery):
     return search_images(payload)
 
-  @api("POST", "/api/image-info")
-  def _post_image_info(self, payload: dict):
-    image_hash = decode_sha256_from_b64(payload["id"])
-    return get_image_info(image_hash)
+  @api("GET", "/api/image-info")
+  def _post_image_info(self):
+    return get_image_info(self.require_image_hash())
 
   @api("POST", "/api/insert-attribute/schema")
   def _post_insert_schema(self, payload: SchemaInsert):
@@ -195,9 +182,9 @@ class ApiRoutes(ApiHandler):
 
     return update_security(table, payload)
 
-  @api("POST", "/api/search-equipment")
-  def _post_search_equipment(self, payload: dict[str, str]):
-    query = payload["query"]
+  @api("GET", "/api/search-equipment")
+  def _get_search_equipment(self):
+    query = self.require_param("query", "search query")
     return search_equipment(query)
 
   @api("POST", "/api/insert-equipment")
@@ -208,9 +195,10 @@ class ApiRoutes(ApiHandler):
   def _post_update_equipment(self, payload: UpdateEquipment):
     return update_equipment(payload)
 
-  @api("POST", "/api/get-area")
-  def _post_fetch_area(self, payload: AreaId):
-    return get_area(payload)
+  @api("GET", "/api/get-area")
+  def _get_fetch_area(self):
+    area_id = self.require_param("id", "area id")
+    return get_area(area_id)
 
   @api("POST", "/api/update-area")
   def _post_update_area(self, payload: AreaUpdate):

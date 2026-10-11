@@ -7,9 +7,9 @@
 
 ## Prerequisites
 
-This application consists of a Python backend and a SvelteKit frontend built on Node.js using the pnpm package manager. The backend requires Python 3.10 or newer and runs without any external Python dependencies.
+This application consists of a Python backend and a SvelteKit frontend built on Node.js using the pnpm package manager. The backend requires Python 3.14 or newer and runs without any external Python dependencies.
 
-The application also depends on QGIS being installed. QGSI includes the required geospatial tools:
+The application also depends on QGIS being installed. QGIS includes the required geospatial tools:
 1. GDAL
 2. SpatiaLite
 

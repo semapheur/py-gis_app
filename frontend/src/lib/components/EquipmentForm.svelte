@@ -162,11 +162,9 @@
   }
 
   async function searchEquipment(query: string): Promise<SelectOption[]> {
-    const response = await fetch("/api/search-equipment", {
-      method: "POST",
-      headers: { "Content-Type": "application/msgpack" },
-      body: encode({ query }),
-    });
+    const response = await fetch(
+      `/api/search-equipment?query=${encodeURIComponent(query)}`,
+    );
 
     if (!response.ok) {
       toast.error("Failed to search equipment");

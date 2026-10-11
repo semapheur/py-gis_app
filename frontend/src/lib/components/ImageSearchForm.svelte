@@ -14,7 +14,7 @@
     ORDER_COLUMN_OPTIONS,
     orderingSchema,
     imageOrderColumnSchema,
-  } from "#lib/utils/constants.js";
+  } from "#lib/schemas/image_search.js";
 
   const params = page.url.searchParams;
   let ordering = $state<(typeof ORDERING_OPTIONS)[number]["value"]>(
