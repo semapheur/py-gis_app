@@ -17,13 +17,13 @@ SECURITY_TABLES = ("classification", "releasability", "keyword")
 app_settings = get_settings()
 
 
-class PartnerTable(Table):
-  _table_name = "partner"
+class ClassificationTable(Table):
+  _table_name = "classification"
 
   id = uuid_field(True, False)
   name = Field(str, nullable=False)
-  short_name = Field(str, nullable=False)
-  type = Field(str, nullable=False, validators=[one_of("country", "group")])
+  level = Field(int, unique=True, nullable=False, validators=[min_value(0)])
+  ordering = Field(int, nullable=False)
 
 
 class KeywordTable(Table):
@@ -35,23 +35,25 @@ class KeywordTable(Table):
   ordering = Field(int, nullable=False)
 
 
-class ClassificationTable(Table):
-  _table_name = "classification"
+class PartnerTable(Table):
+  _table_name = "partner"
 
   id = uuid_field(True, False)
   name = Field(str, nullable=False)
-  level = Field(int, unique=True, nullable=False, validators=[min_value(0)])
-  ordering = Field(int, nullable=False)
+  short_name = Field(str, nullable=False)
+  type = Field(str, nullable=False, validators=[one_of("country", "group")])
 
 
-member_table = uuid_list_junction_model(PartnerTable, "member")
+member_junction = uuid_list_junction_model(PartnerTable, "member")
 
 
 def create_security_tables():
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    for table in SECURITY_TABLES:
-      model = make_security_model(table)
-      db.create_table(model)
+    db.create_table(ClassificationTable)
+    db.create_table(KeywordTable)
+    db.create_table(PartnerTable)
+    db.create_table(member_junction)
+    db.create_table_indexes(member_junction)
 
 
 def get_security_attribute_tables():
