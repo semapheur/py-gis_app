@@ -8,24 +8,43 @@ from src.sqlite.table import (
   Field,
   Table,
   uuid_field,
+  uuid_list_junction_model,
 )
+from src.sqlite.validator import min_value, one_of
 
 SECURITY_TABLES = ("classification", "releasability", "keyword")
 
 app_settings = get_settings()
 
 
-def make_security_model(table_name: str) -> type[Table]:
-  class SecurityTable(Table):
-    _table_name = table_name
+class PartnerTable(Table):
+  _table_name = "partner"
 
-    id = uuid_field(True, False)
-    name = Field(str, nullable=False)
-    level = Field(int, unique=True)
-    ordering = Field(int, nullable=False)
+  id = uuid_field(True, False)
+  name = Field(str, nullable=False)
+  short_name = Field(str, nullable=False)
+  type = Field(str, nullable=False, validators=[one_of("country", "group")])
 
-  SecurityTable.__name__ = f"{table_name.title().replace('_', '')}Table"
-  return SecurityTable
+
+class KeywordTable(Table):
+  _table_name = "keyword"
+
+  id = uuid_field(True, False)
+  name = Field(str, nullable=False)
+  short_name = Field(str, nullable=False)
+  ordering = Field(int, nullable=False)
+
+
+class ClassificationTable(Table):
+  _table_name = "classification"
+
+  id = uuid_field(True, False)
+  name = Field(str, nullable=False)
+  level = Field(int, unique=True, nullable=False, validators=[min_value(0)])
+  ordering = Field(int, nullable=False)
+
+
+member_table = uuid_list_junction_model(PartnerTable, "member")
 
 
 def create_security_tables():

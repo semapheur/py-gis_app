@@ -1,10 +1,11 @@
 from __future__ import annotations
 
 import json
+import re
 import uuid
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from datetime import datetime
-from enum import Enum
+from enum import Enum, StrEnum
 from pathlib import Path
 from sqlite3 import Row
 from typing import (
@@ -28,17 +29,20 @@ J = TypeVar("J")
 
 GeoFormat = Literal["AsText", "AsGeoJSON"]
 
-Geometry = Literal[
-  "POINT",
-  "LINESTRING",
-  "POLYGON",
-  "MULTIPOINT",
-  "MULTILINESTRING",
-  "MULTIPOLYGON",
-  "GEOMETRYCOLLECTION",
-]
-
 ForeignKeyAction = Literal["CASCADE", "SET NULL", "RESTRICT", "NO ACTION"]
+
+_EWKT_PREFIX = re.compile(r"^\s*SRID=(\d+);", re.IGNORECASE)
+_WKT_TYPE = re.compile(r"^\s*([A-Za-z]+)\s*(Z|M|ZM)?\s*(\(|EMPTY)", re.IGNORECASE)
+
+
+class Geometry(StrEnum):
+  POINT = "POINT"
+  LINESTRING = "LINESTRING"
+  POLYGON = "POLYGON"
+  MULTIPOINT = "MULTIPOINT"
+  MULTILINESTRING = "MULTILINESTRING"
+  MULTIPOLYGON = "MULTIPOLYGON"
+  GEOMETRYCOLLECTION = "GEOMETRYCOLLECTION"
 
 
 class ColumnType(Enum):
@@ -83,6 +87,8 @@ class Field(Generic[T, S, J]):
   from_sql: Optional[Callable[[S], T]] = None
   to_json: Optional[Callable[[T], J]] = None
   from_json: Optional[Callable[[J], T]] = None
+  validators: list[Callable[[Any], None]] = field(default_factory=list)
+  name: Optional[str] = None
 
   def __post_init__(self):
     if self.sql_type is None:
@@ -91,18 +97,58 @@ class Field(Generic[T, S, J]):
     if self.primary_key:
       self.nullable = False
 
+  def __set_name__(self, owner, attribute_name: str):
+    if self.name is None:
+      self.name = attribute_name
+
   def sql_column_type(self):
     if self.sql_type is None:
       raise ValueError("sql_type is not set")
 
     return self.sql_type.name
 
+  def check_clauses(self, column: Optional[str] = None) -> list[str]:
+    col = column or self.name
+    if col is None:
+      raise ValueError("Field has no name; cannot build CHECK clauses")
+
+    return [v.sql.format(col=col) for v in self.validators if getattr(v, "sql", None)]
+
   def validate_nullability(self, value: Optional[Any]):
     if value is None and not self.nullable:
-      raise ValueError(f"Field {self!r} is non-nullable but received None")
+      raise ValueError(f"Field {self.name!r} is non-nullable but received None")
+
+  def validate_type(self, value: Any):
+    expected = self.python_type
+    if not isinstance(expected, type):
+      return
+
+    if expected is int and isinstance(value, bool):
+      raise ValueError(f"Field {self.name!r} expects int, got bool")
+
+    if expected is float and isinstance(value, int) and not isinstance(value, bool):
+      return
+
+    if not isinstance(value, expected):
+      raise TypeError(
+        f"Field {self.name!r} expects {expected.__name__}, got {type(value).__name__}"
+      )
+
+  def validate(self, value: Optional[Any]):
+    self.validate_nullability(value)
+    if value is None:
+      return
+
+    self.validate_type(value)
+
+    for check in self.validators:
+      try:
+        check(value)
+      except ValueError as e:
+        raise ValueError(f"Field [{self.name!r}: {e}") from None
 
   def serialize_to_sql(self, value: Optional[T]) -> Union[S, None]:
-    self.validate_nullability(value)
+    self.validate(value)
 
     if value is None:
       return None
@@ -138,21 +184,47 @@ class Field(Generic[T, S, J]):
     if value is None:
       return None
 
-    if self.from_json:
-      return self.from_json(value)
+    result = self.from_json(value) if self.from_json else self.python_type(value)
 
-    return self.python_type(value)
+    self.validate(result)
+    return result
 
 
 @dataclass(slots=True)
 class GeometryField(Field):
+  python_type: type[str] = str
   geometry_type: Optional[Geometry] = None
   srid: int = 4326
 
   def __post_init__(self):
-    super().__post_init__()
+    Field.__post_init__(self)
     if self.geometry_type is None:
       raise ValueError("GeometryField requires a geomtry_type")
+    self.validators.append(self._validate_wkt)
+
+  def _expected_geometry_name(self, value: str):
+    return str(getattr(self.geometry_type, "name", self.geometry_type)).upper()
+
+  def _validate_wkt(self, value: str):
+    text = value
+    ewkt = _EWKT_PREFIX.match(text)
+    if ewkt:
+      if int(ewkt.group(1)) != self.srid:
+        raise ValueError(
+          f"Field {self.name!r}: SRID {ewkt.group(1)} does not match expected {self.srid}"
+        )
+      text = text[ewkt.end() :]
+
+    match = _WKT_TYPE.match(text)
+    if not match:
+      raise ValueError(f"Field {self.name!r}: not valid WKT: {value[:40]!r}")
+
+    actual = match.group(1).upper()
+    expected = self._expected_geometry_name()
+    if actual != expected:
+      raise ValueError(
+        f"Field {self.name!r}: expected {expected} geometry, got {actual}"
+      )
 
   def to_wkt(self, value: Optional[str]) -> Optional[str]:
     if self.geometry_type is None:
@@ -192,6 +264,9 @@ class TableMeta(type):
     fields: dict[str, Union[Field, GeometryField]] = {}
     for k, v in list(attributes.items()):
       if isinstance(v, Field):
+        if v.name is None:
+          v.name = k
+
         fields[k] = v
         del attributes[k]
 
@@ -215,13 +290,13 @@ class Table(metaclass=TableMeta):
   def to_dict(self, json: bool = False) -> dict[str, SqliteValue]:
     data: dict[str, Any] = {}
 
-    for name, field in self._fields.items():
+    for name, field_ in self._fields.items():
       value = getattr(self, name, None)
 
-      if isinstance(field, GeometryField):
-        data[name] = field.to_wkt(value)
+      if isinstance(field_, GeometryField):
+        data[name] = field_.to_wkt(value)
       else:
-        data[name] = field.serialize_to_json(value) if json else value
+        data[name] = field_.serialize_to_json(value) if json else value
 
     return data
 
@@ -250,26 +325,31 @@ class Table(metaclass=TableMeta):
     columns: list[str] = []
     constraints: list[str] = []
 
-    for name, field in cls._fields.items():
+    for name, field_ in cls._fields.items():
       if isinstance(field, GeometryField):
         continue
 
-      col_def = [name, field.sql_column_type()]
+      col_def = [name, field_.sql_column_type()]
 
-      if field.primary_key and not composite_primary_key:
+      if field_.primary_key and not composite_primary_key:
         col_def.append("PRIMARY KEY")
-      elif not field.nullable:
-        col_def.append("NOT NULL")
-      elif field.unique:
-        col_def.append("UNIQUE")
+      else:
+        if not field_.nullable:
+          col_def.append("NOT NULL")
 
-      if field.default is not None:
-        col_def.append(f"DEFAULT {field.default}")
+        if field_.unique:
+          col_def.append("UNIQUE")
+
+      for clause in field_.check_clauses(name):
+        col_def.append(f"CHECK ({clause})")
+
+      if field_.default is not None:
+        col_def.append(f"DEFAULT {field_.default}")
 
       columns.append(" ".join(col_def))
 
-      if field.foreign_key is not None:
-        constraints.append(field.foreign_key.sql(name))
+      if field_.foreign_key is not None:
+        constraints.append(field_.foreign_key.sql(name))
 
     if not columns:
       raise ValueError(f"{cls.__name__} has no fields")
@@ -294,9 +374,9 @@ class Table(metaclass=TableMeta):
 
     sql: list[str] = []
 
-    for name, field in cls.geometry_fields().items():
+    for name, field_ in cls.geometry_fields().items():
       sql.append(f"""
-        SELECT AddGeometryColumn('{table_name}', '{name}', {field.srid}, '{field.geometry_type}', '{dimension}')
+        SELECT AddGeometryColumn('{table_name}', '{name}', {field_.srid}, '{field_.geometry_type}', '{dimension}')
       """)
 
     return sql
@@ -305,31 +385,31 @@ class Table(metaclass=TableMeta):
   def column_names(cls, exclude_geometry_fields: bool = False) -> list[str]:
     return [
       name
-      for name, field in cls._fields.items()
-      if not exclude_geometry_fields or not isinstance(field, GeometryField)
+      for name, field_ in cls._fields.items()
+      if not exclude_geometry_fields or not isinstance(field_, GeometryField)
     ]
 
   @classmethod
   def geometry_names(cls) -> list[str]:
     return [
-      name for name, field in cls._fields.items() if isinstance(field, GeometryField)
+      name for name, field_ in cls._fields.items() if isinstance(field_, GeometryField)
     ]
 
   @classmethod
   def column_sql(cls, geo_format: GeoFormat = "AsGeoJSON") -> list[str]:
     return [
       name
-      if not isinstance(field, GeometryField)
+      if not isinstance(field_, GeometryField)
       else f"{geo_format}({name}) AS {name}"
-      for name, field in cls._fields.items()
+      for name, field_ in cls._fields.items()
     ]
 
   @classmethod
   def geometry_fields(cls) -> dict[str, GeometryField]:
     return {
-      name: field
-      for name, field in cls._fields.items()
-      if isinstance(field, GeometryField)
+      name: field_
+      for name, field_ in cls._fields.items()
+      if isinstance(field_, GeometryField)
     }
 
   @classmethod
@@ -361,12 +441,12 @@ class Table(metaclass=TableMeta):
   def from_dict(cls, data: dict[str, Any], json: bool = False):
     obj = cls.__new__(cls)
 
-    for name, field in cls._fields.items():
+    for name, field_ in cls._fields.items():
       if name in data:
-        value = field.deserialize_from_json(data[name]) if json else data[name]
-      elif field.default is not None:
-        value = field.default
-      elif not field.nullable and not field.primary_key:
+        value = field_.deserialize_from_json(data[name]) if json else data[name]
+      elif field_.default is not None:
+        value = field_.default
+      elif not field_.nullable and not field_.primary_key:
         raise ValueError(f"{cls.__name__}.{name} is required")
       else:
         value = None
