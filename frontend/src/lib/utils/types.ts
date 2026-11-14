@@ -127,10 +127,12 @@ export interface ColumnDefinition {
   filterable?: boolean;
 }
 
+export type DataGridEditor = "number" | "select" | "text" | "textarea";
+
 export interface DataGridColumn extends IColumnConfig {
   id: string;
   header: string;
-  editor: string;
+  editor: DataGridEditor;
   sort: true;
   flexgrow: number;
   required: boolean;

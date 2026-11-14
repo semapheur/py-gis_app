@@ -7,8 +7,8 @@
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
 
-  let columns = $derived([
-    {
+  const commonColumns = {
+    name: {
       id: "name",
       header: "Name",
       nullable: false,
@@ -16,22 +16,70 @@
       editor: "text",
       flexgrow: 1,
     },
-    {
-      id: "level",
-      header: "Level",
+    short_name: {
+      id: "short_name",
+      header: "Short name",
       nullable: false,
       unique: true,
-      editor: "number",
+      editor: "text",
       flexgrow: 1,
     },
-    {
+    ordering: {
       id: "ordering",
       header: "Ordering",
       nullable: true,
       editor: "number",
       flexgrow: 1,
     },
-  ]);
+  };
+
+  let columns = $derived.by(() => {
+    if (table === undefined) return [];
+
+    const tableColumns = {
+      classification: [
+        commonColumns.name,
+        commonColumns.short_name,
+        {
+          id: "level",
+          header: "Level",
+          nullable: false,
+          unique: true,
+          editor: "number",
+          flexgrow: 1,
+        },
+        commonColumns.ordering,
+      ],
+      keyword: [
+        commonColumns.name,
+        commonColumns.short_name,
+        commonColumns.ordering,
+      ],
+      partner: [
+        commonColumns.name,
+        commonColumns.short_name,
+        {
+          id: "type",
+          header: "Type", // Note: check if header should be "Type" instead
+          nullable: false,
+          unique: true,
+          editor: "select",
+          selectOptions: ["Country", "Group"],
+          flexgrow: 1,
+        },
+        {
+          id: "member",
+          header: "Members",
+          nullable: false,
+          unique: true,
+          editor: "text",
+          flexgrow: 1,
+        },
+      ],
+    };
+
+    return tableColumns[table] ?? [];
+  });
 
   let insertApi = $derived(`/api/insert-security/${table}`);
   let updateApi = $derived(`/api/update-security/${table}`);

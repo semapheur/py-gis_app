@@ -12,7 +12,7 @@ from src.sqlite.table import (
 )
 from src.sqlite.validator import min_value, one_of
 
-SECURITY_TABLES = ("classification", "releasability", "keyword")
+SECURITY_TABLES = ("classification", "partner", "keyword")
 
 app_settings = get_settings()
 
@@ -22,6 +22,7 @@ class ClassificationTable(Table):
 
   id = uuid_field(True, False)
   name = Field(str, nullable=False)
+  short_name = Field(str, nullable=False)
   level = Field(int, unique=True, nullable=False, validators=[min_value(0)])
   ordering = Field(int, nullable=False)
 
@@ -65,19 +66,35 @@ def validate_security_table(table: str):
     raise ValueError(f"Invalid attribute table: {table}")
 
 
+def select_security_query(table: str):
+  if table == "classification":
+    return (
+      SelectQuery()
+      .select("uuid_blob_to_str(id) AS id", "name", "short_name", "level", "ordering")
+      .from_("classification")
+    )
+
+  if table == "keyword":
+    return (
+      SelectQuery()
+      .select("uuid_blob_to_str(id) AS id", "name", "short_name", "ordering")
+      .from_("keyword")
+    )
+
+  if table == "partner":
+    return SelectQuery().select(
+      "uuid_blob_to_str(id) AS id", "name", "short_name", "type"
+    )
+
+  raise ValueError(f"Invalid security table: {table}")
+
+
 def get_security_data(table: str):
   validate_security_table(table)
-
-  query = (
-    SelectQuery()
-    .select("uuid_blob_to_str(a.id) AS id", "name", "level", "ordering")
-    .from_(f"{table} a")
-  )
+  query = select_security_query(table)
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
-    records = db.select_records(query)
-
-  return records
+    return db.select_records(query)
 
 
 def get_next_ordering(table: str) -> int:
