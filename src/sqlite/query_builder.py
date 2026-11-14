@@ -512,3 +512,20 @@ class UnionQuery:
       union_sql += f"LIMIT -1 OFFSET {self._offset}"
 
     return union_sql, all_params
+
+
+def build_junction_array_sql(
+  child_table: str,
+  reference_table: str,
+  reference_column: str,
+  lookup_table: str,
+) -> str:
+  return (
+    SelectQuery()
+    .select(
+      f"COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', r.{reference_column})), '[]')"
+    )
+    .from_(f"{child_table} c")
+    .inner_join(f"{reference_table} r", "r.id = c.value")
+    .where(f"c.parent_id = {lookup_table}.id")
+  ).build()[0]

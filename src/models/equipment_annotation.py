@@ -13,6 +13,7 @@ from src.sqlite.query_builder import (
   SelectQuery,
   UnionQuery,
   UpdateQuery,
+  build_junction_array_sql,
 )
 from src.sqlite.table import (
   Field,
@@ -185,23 +186,6 @@ def delete_annotations(payload: dict[str, list[str]]):
       db.delete_by_ids(model, uuids)
 
 
-def build_junction_array_sql(
-  child_table: str,
-  reference_table: str,
-  reference_column: str,
-  annotation_table: str = "ea",
-) -> str:
-  return (
-    SelectQuery()
-    .select(
-      f"COALESCE(json_group_array(json_object('id', uuid_blob_to_str(c.value), 'label', r.{reference_column})), '[]')"
-    )
-    .from_(f"{child_table} c")
-    .inner_join(f"{reference_table} r", "r.id = c.value")
-    .where(f"c.parent_id = {annotation_table}.id")
-  ).build()[0]
-
-
 def get_equipment_annotations_by_image(image_id: bytes):
 
   def map_row(row: Row) -> dict:
@@ -248,7 +232,9 @@ def get_equipment_annotations_by_image(image_id: bytes):
     for field in MULTI_ATTRIBUTE_FIELDS:
       ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
       ref_column = "display_name" if field == "alternatives" else "name"
-      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
+      array_sql = build_junction_array_sql(
+        f"{table}_{field}", ref_table, ref_column, "ea"
+      )
       select_fields.append(f"({array_sql}) AS {field}")
 
     select_fields += [
@@ -375,7 +361,9 @@ def get_annotation_ghosts_by_geometry(
     for field in MULTI_ATTRIBUTE_FIELDS:
       ref_table = "ed.equipment" if field == "alternatives" else f"a.equipment_{field}"
       ref_column = "display_name" if field == "alternatives" else "name"
-      array_sql = build_junction_array_sql(f"{table}_{field}", ref_table, ref_column)
+      array_sql = build_junction_array_sql(
+        f"{table}_{field}", ref_table, ref_column, "ea"
+      )
       select_fields.append(f"({array_sql}) AS {field}")
 
     select_fields += [

@@ -3,7 +3,7 @@ from typing import Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
-from src.sqlite.query_builder import SelectQuery, UpdateQuery
+from src.sqlite.query_builder import SelectQuery, UpdateQuery, build_junction_array_sql
 from src.sqlite.table import (
   Field,
   Table,
@@ -45,7 +45,7 @@ class PartnerTable(Table):
   type = Field(str, nullable=False, validators=[one_of("country", "group")])
 
 
-member_junction = uuid_list_junction_model(PartnerTable, "member")
+member_junction = uuid_list_junction_model(PartnerTable, "members")
 
 
 def create_security_tables():
@@ -82,8 +82,13 @@ def select_security_query(table: str):
     )
 
   if table == "partner":
+    array_sql = build_junction_array_sql("partner_member", "members", "name", "member")
     return SelectQuery().select(
-      "uuid_blob_to_str(id) AS id", "name", "short_name", "type"
+      "uuid_blob_to_str(id) AS id",
+      "name",
+      "short_name",
+      "type",
+      f"({array_sql}) AS members",
     )
 
   raise ValueError(f"Invalid security table: {table}")
