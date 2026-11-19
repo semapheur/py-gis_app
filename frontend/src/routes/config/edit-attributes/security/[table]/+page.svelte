@@ -3,9 +3,25 @@
   import { page } from "$app/state";
   import { browser } from "$app/env";
   import DataGrid from "#lib/components/DataGrid.svelte";
+  import type { SelectOption } from "#lib/utils/types.js";
+  import { toast } from "#lib/stores/toast.svelte.js";
+  import { decode } from "@msgpack/msgpack";
 
   let { data }: { data: PageData } = $props();
   let table = $derived(page.params.table);
+
+  async function searchPartner(query: string): Promise<SelectOption[]> {
+    const response = await fetch(
+      `/api/search-equipment?query=${encodeURIComponent(query)}`,
+    );
+
+    if (!response.ok) {
+      toast.error("Failed to search equipment");
+    }
+
+    const buffer = await response.arrayBuffer();
+    return decode(buffer) as SelectOption[];
+  }
 
   const commonColumns = {
     name: {
@@ -72,7 +88,8 @@
           header: "Members",
           nullable: false,
           unique: true,
-          editor: "text",
+          editor: "multi-autocomplete",
+          fetchOptions: searchPartner,
           flexgrow: 1,
         },
       ],

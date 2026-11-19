@@ -1,5 +1,5 @@
 <script lang="ts">
-  import { encode, decode } from "@msgpack/msgpack";
+  import { decode } from "@msgpack/msgpack";
   import Autocomplete from "#lib/components/Autocomplete.svelte";
   import MultiAutocomplete from "#lib/components/MultiAutocomplete.svelte";
   import Select from "#lib/components/Select.svelte";

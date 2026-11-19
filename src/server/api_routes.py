@@ -66,6 +66,7 @@ from src.models.security import (
   SecurityInsert,
   SecurityUpdate,
   insert_sequrity,
+  search_partner,
   update_security,
 )
 from src.server.api_handler import ApiError, ApiHandler, api
@@ -181,6 +182,11 @@ class ApiRoutes(ApiHandler):
       raise ApiError(404, "Invalid POST endpoint")
 
     return update_security(table, payload)
+
+  @api("POS", "/api/search-partner")
+  def _post_search_partner(self):
+    query = self.require_param("query", "search query")
+    return search_partner(query)
 
   @api("GET", "/api/search-equipment")
   def _get_search_equipment(self):

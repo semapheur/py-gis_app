@@ -1,5 +1,5 @@
 import uuid
-from typing import Optional, TypedDict
+from typing import Literal, Optional, TypedDict
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
@@ -82,13 +82,19 @@ def select_security_query(table: str):
     )
 
   if table == "partner":
-    array_sql = build_junction_array_sql("partner_member", "members", "name", "member")
-    return SelectQuery().select(
-      "uuid_blob_to_str(id) AS id",
-      "name",
-      "short_name",
-      "type",
-      f"({array_sql}) AS members",
+    array_sql = build_junction_array_sql(
+      "partner_members", "partner", "name", "partner"
+    )
+    return (
+      SelectQuery()
+      .select(
+        "uuid_blob_to_str(id) AS id",
+        "name",
+        "short_name",
+        "type",
+        f"({array_sql}) AS members",
+      )
+      .from_("partner")
     )
 
   raise ValueError(f"Invalid security table: {table}")
@@ -148,6 +154,39 @@ def insert_sequrity(table_name: str, payload: SecurityInsert):
   }
 
 
+class PartnerInsert(TypedDict):
+  id: str
+  name: str
+  short_name: str
+  type: Literal["country", "group"]
+  members: list[str]
+
+
+def insert_partner(payload: PartnerInsert):
+  new_id = uuid.uuid4()
+
+  record = {
+    "id": new_id,
+    "name": payload["name"],
+    "short_name": payload["short_name"],
+    "type": payload["type"],
+    "members": payload["members"],
+  }
+
+  table_row = PartnerTable.from_dict(record)
+
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    db.insert_models([table_row])
+
+  return {
+    "id": str(new_id),
+    "name": payload["name"],
+    "short_name": payload["short_name"],
+    "type": payload["type"],
+    "members": payload["members"],
+  }
+
+
 class SecurityUpdate(TypedDict):
   id: str
   name: str
@@ -185,3 +224,15 @@ def update_security(table_name: str, payload: SecurityUpdate):
     "level": payload["level"],
     "ordering": ordering,
   }
+
+
+def search_partner(search_query: str):
+  query = (
+    SelectQuery()
+    .select("p.id AS value", "p.name AS label")
+    .from_(f"{PartnerTable.table_name()} p")
+    .where(" LIKE ?", f'"%{search_query}%"')
+  )
+
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    return db.select_model_records(PartnerTable, query, True)

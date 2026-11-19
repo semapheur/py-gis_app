@@ -139,4 +139,5 @@ export interface DataGridColumn extends IColumnConfig {
   validate?: (input: unknown) => Promise<boolean>;
   unique?: boolean;
   selectOptions?: SelectOption[];
+  fetchOptions?: (query: string) => SelectOption[];
 }

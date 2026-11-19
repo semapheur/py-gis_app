@@ -13,6 +13,7 @@
   import { fetchMsgpack } from "#lib/utils/msgpack.js";
   import { exportFile, parseCsv, parseJson } from "#lib/utils/io.js";
   import type { ComponentExports, DataGridColumn } from "#lib/utils/types.js";
+  import MultiAutocomplete from "./MultiAutocomplete.svelte";
 
   type FormMode = "add" | "edit";
 
@@ -378,12 +379,18 @@
 
 <div class="grid-container">
   <div class="grid-toolbar">
-    <Button onclick={() => handleUndo(api)} disabled={history && !$history.undo}
-      >Undo</Button
+    <Button
+      onclick={() => handleUndo(api)}
+      disabled={history && !$history.undo}
     >
-    <Button onclick={() => handleRedo(api)} disabled={history && !$history.redo}
-      >Redo</Button
+      Undo
+    </Button>
+    <Button
+      onclick={() => handleRedo(api)}
+      disabled={history && !$history.redo}
     >
+      Redo
+    </Button>
     <Button onclick={openAdd}>Add</Button>
     <Button onclick={selectAllRows}>Select all</Button>
     <Button onclick={deleteRow} disabled={!selectedRows.length}>Delete</Button>
@@ -466,6 +473,8 @@
           options={column.selectOptions}
           placeholder={`${column.header}${column.required ? "*" : ""}`}
         />
+      {:else if column.editor === "multi-autocomplete"}
+        <MultiAutocomplete fetchOptions={column.fetchOptions} />
       {/if}
       {#if columnErrors[column.id]}
         <span class="error">
@@ -474,9 +483,9 @@
       {/if}
     {/each}
 
-    <Button type="submit"
-      >{form.mode === "add" ? "Add row" : "Save changes"}</Button
-    >
+    <Button type="submit">
+      {form.mode === "add" ? "Add row" : "Save changes"}
+    </Button>
   </form>
 </Modal>
 
