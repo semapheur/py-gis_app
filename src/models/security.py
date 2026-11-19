@@ -1,5 +1,5 @@
 import uuid
-from typing import Literal, Optional, TypedDict
+from typing import Literal, Optional, TypedDict, Union
 
 from src.bootstrap import get_settings
 from src.sqlite.connect import SqliteDatabase
@@ -118,15 +118,49 @@ def get_next_ordering(table: str) -> int:
   return int(records[0]["ordering"])
 
 
-class SecurityInsert(TypedDict):
+class ClassificationInsert(TypedDict):
   name: str
+  short_name: str
   level: int
   ordering: Optional[int]
 
 
-def insert_sequrity(table_name: str, payload: SecurityInsert):
-  validate_security_table(table_name)
-  table_model = make_security_model(table_name)
+def insert_classification(payload: ClassificationInsert):
+  new_id = uuid.uuid4()
+  ordering = payload.get("ordering")
+
+  if ordering is None:
+    ordering = get_next_ordering(table_name)
+
+  record = {
+    "id": new_id,
+    "name": payload["name"],
+    "short_name": payload["short_name"],
+    "level": payload["level"],
+    "ordering": ordering,
+  }
+
+  table_row = ClassificationTable.from_dict(record)
+
+  with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
+    db.insert_models([table_row])
+
+  return {
+    "id": str(new_id),
+    "name": payload["name"],
+    "short_name": payload["short_name"],
+    "level": payload["level"],
+    "ordering": ordering,
+  }
+
+
+class KeywordInsert(TypedDict):
+  name: str
+  short_name: str
+  ordering: Optional[int]
+
+
+def insert_keyword(payload: KeywordInsert):
 
   new_id = uuid.uuid4()
   ordering = payload.get("ordering")
@@ -137,11 +171,11 @@ def insert_sequrity(table_name: str, payload: SecurityInsert):
   record = {
     "id": new_id,
     "name": payload["name"],
-    "level": payload["level"],
+    "short_name": payload["short_name"],
     "ordering": ordering,
   }
 
-  table_row = table_model.from_dict(record)
+  table_row = KeywordTable.from_dict(record)
 
   with SqliteDatabase(app_settings.ATTRIBUTE_DB) as db:
     db.insert_models([table_row])
@@ -149,7 +183,7 @@ def insert_sequrity(table_name: str, payload: SecurityInsert):
   return {
     "id": str(new_id),
     "name": payload["name"],
-    "level": payload["level"],
+    "short_name": payload["short_name"],
     "ordering": ordering,
   }
 
@@ -185,6 +219,21 @@ def insert_partner(payload: PartnerInsert):
     "type": payload["type"],
     "members": payload["members"],
   }
+
+
+def insert_security(
+  table_name: str, payload: Union[ClassificationInsert, KeywordInsert, PartnerInsert]
+):
+  if table_name == "classification":
+    insert_classification(payload)
+
+  elif table_name == "keyword":
+    insert_keyword(payload)
+
+  elif table_name == "partner":
+    insert_partner(payload)
+
+  raise ValueError(f"No such security table exists: {table_name}")
 
 
 class SecurityUpdate(TypedDict):
